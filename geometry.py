@@ -1,6 +1,6 @@
 import shapely
 import shapely.affinity
-from shapely.geometry.base import BaseGeometry as BaseShape
+from shapely.geometry.base import BaseGeometry as Shape
 
 class Shape:
     def __init__(self, data):
@@ -64,6 +64,13 @@ class Geometry:
 
     def bounds(self, *shapes):
         return shapely.total_bounds(shapes)
+
+    def polygons(self, shape):
+        if isinstance(shape, shapely.Polygon):
+            return [shape]
+        elif isinstance(shape, shapely.MultiPolygon):
+            return shape.geoms
+        return []
 
     def exteriors(self, shape):
         if isinstance(shape, shapely.Polygon):
