@@ -60,7 +60,10 @@ class GerberItem:
         self._geometry_cache = None
 
     def clone(self):
-        return GerberItem(self.name, self._geometry)
+        clone = GerberItem(self.name, self._geometry)
+        clone.color = self.color
+        clone.selected = self.selected
+        return clone
 
     @property
     def geometry(self):
