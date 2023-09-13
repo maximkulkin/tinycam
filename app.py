@@ -318,7 +318,9 @@ class CncManipulateTool(CncTool):
         self._bounds = None
         self._items = []
         self._original_manipulation_position = QPointF()
+        self._original_bounds = None
         self._shift_pressed = False
+        self._alt_pressed = False
         self.view.view_updated.connect(self._update)
 
     def activate(self):
@@ -345,43 +347,64 @@ class CncManipulateTool(CncTool):
         position = self.view.screen_to_canvas_point(
             self.view.mapFromGlobal(QCursor.pos()).toPointF()
         )
+        delta = position - self._original_manipulation_position
         match self._manipulation:
             case self.Manipulation.NONE:
                 pass
+
             case self.Manipulation.MOVE:
-                delta = position - self._original_manipulation_position
                 for item, temp_item in zip(self.project.selectedItems, self._items):
                     temp_item.geometry = GEOMETRY.translate(item.geometry, (delta.x(), delta.y()))
                 self._update()
                 self.view.update()
-            case self.Manipulation.RESIZE_TOP:
-                pass
-            case self.Manipulation.RESIZE_BOTTOM:
-                delta = position.y() - self._original_manipulation_position.y()
-                scale = 1.0 + delta / self._bounds.height()
-                offset = delta * 0.5
-                if self._shift_pressed:
-                    offset = 0.0
 
-                for item, temp_item in zip(self.project.selectedItems, self._items):
-                    temp_item.geometry = GEOMETRY.translate(
-                        GEOMETRY.scale(item.geometry, (1.0, scale)),
-                        (0.0, offset)
-                    )
-                self._update()
-                self.view.update()
+            case self.Manipulation.RESIZE_TOP:
+                self._scale((0, delta.y()), (0, -1))
+
+            case self.Manipulation.RESIZE_BOTTOM:
+                self._scale((0, delta.y()), (0, 1))
+
             case self.Manipulation.RESIZE_LEFT:
-                pass
+                self._scale((delta.x(), 0), (-1, 0))
+
             case self.Manipulation.RESIZE_RIGHT:
-                pass
+                self._scale((delta.x(), 0), (1, 0))
+
             case self.Manipulation.RESIZE_TOP_LEFT:
-                pass
+                self._scale(delta.toTuple(), (-1, -1))
+
             case self.Manipulation.RESIZE_TOP_RIGHT:
-                pass
+                self._scale(delta.toTuple(), (1, -1))
+
             case self.Manipulation.RESIZE_BOTTOM_LEFT:
-                pass
+                self._scale(delta.toTuple(), (-1, 1))
+
             case self.Manipulation.RESIZE_BOTTOM_RIGHT:
-                pass
+                self._scale(delta.toTuple(), (1, 1))
+
+
+    def _scale(self, delta, sign=(0, 0)):
+        if self._shift_pressed:
+            m = delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
+            delta = (m * abs(sign[0]), m * abs(sign[1]))
+
+        offset = (delta[0] * 0.5, delta[1] * 0.5)
+        if self._alt_pressed:
+            offset = (0.0, 0.0)
+            delta = (delta[0] * 2, delta[1] * 2)
+
+        scale = (
+            1.0 + sign[0] * delta[0] / self._original_bounds.width(),
+            1.0 + sign[1] * delta[1] / self._original_bounds.height()
+        )
+
+        for item, temp_item in zip(self.project.selectedItems, self._items):
+            temp_item.geometry = GEOMETRY.translate(
+                GEOMETRY.scale(item.geometry, scale),
+                offset
+            )
+        self._update()
+        self.view.update()
 
     def _accept_manipulation(self):
         for item, new_item in zip(self.project.selectedItems, self._items):
@@ -412,12 +435,20 @@ class CncManipulateTool(CncTool):
                 self._shift_pressed = True
                 self._update_manipulation()
                 event.accept()
+            elif event.key() == Qt.Key_Alt:
+                self._alt_pressed = True
+                self._update_manipulation()
+                event.accept()
 
     def keyReleaseEvent(self, event):
         event.ignore()
         if self._manipulation != self.Manipulation.NONE:
             if event.key() == Qt.Key_Shift:
                 self._shift_pressed = False
+                self._update_manipulation()
+                event.accept()
+            elif event.key() == Qt.Key_Alt:
+                self._alt_pressed = False
                 self._update_manipulation()
                 event.accept()
 
@@ -460,6 +491,7 @@ class CncManipulateTool(CncTool):
             ]
             self.view.hide_selected_geometry(True)
             self._original_manipulation_position = self.view.screen_to_canvas_point(event.position())
+            self._original_bounds = self._bounds
 
     def mouseReleaseEvent(self, event):
         if event.button() != Qt.LeftButton:
