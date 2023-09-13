@@ -637,16 +637,25 @@ class CncVisualization(QWidget):
         self._hide_selected_geometry = bool(state)
 
     def keyPressEvent(self, event):
+        if self._panning:
+            return
+
         self.current_tool.keyPressEvent(event)
         if event.isAccepted():
             return
 
     def keyReleaseEvent(self, event):
+        if self._panning:
+            return
+
         self.current_tool.keyReleaseEvent(event)
         if event.isAccepted():
             return
 
     def mousePressEvent(self, event):
+        if self._panning:
+            return
+
         self.current_tool.mousePressEvent(event)
         if event.isAccepted():
             return
@@ -668,30 +677,32 @@ class CncVisualization(QWidget):
             self._panning = True
             self.setCursor(Qt.ClosedHandCursor)
             self._last_mouse_position = event.position()
-        event.accept()
 
     def mouseReleaseEvent(self, event):
+        if self._panning and ((event.button() == Qt.MiddleButton) or (event.button() == Qt.RightButton)):
+            self._panning = False
+            self.setCursor(Qt.CrossCursor)
+            return
+
         self.current_tool.mouseReleaseEvent(event)
         if event.isAccepted():
             return
 
-        if self._panning and ((event.button() == Qt.MiddleButton) or (event.button() == Qt.RightButton)):
-            self._panning = False
-            self.setCursor(Qt.CrossCursor)
-        event.accept()
+        event.ignore()
 
     def mouseMoveEvent(self, event):
+        if self._panning:
+            self._offset += (event.position() - self._last_mouse_position)
+            self._last_mouse_position = event.position()
+            self.view_updated.emit()
+            self.repaint()
+            return
+
         self.current_tool.mouseMoveEvent(event)
         if event.isAccepted():
             return
 
-        if self._panning:
-            self._offset += (event.position() - self._last_mouse_position)
-            self.view_updated.emit()
-            self.repaint()
-
-        self._last_mouse_position = event.position()
-        event.accept()
+        event.ignore()
 
     def wheelEvent(self, event):
         self.current_tool.wheelEvent(event)
