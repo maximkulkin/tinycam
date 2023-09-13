@@ -7,7 +7,8 @@ import sys
 
 import numpy as np
 from PySide6.QtCore import Qt, QSettings, Signal, QObject, QPointF, QRect, QRectF, \
-    QMarginsF, QSizeF, QAbstractListModel, QModelIndex, QItemSelection, QItemSelectionModel
+    QMarginsF, QSize, QSizeF, QAbstractListModel, QModelIndex, QItemSelection, \
+    QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QDockWidget, \
     QMenuBar, QToolBar, QStatusBar, QListWidget, QListWidgetItem, \
     QVBoxLayout, QFileDialog
@@ -499,19 +500,18 @@ class CncManipulateTool(CncTool):
         if self._bounds is None:
             return
 
-        with painter:
-            painter.translate(self.view.offset)
-            painter.scale(self.view.scale)
-
-            for item in self._items:
-                item.draw(painter)
+        for item in self._items:
+            item.draw(painter)
 
         items = self._items or self.project.selectedItems
         self._draw_selection_handles(painter, [item.geometry for item in items])
 
     def _draw_selection_handles(self, painter, geometries):
         with painter:
-            painter.setPen(QColor('white'))
+            painter.resetTransform()
+            pen = QPen(Qt.white, 2)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
             painter.setBrush(QColor('dimgrey'))
 
             self._draw_box_handle(painter, self._bounds.topLeft())
@@ -547,6 +547,8 @@ class CncVisualization(QWidget):
 
         self._scale = 1.0
         self._offset = QPointF(0.0, 0.0)
+        self._x_label_size = QSize(30, 30)
+        self._y_label_size = QSize(40, 25)
 
         self._panning = False
         self._last_mouse_position = QPointF(0.0, 0.0)
@@ -672,13 +674,19 @@ class CncVisualization(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(self.rect(), QColor("white"))
 
-        self._draw_grid(painter)
-
-        clipRect = QRect(50, 0, self.width() - 50, self.height() - 30)
+        clipRect = QRect(
+            self._y_label_size.width() + 5, 0,
+            self.width() - self._y_label_size.width() - 5,
+            self.height() - self._x_label_size.height()
+        )
         painter.setPen(QColor('black'))
         painter.drawRect(clipRect)
         painter.setClipRegion(clipRect)
 
+        painter.translate(self._offset)
+        painter.scale(self._scale)
+
+        self._draw_grid(painter)
         self._draw_axis(painter)
         self._draw_items(painter)
 
@@ -686,6 +694,8 @@ class CncVisualization(QWidget):
 
     def _draw_axis(self, painter):
         with painter:
+            painter.resetTransform()
+
             painter.setOpacity(0.5)
 
             painter.setPen(QPen(Qt.red, 2.0))
@@ -700,7 +710,6 @@ class CncVisualization(QWidget):
         # pmax = (self.width() - self._offset) / self._scale
 
         with painter:
-            # xs = np.arange(pmin.x() - pmin.x() % step + step, pmax.x(), step) * self._scale + self._offset.x()
             xs = np.arange(pmin.x() - pmin.x() % step + step, pmax.x(), step) * self._scale + self._offset.x()
             ys = np.arange(pmin.y() - pmin.y() % step + step, pmax.y(), step) * self._scale + self._offset.y()
 
@@ -712,24 +721,19 @@ class CncVisualization(QWidget):
             for sx in xs:
                 painter.drawLine(QPointF(sx, 0), QPointF(sx, self.height()))
 
-    def _draw_grid_scale(self, painter, step):
+    def _draw_grid_labels(self, painter, step):
         pmin = self.screen_to_canvas_point((0, 0))
         pmax = self.screen_to_canvas_point((self.width(), self.height()))
-
-        edge_offset = 10  # offset 10 pixels from the edge
-
-        left_margin = edge_offset
 
         with painter:
             xs = np.arange(pmin.x() - pmin.x() % step + step, pmax.x(), step)
             ys = np.arange(pmin.y() - pmin.y() % step + step, pmax.y(), step)
 
             text_height = painter.fontMetrics().height()
-            x_text_width = painter.fontMetrics().maxWidth() * int(math.ceil(math.log10(max(abs(xs[0]), abs(xs[-1])))) + 1.0)
-            y_text_width = painter.fontMetrics().maxWidth() * int(math.ceil(math.log10(max(abs(ys[0]), abs(ys[-1])))) + 1.0)
+            y_text_width = 30
 
             grid_screen_size = step * self._scale
-            if grid_screen_size < max(x_text_width, y_text_width):
+            if grid_screen_size < max(self._x_label_size.width(), self._y_label_size.height()):
                 # paint only every even line
                 if (xs[0] % (10 * step) / step) % 2 == 1:
                     xs = xs[1::2]
@@ -741,39 +745,39 @@ class CncVisualization(QWidget):
                 else:
                     ys = ys[::2]
 
-            left_margin = y_text_width + edge_offset
-            bottom_margin = self.height() - edge_offset - text_height * 2
-
-            background_color = QColor('white')
-            painter.setOpacity(1.0)
-            painter.fillRect(0, 0, y_text_width + edge_offset, self.height(), background_color)
-            painter.fillRect(0, self.height() - edge_offset - text_height, self.width(), text_height + edge_offset, background_color)
-
             painter.setOpacity(0.5)
-            # draw horizontal lines
+
+            clip_region = painter.clipRegion().boundingRect()
+
+            # draw x axis labels
+            painter.setClipRect(
+                clip_region.x(), clip_region.y() + clip_region.height(),
+                clip_region.width(), self._x_label_size.height()
+            )
+            horizontal_text_y = self.height() - self._x_label_size.height()
+            for x in xs:
+                sx = x * self._scale + self._offset.x()
+
+                r = QRect(sx - self._x_label_size.width()*0.5, horizontal_text_y, self._x_label_size.width(), self._x_label_size.height())
+                painter.drawText(r, Qt.AlignCenter, '%g' % x)
+
+            # draw y axis labels
+            painter.setClipRect(
+                0, clip_region.y(),
+                self._y_label_size.width(), clip_region.height()
+            )
             for y in ys:
                 sy = y * self._scale + self._offset.y()
-                if sy >= bottom_margin:
-                    continue
 
-                r = QRect(edge_offset, sy - text_height*0.5, y_text_width, text_height)
+                r = QRect(0, sy - self._y_label_size.height()*0.5, self._y_label_size.width(), self._y_label_size.height())
                 painter.drawText(r, Qt.AlignRight | Qt.AlignVCenter, '%g' % y)
 
 
-            # draw vertical lines
-            horizontal_text_y = self.height() - edge_offset - text_height
-            for x in xs:
-                sx = x * self._scale + self._offset.x()
-                if sx - x_text_width*0.5 <= left_margin:
-                    continue
-
-                r = QRect(sx - x_text_width*0.5, horizontal_text_y, x_text_width, text_height)
-                painter.drawText(r, Qt.AlignCenter, '%g' % x)
-
     def _draw_grid(self, painter):
         with painter:
-            pen = QPen()
-            pen.setColor(QColor("grey"))
+            painter.resetTransform()
+
+            pen = QPen(QColor("grey"))
 
             painter.setOpacity(0.5)
 
@@ -789,13 +793,11 @@ class CncVisualization(QWidget):
             painter.setPen(pen)
             self._draw_grid_with_step(painter, 10 * grid_step)
 
-            self._draw_grid_scale(painter, grid_step)
+            painter.setPen(Qt.black)
+            self._draw_grid_labels(painter, grid_step)
 
     def _draw_items(self, painter):
         with painter:
-            painter.translate(self._offset)
-            painter.scale(self._scale)
-
             for item in self.project.items:
                 if item.selected:
                     continue
