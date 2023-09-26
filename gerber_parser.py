@@ -496,7 +496,7 @@ class GerberParser:
             case 'IN':
                 self._units_scale = 25.4
             case _:
-                raise GerberError('Unknown units: %s' % node.units)
+                raise GerberError(node.location, 'Unknown units: %s' % node.units)
 
     def _process_format_specification(self, node):
         self._fixed_width_x_multiplier = 0.1**node.x_format['decimal']
@@ -550,7 +550,9 @@ class GerberParser:
                     'shape': self._eval_macro_aperture(node.template),
                 }
             case _:
-                raise GerberError('Unknown aperture type: %s' % node.template.type)
+                raise GerberError(
+                    node.location, 'Unknown aperture type: %s' % node.template.type,
+                )
 
         if hasattr(node, 'hole_diameter'):
             aperture['shape'] = self._geometry.difference(
@@ -562,7 +564,9 @@ class GerberParser:
 
     def _eval_macro_aperture(self, template):
         if template.name not in self._aperture_macros:
-            raise GerberError('Unknown aperture macro: %s' % template.name)
+            raise GerberError(
+                node.location, 'Unknown aperture macro: %s' % template.name,
+            )
 
         macro_body = self._aperture_macros[template.name]
         variables = {
@@ -627,6 +631,7 @@ class GerberParser:
                                eval_expression(statement.start_y))]
                     if len(statement.points) != n:
                         raise GerberError(
+                            node.location,
                             'Invalid number of outline points: '
                             'expected %d found %d' % (
                                 n+1, len(statement.points)
@@ -720,7 +725,9 @@ class GerberParser:
 
     def _process_set_current_aperture(self, node):
         if node.identifier not in self._apertures:
-            raise GerberError('Unknown aperture ID: %s' % node.identifier)
+            raise GerberError(
+                node.location, 'Unknown aperture ID: %s' % node.identifier,
+            )
         self._current_aperture = node.identifier
 
     def _process_linear_mode(self, node):
