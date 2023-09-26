@@ -30,8 +30,18 @@ class Node:
     def __repr__(self):
         extras = ''
         for k, v in self._data.items():
-            extras += ' {k}={v}'.format(k=k, v=v)
-        return '<Node type={type}{extras}>'.format(type=self.type, extras=extras)
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Node):
+                extras += (
+                    ' {k}=[\n'.format(k=k) +
+                    '\n'.join(
+                        '\n'.join('  ' + line for line in str(item).split('\n'))
+                        for item in v
+                    ) +
+                    '\n]'
+                )
+            else:
+                extras += ' {k}={v}'.format(k=k, v=v)
+        return '<{type}{extras}>'.format(type=self.type, extras=extras)
 
 
 def make_node(type):
