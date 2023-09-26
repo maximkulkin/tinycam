@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QDockWidget, \
 from PySide6.QtGui import QPainter, QColor, QPolygonF, QBrush, QPen, QMouseEvent, \
     QPainterPath, QCursor
 from geometry import Geometry
+from excellon_parser import parse_excellon
 from gerber_parser import parse_gerber
 
 
@@ -129,19 +130,91 @@ class GerberItem:
             return GerberItem(name, geometry)
 
 
-class CncJob:
-    def __init__(self):
-        self._geometry = None
+class ExcellonItem(CncProjectItem):
+    def __init__(self, name, geometry):
+        super().__init__(name, color=QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
+        self._geometry = geometry
+        self._geometry_cache = None
+
+    def clone(self):
+        clone = ExcellonItem(self.name, self._geometry)
+        clone.color = self.color
+        clone.selected = self.selected
+        return clone
 
     @property
     def geometry(self):
         return self._geometry
 
-    def update(self):
-        pass
+    @geometry.setter
+    def geometry(self, value):
+        self._geometry = value
+        self._geometry_cache = None
+
+    def _precache_geometry(self):
+        path = QPainterPath()
+
+        for polygon in GEOMETRY.polygons(self._geometry):
+            p = QPainterPath()
+
+            for exterior in GEOMETRY.exteriors(polygon):
+                p.addPolygon(
+                    QPolygonF.fromList([
+                        QPointF(x, y)
+                        for x, y in GEOMETRY.points(exterior)
+                    ])
+                )
+
+            for interior in GEOMETRY.interiors(polygon):
+                pi = QPainterPath()
+                pi.addPolygon(
+                    QPolygonF.fromList([
+                        QPointF(x, y)
+                        for x, y in GEOMETRY.points(interior)
+                    ])
+                )
+                p = p.subtracted(pi)
+
+            path = path.united(p)
+
+        self._geometry_cache = path
 
     def draw(self, painter):
-        pass
+        if not self.visible:
+            return
+
+        if not self._geometry_cache:
+            self._precache_geometry()
+
+        with painter:
+            color = self.color
+            if self.selected:
+                color = color.lighter(150)
+
+            painter.setBrush(QBrush(color))
+            pen = QPen(color.darker(150), 2.0)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
+
+            painter.drawPath(self._geometry_cache)
+
+    @staticmethod
+    def from_file(path):
+        with open(path, 'rt') as f:
+            geometry = parse_excellon(f.read(), geometry=GEOMETRY)
+            # name, ext = os.path.splitext(os.path.basename(path))
+            name = os.path.basename(path)
+            return ExcellonItem(name, geometry)
+
+
+class CncJob(CncProjectItem):
+    def __init__(self, name):
+        super().__init__(name)
+        self._geometry = None
+
+    @property
+    def geometry(self):
+        return self._geometry
 
 
 class CncIsolateJob(CncJob):
@@ -1078,12 +1151,19 @@ class CncMainWindow(QMainWindow):
         settings.endGroup()
 
 
-PROJECT = Project()
-PROJECT.add_item(GerberItem.from_file('sample.gbr'))
+class CncApplication(QApplication):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-app = QApplication(sys.argv)
+        self.project = CncProject()
+        self.undo_stack = QUndoStack()
 
-main_window = CncMainWindow(PROJECT)
+
+APP = CncApplication(sys.argv)
+APP.project.items.append(GerberItem.from_file('sample.gbr'))
+APP.project.items.append(ExcellonItem.from_file('sample.drl'))
+
+main_window = CncMainWindow()
 main_window.show()
 
-app.exec()
+APP.exec()
