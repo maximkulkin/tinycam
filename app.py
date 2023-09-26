@@ -182,12 +182,92 @@ class CncPainter(QPainter):
         self.restore()
 
 
-class GerberItem:
+class CncProjectItem(QObject):
+
+    def __init__(self, name, color=Qt.black):
+        super().__init__()
+        self._name = name
+        self._color = color
+        self._visible = True
+        self._selected = False
+        self._updating = False
+        self._updated = False
+
+    def clone(self):
+        clone = self.__class__(self.name, self.color)
+        clone.visible = self.visible
+        clone.selected = self.selected
+        return clone
+
+    def __enter__(self):
+        self._updating = True
+        self._updated = False
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._updating = False
+        if self._updated:
+            self.changed.emit(self)
+
+    def _changed(self):
+        if self._updating:
+            self._updated = True
+        else:
+            self.changed.emit(self)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if self._name == value:
+            return
+        self._name = value
+        self._changed()
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, value):
+        if self._color == value:
+            return
+        self._color = value
+        self._changed()
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, value):
+        if self._visible == value:
+            return
+        self._visible = value
+        self._changed()
+
+    @property
+    def selected(self):
+        return self._selected
+
+    @selected.setter
+    def selected(self, value):
+        if self._selected == value:
+            return
+        self._selected = value
+        self._changed()
+
+    def draw(self, painter):
+        pass
+
+CncProjectItem.changed = Signal(CncProjectItem)
+
+
+class GerberItem(CncProjectItem):
     def __init__(self, name, geometry):
-        self.name = name
-        self.color = QColor.fromRgbF(0.0, 0.65, 0.0, 0.6)
-        self.visible = True
-        self.selected = False
+        super().__init__(name, QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
         self._geometry = geometry
         self._geometry_cache = None
 
@@ -205,6 +285,7 @@ class GerberItem:
     def geometry(self, value):
         self._geometry = value
         self._geometry_cache = None
+        self._changed()
 
     def _precache_geometry(self):
         path = QPainterPath()
@@ -257,7 +338,8 @@ class GerberItem:
     def from_file(path):
         with open(path, 'rt') as f:
             geometry = parse_gerber(f.read(), geometry=GEOMETRY)
-            name, ext = os.path.splitext(os.path.basename(path))
+            # name, ext = os.path.splitext(os.path.basename(path))
+            name = os.path.basename(path)
             return GerberItem(name, geometry)
 
 
