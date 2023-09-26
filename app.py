@@ -22,6 +22,8 @@ from gerber_parser import parse_gerber
 
 
 GEOMETRY = Geometry()
+APP = None
+
 
 
 class Point:
@@ -1306,12 +1308,12 @@ class CncToolOptionsWindow(CncWindow):
 
 
 class CncMainWindow(QMainWindow):
-    def __init__(self, project, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.resize(600, 400)
 
-        self.project = project
+        self.project = APP.project
         self.project_view = CncVisualization(self.project, self)
         self.setCentralWidget(self.project_view)
 
