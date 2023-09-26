@@ -24,6 +24,11 @@ from gerber_parser import parse_gerber
 GEOMETRY = Geometry()
 APP = None
 
+ITEM_COLORS = [
+    ('Red', QColor.fromRgbF(0.6, 0.0, 0.0, 0.6)),
+    ('Green', QColor.fromRgbF(0.0, 0.6, 0.0, 0.6)),
+    ('Blue', QColor.fromRgbF(0.0, 0.0, 0.6, 0.6)),
+]
 
 
 class Point:
@@ -1464,21 +1469,51 @@ class CncProjectWindow(CncWindow):
             super().__init__(item.name, type=QListWidgetItem.UserType + 1)
             self.project = project
             self.item = item
+            self.setFlags(
+                  Qt.ItemIsEnabled
+                | Qt.ItemIsEditable
+                | Qt.ItemIsSelectable
+                | Qt.ItemIsUserCheckable
+            )
+            self.setCheckState(Qt.Checked if self.item.visible else Qt.Unchecked)
 
-            self.visible_checkbox = QCheckBox()
-            self.label = QLabel(item.name)
+    class ColorBox(QWidget):
+        def __init__(self, color, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.color = color
+            self.set = QPoint(30, 0)
+            self.setMinimumSize(QSize(70, 20))
+            self.checked = False
 
-            layout = QHBoxLayout()
-            layout.addWidget(self.visible_checkbox)
-            layout.addWidget(self.label)
+        def paintEvent(self, event):
+            super().paintEvent(event)
 
-            self.setLayout(layout)
+            painter = QPainter(self)
+
+            if self.checked:
+                style = QStyleOptionButton(1)
+                style.rect = QRect(5, 2, 20, self.size().height() - 4)
+                style.state = QStyle.State_Enabled | QStyle.State_On
+
+                QApplication.style().drawPrimitive(
+                    QStyle.PE_IndicatorItemViewItemCheck,
+                    style, painter, self
+                )
+
+            color = QColor(self.color)
+            color.setAlphaF(1.0)
+            painter.fillRect(
+                QRect(25, 2, self.size().width() - 30, self.size().height() - 4),
+                color
+            )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setObjectName("project_window")
         self.setWindowTitle("Project")
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._on_context_menu)
 
         self.project.items.added.connect(self._on_item_added)
         self.project.items.removed.connect(self._on_item_removed)
@@ -1488,6 +1523,8 @@ class CncProjectWindow(CncWindow):
         self._updating_selection = False
 
         self._view = QListWidget()
+        self._view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._view.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         self._view.itemSelectionChanged.connect(
             self._on_list_widget_item_selection_changed)
         self._view.itemChanged.connect(self._on_list_widget_item_changed)
