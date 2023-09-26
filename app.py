@@ -1164,13 +1164,16 @@ class CncVisualization(QWidget):
     def zoom_to_fit(self):
         bounds = reduce(combine_bounds, [item.geometry.bounds for item in self.project.items])
 
-        self._scale = min((self.width() - 20) / (bounds[2] - bounds[0]),
-                          (self.height() - 20) / (bounds[3] - bounds[1]))
+        self._scale = min(
+            (self.width() - self._y_label_size.width() - 5) / (bounds[2] - bounds[0]),
+            (self.height() - self._x_label_size.height()) / (bounds[3] - bounds[1])
+        ) * 0.9
         w = (bounds[2] - bounds[0]) * self._scale
         h = (bounds[3] - bounds[1]) * self._scale
         self._offset = self.canvas_to_screen_point(
             self.screen_to_canvas_point(
-                QPointF((self.width() - w) * 0.5, (self.height() - h) * 0.5)
+                QPointF((self.width() - self._y_label_size.width() - 5 - w) * 0.5,
+                        (self.height() - self._x_label_size.height() - h) * 0.5)
             ) - QPointF(bounds[0], bounds[1])
         )
         self.view_updated.emit()
