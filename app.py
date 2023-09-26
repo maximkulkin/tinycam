@@ -11,8 +11,9 @@ from PySide6.QtCore import Qt, QSettings, Signal, QObject, QPoint, QPointF, \
     QRect, QRectF, QMarginsF, QSize, QSizeF, QAbstractListModel, QModelIndex, \
     QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QDockWidget, \
-    QMenuBar, QToolBar, QStatusBar, QListWidget, QListWidgetItem, \
-    QVBoxLayout, QFileDialog
+    QMenu, QMenuBar, QToolBar, QStatusBar, QListWidget, QListWidgetItem, \
+    QVBoxLayout, QFileDialog, QWidgetAction, QAbstractItemView, \
+    QAbstractItemDelegate, QLabel, QStyle, QStyleOptionButton
 from PySide6.QtGui import QPainter, QColor, QPolygonF, QBrush, QPen, QMouseEvent, \
     QPainterPath, QCursor
 from geometry import Geometry
@@ -495,23 +496,21 @@ class Project(QObject):
     def jobs(self):
         return self._jobs
 
-    def add_item(self, item):
-        self._items.append(item)
-        self.items_changed.emit()
-
     @property
     def selection(self):
         return self._selection
 
-    @selection.setter
-    def selection(self, value):
-        if not isinstance(value, set):
-            raise ValueError('Selection should be a set')
+    @property
+    def selectedItems(self):
+        return [self._items[idx] for idx in self._selection]
 
-        self._selection = set(value)
+    @selectedItems.setter
+    def selectedItems(self, items):
+        self._selection.set([
+            idx for idx, item in enumerate(self._items)
+            if item in items
+        ])
 
-        for idx, item in enumerate(self._items):
-            item.selected = idx in self._selection
 
         self.selection_changed.emit()
 
@@ -607,20 +606,24 @@ class CncManipulateTool(CncTool):
         self._original_bounds = None
         self._shift_pressed = False
         self._alt_pressed = False
+        self._command = None
         self.view.view_updated.connect(self._update)
 
     def activate(self):
-        self.project.selection_changed.connect(self._update)
+        self.project.selection.changed.connect(self._update)
+        self.project.items.changed.connect(self._update)
         self._manipulation = self.Manipulation.NONE
+        self._update()
 
     def deactivate(self):
-        self.project.selection_changed.disconnect(self._udpate)
+        self.project.items.changed.disconnect(self._update)
+        self.project.selection.changed.disconnect(self._udpate)
 
     def _update(self):
         items = self._items or self.project.selectedItems
         if items:
             margin = QMarginsF() + 10
-            self._bounds = total_bounds([item.geometry for item in items]).marginsAdded(margin / self.view.scale)
+            self._bounds = total_bounds([item.geometry for item in items]) # .marginsAdded(margin / self.view.scale)
         else:
             self._bounds = None
 
@@ -879,8 +882,11 @@ class CncVisualization(QWidget):
         self.current_tool = CncManipulateTool(self.project, self)
         self.current_tool.activate()
 
-        self.project.items_changed.connect(self.update)
-        self.project.selection_changed.connect(self.update)
+        self.project.items.added.connect(self._on_item_added)
+        self.project.items.removed.connect(self._on_item_removed)
+        self.project.items.changed.connect(self._on_item_changed)
+
+        self.project.selection.changed.connect(self.update)
 
         self.setCursor(Qt.CrossCursor)
 
@@ -938,6 +944,17 @@ class CncVisualization(QWidget):
         if event.isAccepted():
             return
 
+    def _select_items_at(self, idxs, modifiers=0):
+        if modifiers & Qt.ShiftModifier:
+            if idxs:
+                if any(idx in self.project.selection for idx in idxs):
+                    self.project.selection.remove_all(idxs)
+                else:
+                    self.project.selection.add_all(idxs)
+        else:
+            self.project.selection.set(idxs)
+        self.repaint()
+
     def mousePressEvent(self, event):
         if self._panning:
             return
@@ -947,18 +964,20 @@ class CncVisualization(QWidget):
             return
 
         if event.buttons() == Qt.LeftButton:
-            idx = self._find_geometry_at(
+            idxs = self._find_geometry_at(
                 self.screen_to_canvas_point(event.position())
             )
-            if event.modifiers() & Qt.ShiftModifier:
-                if idx != -1:
-                    if idx in self.project.selection:
-                        self.project.selection -= {idx}
-                    else:
-                        self.project.selection |= {idx}
+            if len(idxs) > 1:
+                popup = QMenu(self)
+                for idx in idxs:
+                    popup.addAction(
+                        self.project.items[idx].name,
+                        (lambda x: lambda: self._select_items_at(x, modifiers=event.modifiers()))([idx])
+                    )
+                popup.exec(event.globalPosition().toPoint())
             else:
-                self.project.selection = set() if idx == -1 else {idx}
-            self.repaint()
+                self._select_items_at(idxs, modifiers=event.modifiers())
+
         elif (event.buttons() == Qt.MiddleButton) or (event.buttons() == Qt.RightButton):
             self._panning = True
             self.setCursor(Qt.ClosedHandCursor)
@@ -1151,14 +1170,24 @@ class CncVisualization(QWidget):
         return point * self._scale + self._offset
 
     def _find_geometry_at(self, point):
+        found = []
         for idx, item in enumerate(self.project.items):
             if not item.visible:
                 continue
 
             if GEOMETRY.contains(item.geometry, (point.x(), point.y())):
-                return idx
+                found.append(idx)
 
-        return -1
+        return found
+
+    def _on_item_added(self, index):
+        self.update()
+
+    def _on_item_removed(self, index):
+        self.update()
+
+    def _on_item_changed(self, index):
+        self.update()
 
 
 class CncWindow(QDockWidget):
@@ -1185,8 +1214,9 @@ class CncWindow(QDockWidget):
 
 class CncProjectWindow(CncWindow):
     class ItemWidget(QListWidgetItem):
-        def __init__(self, item):
+        def __init__(self, project, item):
             super().__init__(item.name, type=QListWidgetItem.UserType + 1)
+            self.project = project
             self.item = item
 
             self.visible_checkbox = QCheckBox()
@@ -1204,36 +1234,55 @@ class CncProjectWindow(CncWindow):
         self.setObjectName("project_window")
         self.setWindowTitle("Project")
 
-        self.project.items_changed.connect(self._update_items)
-        self.project.selection_changed.connect(self._on_project_selection_changed)
+        self.project.items.added.connect(self._on_item_added)
+        self.project.items.removed.connect(self._on_item_removed)
+        self.project.items.changed.connect(self._on_item_changed)
+        self.project.selection.changed.connect(self._on_project_selection_changed)
+
+        self._updating_selection = False
 
         self._view = QListWidget()
+        self._view.itemSelectionChanged.connect(
+            self._on_list_widget_item_selection_changed)
         self._view.itemChanged.connect(self._on_list_widget_item_changed)
 
-        self._updating_selection = False
-
         self.setWidget(self._view)
-        self._update_items()
-
-    def _update_items(self):
-        self._view.clear()
         for item in self.project.items:
-            item_widget = QListWidgetItem(item.name)
-            item_widget.setCheckState(Qt.Checked if item.visible else Qt.Unchecked)
+            self._view.addItem(self.ItemWidget(self.project, item))
 
-            self._view.addItem(item_widget)
+    def _on_item_added(self, index):
+        item = self.project.items[index]
+        self._view.insertItem(index, self.ItemWidget(self.project, item))
+
+    def _on_item_removed(self, index):
+        self._view.removeItem(index)
+
+    def _on_item_changed(self, index):
+        pass
 
     def _on_project_selection_changed(self):
-        selectionModel = self._view.selectionModel()
+        if self._updating_selection:
+            return
+
         self._updating_selection = True
-        selectionModel.clear()
+
+        model_index = lambda idx: self._view.model().createIndex(idx, 0)
+
+        selection_model = self._view.selectionModel()
+        selection_model.clear()
         for idx in self.project.selection:
-            selectionModel.select(
-                QItemSelection(self._view.model().createIndex(idx, 0),
-                               self._view.model().createIndex(idx, 0)),
-                QItemSelectionModel.Select
-            )
+            selection_model.select(model_index(idx), QItemSelectionModel.Select)
+
         self._updating_selection = False
+
+    def _on_list_widget_item_selection_changed(self):
+        if self._updating_selection:
+            return
+
+        self.project.selectedItems = [
+            view_item.item
+            for view_item in self._view.selectedItems()
+        ]
 
     def _on_list_widget_item_changed(self, item):
         self.project.items[self._view.row(item)].visible = item.checkState() == Qt.Checked
