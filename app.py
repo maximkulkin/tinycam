@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QDockWidget, \
     QVBoxLayout, QFileDialog, QWidgetAction, QAbstractItemView, \
     QAbstractItemDelegate, QLabel, QStyle, QStyleOptionButton
 from PySide6.QtGui import QPainter, QColor, QPolygonF, QBrush, QPen, QMouseEvent, \
-    QPainterPath, QCursor
+    QPainterPath, QCursor, QUndoCommand, QUndoStack, QIcon, QKeySequence
 from geometry import Geometry
 from excellon_parser import parse_excellon
 from gerber_parser import parse_gerber
@@ -479,16 +479,186 @@ class CncIsolateJob(CncJob):
         self._geometry = s
 
 
-class Project(QObject):
-    items_changed = Signal()
-    selection_changed = Signal()
+
+class CncProject(QObject):
+    class ItemCollection(QObject):
+        added = Signal(int)
+        removed = Signal(int)
+        changed = Signal(int)
+
+        def __init__(self):
+            super().__init__()
+            self._items = []
+            self._item_changed_callbacks = {}
+
+        def insert(self, index, item):
+            if index < 0:
+                index += len(self)
+                if index < 0:
+                    raise KeyError()
+
+            item.changed.connect(self._on_item_changed)
+
+            self._items.insert(index, item)
+            self.added.emit(index)
+
+        def append(self, item):
+            item.changed.connect(self._on_item_changed)
+
+            self._items.append(item)
+            self.added.emit(len(self._items) - 1)
+
+        def extend(self, items):
+            for item in items:
+                self.append(item)
+
+        def remove(self, item):
+            index = self.index(item)
+            item.changed.disconnect(self._on_item_changed)
+            self._items.remove(item)
+            self.removed.emit(index)
+
+        def clear(self):
+            for i in reversed(range(len(self))):
+                del self[i]
+
+        def index(self, item):
+            return self._items.index(item)
+
+        def __iter__(self):
+            yield from self._items
+
+        def __len__(self):
+            return len(self._items)
+
+        def __getitem__(self, index):
+            return self._items[index]
+
+        def __setitem__(self, index, item):
+            if index < 0:
+                index += len(self)
+                if index < 0:
+                    raise KeyError()
+
+            self._items[index].changed.disconnect(self._on_item_changed)
+            self._items[index] = item
+            item.changed.connect(self._on_item_changed)
+            self.changed.emit(index)
+
+        def __delitem__(self, index):
+            if index < 0:
+                index += len(self)
+                if index < 0:
+                    raise KeyError()
+            self._items[index].changed.disconnect(self._on_item_changed)
+            del self._items[index]
+            self.removed.emit(index)
+
+        def __contains__(self, item):
+            return item in self._items
+
+        def _on_item_changed(self, item):
+            index = self._items.index(item)
+            if index == -1:
+                return
+            self.changed.emit(index)
+
+    class Selection(QObject):
+        changed = Signal()
+
+        def __init__(self, project):
+            super().__init__()
+            self._project = project
+            self._indexes = set()
+
+        def _changed(self):
+            self.changed.emit()
+
+        def set(self, indexes):
+            indexes = set(indexes)
+
+            for index in (self._indexes - indexes):
+                self.remove(index)
+
+            self.add_all(indexes)
+
+        def add(self, index):
+            if index < 0 or index >= len(self._project.items):
+                raise ValueError("Selection index is out of range")
+
+            if index in self._indexes:
+                return
+
+            self._indexes.add(index)
+            self._project.items[index].selected = True
+            self._changed()
+
+        def add_all(self, indexes):
+            if not indexes:
+                return
+
+            for index in indexes:
+                if index < 0 or index >= len(self._project.items):
+                    raise ValueError("Selection index is out of range")
+
+                if index in self._indexes:
+                    continue
+
+                self._indexes.add(index)
+                self._project.items[index].selected = True
+
+            self._changed()
+
+        def remove(self, index):
+            if index not in self._indexes:
+                return
+
+            self._indexes.remove(index)
+            self._project.items[index].selected = False
+            self._changed()
+
+        def remove_all(self, indexes):
+            changed = False
+            for index in indexes:
+                if index not in self._indexes:
+                    continue
+
+                self._indexes.remove(index)
+                self._project.items[index].selected = False
+                changed = True
+
+            if changed:
+                self._changed()
+
+        def clear(self):
+            if not self._items:
+                return
+
+            for index in self._indexes:
+                self._project.items[index].selected = False
+
+            self._indexes = set()
+            self._changed()
+
+        def __iter__(self):
+            yield from self._indexes
+
+        def __len__(self):
+            return len(self._indexes)
+
+        def __contains__(self, index):
+            return index in self._indexes
+
+        def items(self):
+            for index in self._indexes:
+                yield self._project.items[index]
 
     def __init__(self):
         super().__init__()
-        self._items = []
-        self._selection = set()
+        self._items = self.ItemCollection()
+        self._selection = self.Selection(self)
 
-        self._jobs = []
+        self._jobs = self.ItemCollection()
 
     @property
     def items(self):
@@ -514,11 +684,82 @@ class Project(QObject):
         ])
 
 
-        self.selection_changed.emit()
+class MoveItemsCommand(QUndoCommand):
+    def __init__(self, items, offset, parent=None):
+        super().__init__('Move', parent=parent)
+        self._items = items
+        self._offset = offset
 
-    @property
-    def selectedItems(self):
-        return [self._items[idx] for idx in self._selection]
+    def _move(self, offset):
+        for item in self._items:
+            item.geometry = GEOMETRY.translate(item.geometry, offset)
+
+    def redo(self):
+        self._move(self._offset)
+
+    def undo(self):
+        self._move((-self._offset[0], -self._offset[1]))
+
+
+class ScaleItemsCommand(QUndoCommand):
+    def __init__(self, items, scale, offset=Point(0.0, 0.0), parent=None):
+        super().__init__('Scale', parent=parent)
+        self._items = items
+        self._scale = scale
+        self._offset = offset
+
+    def redo(self):
+        for item in self._items:
+            item.geometry = GEOMETRY.translate(
+                GEOMETRY.scale(item.geometry, self._scale),
+                self._offset
+            )
+
+    def undo(self):
+        for item in self._items:
+            item.geometry = GEOMETRY.scale(
+                GEOMETRY.translate(item.geometry, -self._offset),
+                1.0/self._scale
+            )
+
+
+class SetItemsColorCommand(QUndoCommand):
+    def __init__(self, items, color, parent=None):
+        super().__init__('Set color', parent=parent)
+        self._items = items
+        self._color = color
+
+        self._old_colors = {}
+
+    def redo(self):
+        for item in self._items:
+            self._old_colors[item] = item.color
+            item.color = self._color
+
+    def undo(self):
+        for item, color in self._old_colors.items():
+            item.color = color
+
+
+class DeleteItemsCommand(QUndoCommand):
+    def __init__(self, items, parent=None):
+        super().__init__('Delete', parent=parent)
+        self._items = items
+        self._item_indexes = []
+
+    def redo(self):
+        self._item_indexes = [
+            (APP.project.items.index(item), item)
+            for item in self._items
+        ]
+        self._item_indexes.sort()
+
+        for item in self._items:
+            APP.project.items.remove(item)
+
+    def undo(self):
+        for idx, item in self._item_indexes:
+            APP.project.items.insert(idx, item)
 
 
 def combine_bounds(b1, b2):
@@ -634,72 +875,75 @@ class CncManipulateTool(CncTool):
         offset = point - self.view.canvas_to_screen_point(handle_position)
         return abs(offset.x()) <= size and abs(offset.y()) <= size
 
-    def _update_manipulation(self):
-        position = self.view.screen_to_canvas_point(
+    def _get_delta(self):
+        return Point(self.view.screen_to_canvas_point(
             self.view.mapFromGlobal(QCursor.pos()).toPointF()
-        )
-        delta = position - self._original_manipulation_position
-        match self._manipulation:
-            case self.Manipulation.NONE:
-                pass
+        )) - self._original_manipulation_position
 
-            case self.Manipulation.MOVE:
-                for item, temp_item in zip(self.project.selectedItems, self._items):
-                    temp_item.geometry = GEOMETRY.translate(item.geometry, (delta.x(), delta.y()))
-                self._update()
-                self.view.update()
+    def _move_command(self, items, delta):
+        return MoveItemsCommand(items, delta)
 
-            case self.Manipulation.RESIZE_TOP:
-                self._scale((0, delta.y()), (0, -1))
-
-            case self.Manipulation.RESIZE_BOTTOM:
-                self._scale((0, delta.y()), (0, 1))
-
-            case self.Manipulation.RESIZE_LEFT:
-                self._scale((delta.x(), 0), (-1, 0))
-
-            case self.Manipulation.RESIZE_RIGHT:
-                self._scale((delta.x(), 0), (1, 0))
-
-            case self.Manipulation.RESIZE_TOP_LEFT:
-                self._scale(delta.toTuple(), (-1, -1))
-
-            case self.Manipulation.RESIZE_TOP_RIGHT:
-                self._scale(delta.toTuple(), (1, -1))
-
-            case self.Manipulation.RESIZE_BOTTOM_LEFT:
-                self._scale(delta.toTuple(), (-1, 1))
-
-            case self.Manipulation.RESIZE_BOTTOM_RIGHT:
-                self._scale(delta.toTuple(), (1, 1))
-
-
-    def _scale(self, delta, sign=(0, 0)):
+    def _scale_command(self, items, delta, sign=Point(0, 0)):
+        sign = Point(sign)
         if self._shift_pressed:
             m = delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
-            delta = (m * abs(sign[0]), m * abs(sign[1]))
+            delta = sign.abs() * m
 
-        offset = (delta[0] * 0.5, delta[1] * 0.5)
+        offset = delta * 0.5
         if self._alt_pressed:
-            offset = (0.0, 0.0)
-            delta = (delta[0] * 2, delta[1] * 2)
+            offset = Point.ZERO
+            delta *= 2
 
-        scale = (
-            1.0 + sign[0] * delta[0] / self._original_bounds.width(),
-            1.0 + sign[1] * delta[1] / self._original_bounds.height()
-        )
+        scale = Point.ONES + delta * sign / self._original_bounds.size()
 
-        for item, temp_item in zip(self.project.selectedItems, self._items):
-            temp_item.geometry = GEOMETRY.translate(
-                GEOMETRY.scale(item.geometry, scale),
-                offset
-            )
+        return ScaleItemsCommand(items, scale, offset)
+
+    def _make_command(self, items):
+        delta = self._get_delta()
+
+        match self._manipulation:
+            case self.Manipulation.NONE:
+                return None
+
+            case self.Manipulation.MOVE:
+                return self._move_command(items, delta)
+
+            case self.Manipulation.RESIZE_TOP:
+                return self._scale_command(items, Point(0, delta.y()), (0, -1))
+
+            case self.Manipulation.RESIZE_BOTTOM:
+                return self._scale_command(items, Point(0, delta.y()), (0, 1))
+
+            case self.Manipulation.RESIZE_LEFT:
+                return self._scale_command(items, Point(delta.x(), 0), (-1, 0))
+
+            case self.Manipulation.RESIZE_RIGHT:
+                return self._scale_command(items, Point(delta.x(), 0), (1, 0))
+
+            case self.Manipulation.RESIZE_TOP_LEFT:
+                return self._scale_command(items, delta, (-1, -1))
+
+            case self.Manipulation.RESIZE_TOP_RIGHT:
+                return self._scale_command(items, delta, (1, -1))
+
+            case self.Manipulation.RESIZE_BOTTOM_LEFT:
+                return self._scale_command(items, delta, (-1, 1))
+
+            case self.Manipulation.RESIZE_BOTTOM_RIGHT:
+                return self._scale_command(items, delta, (1, 1))
+
+    def _update_manipulation(self):
+        self._items = [item.clone() for item in self.project.selectedItems]
+        command = self._make_command(self._items or self.project.selectedItems)
+        if command is not None:
+            command.redo()
         self._update()
         self.view.update()
 
     def _accept_manipulation(self):
-        for item, new_item in zip(self.project.selectedItems, self._items):
-            item.geometry = new_item.geometry
+        command = self._make_command(self.project.selectedItems)
+        if command is not None:
+            APP.undo_stack.push(command)
 
         self._items = []
 
@@ -1287,8 +1531,42 @@ class CncProjectWindow(CncWindow):
         ]
 
     def _on_list_widget_item_changed(self, item):
-        self.project.items[self._view.row(item)].visible = item.checkState() == Qt.Checked
-        self.project.items_changed.emit()
+        with self.project.items[self._view.row(item)] as view_item:
+            view_item.name = item.text()
+            view_item.visible = item.checkState() == Qt.Checked
+
+    def _on_context_menu(self, position):
+        if self._view.currentItem() is None:
+            return
+
+        item = self._view.currentItem().item
+
+        popup = QMenu(self)
+
+        color_menu = popup.addMenu('Color')
+        for color_name, color in ITEM_COLORS:
+            widget = self.ColorBox(color)
+            widget.checked = item.color == color
+            set_color_action = QWidgetAction(self)
+            set_color_action.setDefaultWidget(widget)
+            set_color_action.triggered.connect(
+                (lambda c: lambda _checked: self._set_color(c))(color)
+            )
+            color_menu.addAction(set_color_action)
+
+        popup.addAction('Delete', self._delete_items)
+
+        popup.exec(self.mapToGlobal(position))
+
+    def _set_color(self, color):
+        APP.undo_stack.push(
+            SetItemsColorCommand(self.project.selectedItems, color)
+        )
+
+    def _delete_items(self):
+        APP.undo_stack.push(
+            DeleteItemsCommand(self.project.selectedItems)
+        )
 
 
 class CncJobsWindow(CncWindow):
@@ -1321,6 +1599,18 @@ class CncMainWindow(QMainWindow):
         self.file_menu = self.menu.addMenu("File")
         self.file_menu.addAction('Import Gerber', self._import_gerber,
                                  shortcut='Ctrl+o')
+
+        undo_action = APP.undo_stack.createUndoAction(self, "&Undo")
+        undo_action.setIcon(QIcon(":/icons/undo.png"))
+        undo_action.setShortcuts(QKeySequence.Undo)
+
+        redo_action = APP.undo_stack.createRedoAction(self, "&Redo")
+        redo_action.setIcon(QIcon(":/icons/redo.png"))
+        redo_action.setShortcuts(QKeySequence.Redo)
+
+        self.edit_menu = self.menu.addMenu("Edit")
+        self.edit_menu.addAction(undo_action)
+        self.edit_menu.addAction(redo_action)
 
         self.view_menu = self.menu.addMenu("View")
 
