@@ -423,8 +423,8 @@ class ExcellonItem(CncProjectItem):
 
 
 class CncJob(CncProjectItem):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._geometry = None
 
     @property
@@ -433,19 +433,41 @@ class CncJob(CncProjectItem):
 
 
 class CncIsolateJob(CncJob):
-    def __init__(self, source_geometry, tool_diameter, cut_depth, feed_rate, spindle_speed):
-        super().__init__()
-        self._source_geometry = source_geometry
+    def __init__(self,
+                 source_item,
+                 tool_diameter=0.1,
+                 spindle_speed=1000,
+                 cut_depth=0.1,
+                 cut_speed=120,
+                 travel_speed=120,
+                 travel_height=2,
+                 pass_count=1,
+                 pass_overlap=10):
+        super().__init__(
+            'Isolate %s' % source_item.name,
+            color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
+        )
+
+        self._source_item = source_item
+
         self._tool_diameter = tool_diameter
         self._cut_depth = cut_depth
-        self._feed_rate = feed_rate
+        self._pass_count = pass_count
+        self._pass_overlap = pass_overlap
         self._spindle_speed = spindle_speed
+        self._cut_speed = cut_speed
+        self._travel_speed = travel_speed
+        self._travel_height = travel_height
 
         self._geometry = None
+        self._geometry_cache = None
+        # TODO:
+        # self._source_item.changed.connect(self._on_source_item_changed)
+        self._calculate_geometry()
 
     @property
     def geometry(self):
-        return self._isolation_geometry
+        return self._geometry
 
     @property
     def tool_diameter(self):
@@ -454,16 +476,43 @@ class CncIsolateJob(CncJob):
     @tool_diameter.setter
     def tool_diameter(self, value):
         self._tool_diameter = value
-        self.update()
+        self._update()
 
     @property
-    def feed_rate(self):
-        return self._feed_rate
+    def cut_depth(self):
+        return self._cut_depth
 
-    @feed_rate.setter
-    def feed_rate(self, value):
-        self._feed_rate = value
-        self.update()
+    @cut_depth.setter
+    def cut_depth(self, value):
+        self._cut_depth = value
+        self._update()
+
+    @property
+    def pass_count(self):
+        return self._pass_count
+
+    @pass_count.setter
+    def pass_count(self, value):
+        self._pass_count = value
+        self._update()
+
+    @property
+    def pass_overlap(self):
+        return self._pass_overlap
+
+    @pass_overlap.setter
+    def pass_overlap(self, value):
+        self._pass_overlap = value
+        self._update()
+
+    @property
+    def cut_speed(self):
+        return self._cut_speed
+
+    @cut_speed.setter
+    def cut_speed(self, value):
+        self._cut_speed = value
+        self._update()
 
     @property
     def spindle_speed(self):
@@ -472,11 +521,78 @@ class CncIsolateJob(CncJob):
     @spindle_speed.setter
     def spindle_speed(self, value):
         self._spindle_speed = value
-        self.update()
+        self._update()
 
-    def update(self):
-        self._geometry = s
+    def _on_source_item_changed(self, _item):
+        self._update()
 
+    def _update(self):
+        self._calculate_geometry()
+        self._changed()
+
+    def _calculate_geometry(self):
+        tool_radius = self._tool_diameter * 0.5
+        pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
+
+        geometry = None
+
+        g = GEOMETRY.simplify(
+            GEOMETRY.buffer(self._source_item.geometry, tool_radius),
+            # TODO: parametrize into settings
+            tolerance=0.01,
+        )
+
+        for pass_index in range(self._pass_count):
+            for polygon in GEOMETRY.polygons(g):
+                for exterior in GEOMETRY.exteriors(polygon):
+                    geometry = GEOMETRY.union(geometry, exterior)
+                for interior in GEOMETRY.interiors(polygon):
+                    geometry = GEOMETRY.union(geometry, interior)
+            g = GEOMETRY.buffer(g, pass_offset)
+
+        self._geometry = geometry
+        self._geometry_cache = None
+
+    def _precache_geometry(self):
+        path = QtGui.QPainterPath()
+        count = 0
+        for line in GEOMETRY.lines(self._geometry):
+            path.addPolygon(
+                QtGui.QPolygonF.fromList([
+                    QtCore.QPointF(x, y)
+                    for x, y in GEOMETRY.points(line)
+                ])
+            )
+            count += len(GEOMETRY.points(line))
+
+        self._geometry_cache = path
+
+    def draw(self, painter):
+        if not self.visible:
+            return
+
+        if self._geometry_cache is None:
+            self._precache_geometry()
+
+        with painter:
+            color = self.color
+            if self.selected:
+                color = color.lighter(150)
+
+            painter.setBrush(Qt.NoBrush)
+            pen = QtGui.QPen(color.darker(150), 2.0)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
+
+            painter.drawPath(self._geometry_cache)
+
+            color.setAlphaF(0.2)
+            pen = QtGui.QPen(color, self._tool_diameter)
+            pen.setJoinStyle(Qt.RoundJoin)
+
+            painter.setPen(pen)
+
+            painter.drawPath(self._geometry_cache)
 
 
 class CncProject(QtCore.QObject):
@@ -683,7 +799,28 @@ class CncProject(QtCore.QObject):
         ])
 
 
-class MoveItemsCommand(QtGui.QUndoCommand):
+class UpdateItemEditorCommand(QtGui.QUndoCommand):
+    def __init__(self, item, updates, parent=None):
+        super().__init__('Update item', parent=parent)
+        self._item = item
+        self._updates = updates
+        self._previous_values = {}
+
+    def redo(self):
+        self._previous_values = {
+            k: getattr(self._item, k)
+            for k in self._updates
+        }
+        for k, v in self._updates.items():
+            setattr(self._item, k, v)
+
+    def undo(self):
+        for k, v in self._previous_values.items():
+            setattr(self._item, k, v)
+        self._previous_values = {}
+
+
+class MoveItemsEditorCommand(QtGui.QUndoCommand):
     def __init__(self, items, offset, parent=None):
         super().__init__('Move', parent=parent)
         self._items = items
@@ -759,6 +896,24 @@ class DeleteItemsEditorCommand(QtGui.QUndoCommand):
     def undo(self):
         for idx, item in self._item_indexes:
             APP.project.items.insert(idx, item)
+
+
+class CreateIsolateJobEditorCommand(QtGui.QUndoCommand):
+    def __init__(self, item, parent=None):
+        super().__init__('Create Isolate Job', parent=parent)
+        self._item = item
+        self._job = None
+
+    @property
+    def job(self):
+        return self._job
+
+    def redo(self):
+        self._job = CncIsolateJob(self._item)
+        APP.project.items.append(self._job)
+
+    def undo(self):
+        APP.project.jobs.remove(self._job)
 
 
 def combine_bounds(b1, b2):
@@ -899,7 +1054,7 @@ class CncManipulateTool(CncTool):
 
         scale = Point.ONES + delta * sign / self._original_bounds.size()
 
-        return ScaleItemsCommand(items, scale, offset)
+        return ScaleItemsEditorCommand(items, scale, offset)
 
     def _make_command(self, items):
         delta = self._get_delta()
@@ -1606,26 +1761,262 @@ class CncProjectWindow(CncWindow):
             color_menu.addAction(set_color_action)
 
         popup.addAction('Delete', self._delete_items)
+        popup.addAction('Create Isolate Job', self._isolate_job)
 
         popup.exec(self.mapToGlobal(position))
 
     def _set_color(self, color):
-        APP.undo_stack.push(
-            SetItemsColorCommand(self.project.selectedItems, color)
-        )
+        APP.undo_stack.push(SetItemsColorEditorCommand(self.project.selectedItems, color))
 
     def _delete_items(self):
-        APP.undo_stack.push(
-            DeleteItemsCommand(self.project.selectedItems)
-        )
+        APP.undo_stack.push(DeleteItemsEditorCommand(self.project.selectedItems))
+
+    def _isolate_job(self):
+        if len(self.project.selection) == 0:
+            return
+
+        command = CreateIsolateJobEditorCommand(self.project.selectedItems[0])
+        APP.undo_stack.push(command)
+        APP.project.selectedItems = [command.job]
 
 
-class CncJobsWindow(CncWindow):
+class StringEdit(QtWidgets.QLineEdit):
+    value_changed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.editingFinished.connect(self.value_changed.emit)
+
+    @property
+    def value(self):
+        return self.text()
+
+    @value.setter
+    def value(self, value):
+        self.setText(value)
+
+
+class IntEdit(QtWidgets.QSpinBox):
+    value_changed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.valueChanged.connect(self._on_value_changed)
+
+    def _on_value_changed(self):
+        self.value_changed.emit()
+
+
+class FloatEdit(QtWidgets.QDoubleSpinBox):
+    value_changed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # self.setValue(self._last_value)
+        self.valueChanged.connect(self._on_value_changed)
+
+    def _on_value_changed(self):
+        self.value_changed.emit()
+
+
+class Vector2Edit(QtWidgets.QWidget):
+    value_changed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(QtWidgets.QLabel('X'))
+        self._x_edit = FloatEdit(self)
+        layout.addWidget(self._x_edit)
+        layout.addWidget(QtWidgets.QLabel('Y'))
+        self._y_edit = FloatEdit(self)
+        layout.addWidget(self._y_edit)
+        self.setLayout(layout)
+
+        self._x_edit.value_changed.connect(self.value_changed.emit)
+        self._y_edit.value_changed.connect(self.value_changed.emit)
+
+    @property
+    def value(self):
+        return (float(self._x_edit.text()), float(self._y_edit.text()))
+
+    @value.setter
+    def value(self, value):
+        self._x_edit.setText(str(value[0]))
+        self._y_edit.setText(str(value[1]))
+
+    def _on_value_changed(self, s):
+        self.value_changed.emit()
+
+
+class CncOptionsView(QtWidgets.QWidget):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._items = []
+        layout = QtWidgets.QFormLayout()
+        # layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.hide()
+
+    def matches(self):
+        return False
+
+    def activate(self):
+        for item in self._items:
+            item.changed.connect(self._on_item_changed)
+            self._items.append(item)
+
+        self.update()
+        APP.project.selection.changed.connect(self._on_selection_changed)
+        self.show()
+
+    def deactivate(self):
+        for item in self._items:
+            item.changed.disconnect(self._on_item_changed)
+
+        APP.project.selection.changed.disconnect(self._on_selection_changed)
+        self.hide()
+
+    def update(self):
+        pass
+
+    def _on_item_changed(self, item):
+        self._update()
+
+    def _on_selection_changed(self):
+        for item in self._items:
+            item.changed.disconnect(self._on_selection_changed)
+
+        self._items = APP.project.selectedItems
+
+        for item in self._items:
+            item.changed.connect(self._on_selection_changed)
+
+    def _add_label(self, text):
+        label = QtWidgets.QLabel(text)
+        self.layout().addRow(label)
+        return label
+
+    def _add_custom_edit(self, label, widget):
+        self.layout().addRow(label, widget)
+        return widget
+
+    def _add_string_edit(self, label):
+        return self._add_custom_edit(label, StringEdit())
+
+    def _add_int_edit(self, label):
+        return self._add_custom_edit(label, IntEdit())
+
+    def _add_float_edit(self, label):
+        return self._add_custom_edit(label, FloatEdit())
+
+    def _add_vector_edit(self, label):
+        return self._add_custom_edit(label, Vector2Edit())
+
+
+class CncProjectItemOptionsView(CncOptionsView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setObjectName("jobs_window")
-        self.setWindowTitle("Jobs")
+        self._scale_edit = self._add_vector_edit("Scale")
+        self._offset_edit = self._add_vector_edit("Offset")
+
+    def matches(self, items):
+        return all(isinstance(item, CncProjectItem) for item in items)
+
+
+class CncIsolateJobOptionsView(CncOptionsView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._add_label('Isolation Job')
+
+        self._tool_diameter_edit = self._add_float_edit("Tool Diameter")
+        self._tool_diameter_edit.setSingleStep(0.05)
+        self._tool_diameter_edit.value_changed.connect(self._on_tool_diameter_changed)
+
+        self._cut_depth_edit = self._add_float_edit("Cut Depth")
+        self._cut_depth_edit.setSingleStep(0.05)
+        self._cut_depth_edit.value_changed.connect(self._on_cut_depth_changed)
+
+        self._pass_count_edit = self._add_int_edit("Pass Count")
+        self._pass_count_edit.setMinimum(1)
+        self._pass_count_edit.setMaximum(10)
+        self._pass_count_edit.value_changed.connect(self._on_pass_count_changed)
+
+        self._pass_overlap_edit = self._add_int_edit("Pass Overlap")
+        self._pass_overlap_edit.setRange(0, 100)
+        self._pass_overlap_edit.setSingleStep(5)
+        self._pass_overlap_edit.value_changed.connect(self._on_pass_overlap_changed)
+
+        self._cut_speed_edit = self._add_int_edit("Feed Rate")
+        self._cut_speed_edit.setRange(10, 10000)
+        self._cut_speed_edit.value_changed.connect(self._on_cut_speed_changed)
+
+        self._spindle_speed_edit = self._add_int_edit("Spindle Speed")
+        self._spindle_speed_edit.setRange(10, 100000)
+        self._spindle_speed_edit.setSingleStep(25)
+        self._spindle_speed_edit.value_changed.connect(self._on_spindle_speed_changed)
+
+    def matches(self, items):
+        return all(isinstance(item, CncIsolateJob) for item in items)
+
+    @property
+    def _item(self):
+        return APP.project.selectedItems[0]
+
+    def update(self):
+        self._tool_diameter_edit.setValue(self._item.tool_diameter)
+        self._cut_depth_edit.setValue(self._item.cut_depth)
+        self._pass_count_edit.setValue(self._item.pass_count)
+        self._pass_overlap_edit.setValue(self._item.pass_overlap)
+        self._cut_speed_edit.setValue(self._item.cut_speed)
+        self._spindle_speed_edit.setValue(self._item.spindle_speed)
+
+    def _on_tool_diameter_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'tool_diameter': self._tool_diameter_edit.value(),
+            })
+        )
+
+    def _on_cut_depth_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'cut_depth': self._cut_depth_edit.value(),
+            })
+        )
+
+    def _on_pass_count_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'pass_count': self._pass_count_edit.value(),
+            })
+        )
+        self._pass_overlap_edit.enabled = (self._item.pass_count > 1)
+
+    def _on_pass_overlap_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'pass_overlap': self._pass_overlap_edit.value(),
+            })
+        )
+
+    def _on_cut_speed_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'cut_speed': self._cut_speed_edit.value(),
+            })
+        )
+
+    def _on_spindle_speed_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'spindle_speed': self._spindle_speed_edit.value(),
+            })
+        )
 
 
 class CncToolOptionsWindow(CncWindow):
@@ -1634,6 +2025,49 @@ class CncToolOptionsWindow(CncWindow):
 
         self.setObjectName("tool_options_window")
         self.setWindowTitle("Tool options")
+
+        self._options_views = []
+        self._options_views.append(CncIsolateJobOptionsView(self))
+        self._options_views.append(CncProjectItemOptionsView(self))
+
+        layout = QtWidgets.QVBoxLayout()
+        for view in self._options_views:
+            layout.addWidget(view)
+        main_widget = QtWidgets.QWidget(self)
+        main_widget.setLayout(layout)
+        self.setWidget(main_widget)
+
+        self._current_view = None
+        self._items = []
+        APP.project.selection.changed.connect(self._on_project_selection_changed)
+
+    def _on_project_selection_changed(self):
+        if len(self._items) != 0:
+            self._deactivate_view()
+
+        self._items = APP.project.selectedItems
+        if len(self._items) != 0:
+            for view in self._options_views:
+                if view.matches(self._items):
+                    self._activate_view(view)
+                    break
+
+    def _activate_view(self, view):
+        if self._current_view is view:
+            return
+
+        if self._current_view is not None:
+            self._current_view.deactivate()
+
+        self._current_view = view
+        self._current_view.activate()
+
+    def _deactivate_view(self):
+        if self._current_view is None:
+            return
+
+        self._current_view.deactivate()
+        self._current_view = None
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -1684,12 +2118,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+1',
         )
         self._add_dock_window(
-            CncJobsWindow(self.project), Qt.LeftDockWidgetArea,
-            shortcut='Ctrl+2',
-        )
-        self._add_dock_window(
             CncToolOptionsWindow(self.project), Qt.RightDockWidgetArea,
-            shortcut='Ctrl+3',
+            shortcut='Ctrl+2',
         )
 
         self.view_menu.addSeparator()

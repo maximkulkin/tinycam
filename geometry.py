@@ -65,12 +65,21 @@ class Geometry:
     def bounds(self, *shapes):
         return shapely.total_bounds(shapes)
 
+    def lines(self, shape):
+        if isinstance(shape, shapely.LineString):
+            return [shape]
+        elif isinstance(shape, shapely.MultiLineString):
+            return shape.geoms
+
+        raise ValueError('Geometry is not a line: %s' % shape.__class__)
+
     def polygons(self, shape):
         if isinstance(shape, shapely.Polygon):
             return [shape]
         elif isinstance(shape, shapely.MultiPolygon):
             return shape.geoms
-        return []
+
+        raise ValueError('Geometry is not a polygon: %s' % shape.__class__)
 
     def exteriors(self, shape):
         if isinstance(shape, shapely.Polygon):
@@ -132,3 +141,6 @@ class Geometry:
 
     def buffer(self, shape, offset):
         return shape.buffer(offset)
+
+    def simplify(self, shape, tolerance=0.01):
+        return shapely.simplify(shape, tolerance)
