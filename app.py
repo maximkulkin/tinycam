@@ -7,15 +7,9 @@ import os.path
 import sys
 
 import numpy as np
-from PySide6.QtCore import Qt, QSettings, Signal, QObject, QPoint, QPointF, \
-    QRect, QRectF, QMarginsF, QSize, QSizeF, QAbstractListModel, QModelIndex, \
-    QItemSelection, QItemSelectionModel
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QDockWidget, \
-    QMenu, QMenuBar, QToolBar, QStatusBar, QListWidget, QListWidgetItem, \
-    QVBoxLayout, QFileDialog, QWidgetAction, QAbstractItemView, \
-    QAbstractItemDelegate, QLabel, QStyle, QStyleOptionButton
-from PySide6.QtGui import QPainter, QColor, QPolygonF, QBrush, QPen, QMouseEvent, \
-    QPainterPath, QCursor, QUndoCommand, QUndoStack, QIcon, QKeySequence
+from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6.QtCore import Qt
+
 from geometry import Geometry
 from excellon_parser import parse_excellon
 from gerber_parser import parse_gerber
@@ -25,9 +19,9 @@ GEOMETRY = Geometry()
 APP = None
 
 ITEM_COLORS = [
-    ('Red', QColor.fromRgbF(0.6, 0.0, 0.0, 0.6)),
-    ('Green', QColor.fromRgbF(0.0, 0.6, 0.0, 0.6)),
-    ('Blue', QColor.fromRgbF(0.0, 0.0, 0.6, 0.6)),
+    ('Red', QtGui.QColor.fromRgbF(0.6, 0.0, 0.0, 0.6)),
+    ('Green', QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6)),
+    ('Blue', QtGui.QColor.fromRgbF(0.0, 0.0, 0.6, 0.6)),
 ]
 
 
@@ -152,19 +146,19 @@ class Point:
         return self._data
 
     def toPoint(self):
-        return QPoint(self._data[0], self._data[1])
+        return QtCore.QPoint(self._data[0], self._data[1])
 
     def toPointF(self):
-        return QPointF(self._data[0], self._data[1])
+        return QtCore.QPointF(self._data[0], self._data[1])
 
 Point.ZERO = Point(0.0, 0.0)
 Point.ONES = Point(1.0, 1.0)
 
 
-class CncPainter(QPainter):
+class CncPainter(QtGui.QPainter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._offset = QPointF(0, 0)
+        self._offset = QtCore.QPointF(0, 0)
         self._scale = 1.0
 
     @property
@@ -190,7 +184,7 @@ class CncPainter(QPainter):
         self.restore()
 
 
-class CncProjectItem(QObject):
+class CncProjectItem(QtCore.QObject):
 
     def __init__(self, name, color=Qt.black):
         super().__init__()
@@ -270,12 +264,12 @@ class CncProjectItem(QObject):
     def draw(self, painter):
         pass
 
-CncProjectItem.changed = Signal(CncProjectItem)
+CncProjectItem.changed = QtCore.Signal(CncProjectItem)
 
 
 class GerberItem(CncProjectItem):
     def __init__(self, name, geometry):
-        super().__init__(name, QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
+        super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
         self._geometry = geometry
         self._geometry_cache = None
 
@@ -296,24 +290,24 @@ class GerberItem(CncProjectItem):
         self._changed()
 
     def _precache_geometry(self):
-        path = QPainterPath()
+        path = QtGui.QPainterPath()
 
         for polygon in GEOMETRY.polygons(self._geometry):
-            p = QPainterPath()
+            p = QtGui.QPainterPath()
 
             for exterior in GEOMETRY.exteriors(polygon):
                 p.addPolygon(
-                    QPolygonF.fromList([
-                        QPointF(x, y)
+                    QtGui.QPolygonF.fromList([
+                        QtCore.QPointF(x, y)
                         for x, y in GEOMETRY.points(exterior)
                     ])
                 )
 
             for interior in GEOMETRY.interiors(polygon):
-                pi = QPainterPath()
+                pi = QtGui.QPainterPath()
                 pi.addPolygon(
-                    QPolygonF.fromList([
-                        QPointF(x, y)
+                    QtGui.QPolygonF.fromList([
+                        QtCore.QPointF(x, y)
                         for x, y in GEOMETRY.points(interior)
                     ])
                 )
@@ -335,8 +329,8 @@ class GerberItem(CncProjectItem):
             if self.selected:
                 color = color.lighter(150)
 
-            painter.setBrush(QBrush(color))
-            pen = QPen(color.darker(150), 2.0)
+            painter.setBrush(QtGui.QBrush(color))
+            pen = QtGui.QPen(color.darker(150), 2.0)
             pen.setCosmetic(True)
             painter.setPen(pen)
 
@@ -353,7 +347,7 @@ class GerberItem(CncProjectItem):
 
 class ExcellonItem(CncProjectItem):
     def __init__(self, name, geometry):
-        super().__init__(name, color=QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
+        super().__init__(name, color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
         self._geometry = geometry
         self._geometry_cache = None
 
@@ -373,24 +367,24 @@ class ExcellonItem(CncProjectItem):
         self._geometry_cache = None
 
     def _precache_geometry(self):
-        path = QPainterPath()
+        path = QtGui.QPainterPath()
 
         for polygon in GEOMETRY.polygons(self._geometry):
-            p = QPainterPath()
+            p = QtGui.QPainterPath()
 
             for exterior in GEOMETRY.exteriors(polygon):
                 p.addPolygon(
-                    QPolygonF.fromList([
-                        QPointF(x, y)
+                    QtGui.QPolygonF.fromList([
+                        QtCore.QPointF(x, y)
                         for x, y in GEOMETRY.points(exterior)
                     ])
                 )
 
             for interior in GEOMETRY.interiors(polygon):
-                pi = QPainterPath()
+                pi = QtGui.QPainterPath()
                 pi.addPolygon(
-                    QPolygonF.fromList([
-                        QPointF(x, y)
+                    QtGui.QPolygonF.fromList([
+                        QtCore.QPointF(x, y)
                         for x, y in GEOMETRY.points(interior)
                     ])
                 )
@@ -412,8 +406,8 @@ class ExcellonItem(CncProjectItem):
             if self.selected:
                 color = color.lighter(150)
 
-            painter.setBrush(QBrush(color))
-            pen = QPen(color.darker(150), 2.0)
+            painter.setBrush(QtGui.QBrush(color))
+            pen = QtGui.QPen(color.darker(150), 2.0)
             pen.setCosmetic(True)
             painter.setPen(pen)
 
@@ -485,11 +479,11 @@ class CncIsolateJob(CncJob):
 
 
 
-class CncProject(QObject):
-    class ItemCollection(QObject):
-        added = Signal(int)
-        removed = Signal(int)
-        changed = Signal(int)
+class CncProject(QtCore.QObject):
+    class ItemCollection(QtCore.QObject):
+        added = QtCore.Signal(int)
+        removed = QtCore.Signal(int)
+        changed = QtCore.Signal(int)
 
         def __init__(self):
             super().__init__()
@@ -568,8 +562,8 @@ class CncProject(QObject):
                 return
             self.changed.emit(index)
 
-    class Selection(QObject):
-        changed = Signal()
+    class Selection(QtCore.QObject):
+        changed = QtCore.Signal()
 
         def __init__(self, project):
             super().__init__()
@@ -689,7 +683,7 @@ class CncProject(QObject):
         ])
 
 
-class MoveItemsCommand(QUndoCommand):
+class MoveItemsCommand(QtGui.QUndoCommand):
     def __init__(self, items, offset, parent=None):
         super().__init__('Move', parent=parent)
         self._items = items
@@ -706,7 +700,7 @@ class MoveItemsCommand(QUndoCommand):
         self._move((-self._offset[0], -self._offset[1]))
 
 
-class ScaleItemsCommand(QUndoCommand):
+class ScaleItemsEditorCommand(QtGui.QUndoCommand):
     def __init__(self, items, scale, offset=Point(0.0, 0.0), parent=None):
         super().__init__('Scale', parent=parent)
         self._items = items
@@ -728,7 +722,7 @@ class ScaleItemsCommand(QUndoCommand):
             )
 
 
-class SetItemsColorCommand(QUndoCommand):
+class SetItemsColorEditorCommand(QtGui.QUndoCommand):
     def __init__(self, items, color, parent=None):
         super().__init__('Set color', parent=parent)
         self._items = items
@@ -746,7 +740,7 @@ class SetItemsColorCommand(QUndoCommand):
             item.color = color
 
 
-class DeleteItemsCommand(QUndoCommand):
+class DeleteItemsEditorCommand(QtGui.QUndoCommand):
     def __init__(self, items, parent=None):
         super().__init__('Delete', parent=parent)
         self._items = items
@@ -772,7 +766,12 @@ def combine_bounds(b1, b2):
 
 def total_bounds(shapes):
     coords = reduce(combine_bounds, [shape.bounds for shape in shapes])
-    return QRectF(coords[0], coords[1], coords[2] - coords[0], coords[3] - coords[1])
+    return QtCore.QRectF(
+        coords[0],
+        coords[1],
+        coords[2] - coords[0],
+        coords[3] - coords[1],
+    )
 
 
 class CncHandle:
@@ -850,7 +849,7 @@ class CncManipulateTool(CncTool):
         super().__init__(*args, **kwargs)
         self._bounds = None
         self._items = []
-        self._original_manipulation_position = QPointF()
+        self._original_manipulation_position = QtCore.QPointF()
         self._original_bounds = None
         self._shift_pressed = False
         self._alt_pressed = False
@@ -870,8 +869,7 @@ class CncManipulateTool(CncTool):
     def _update(self):
         items = self._items or self.project.selectedItems
         if items:
-            margin = QMarginsF() + 10
-            self._bounds = total_bounds([item.geometry for item in items]) # .marginsAdded(margin / self.view.scale)
+            self._bounds = total_bounds([item.geometry for item in items])
         else:
             self._bounds = None
 
@@ -882,11 +880,11 @@ class CncManipulateTool(CncTool):
 
     def _get_delta(self):
         return Point(self.view.screen_to_canvas_point(
-            self.view.mapFromGlobal(QCursor.pos()).toPointF()
+            self.view.mapFromGlobal(QtGui.QCursor.pos()).toPointF()
         )) - self._original_manipulation_position
 
     def _move_command(self, items, delta):
-        return MoveItemsCommand(items, delta)
+        return MoveItemsEditorCommand(items, delta)
 
     def _scale_command(self, items, delta, sign=Point(0, 0)):
         sign = Point(sign)
@@ -1004,13 +1002,13 @@ class CncManipulateTool(CncTool):
 
         if self._within_handle(event.position(), self._bounds.center()):
             self._manipulation = self.Manipulation.MOVE
-        elif self._within_handle(event.position(), QPointF(center.x(), self._bounds.top())):
+        elif self._within_handle(event.position(), QtCore.QPointF(center.x(), self._bounds.top())):
             self._manipulation = self.Manipulation.RESIZE_TOP
-        elif self._within_handle(event.position(), QPointF(center.x(), self._bounds.bottom())):
+        elif self._within_handle(event.position(), QtCore.QPointF(center.x(), self._bounds.bottom())):
             self._manipulation = self.Manipulation.RESIZE_BOTTOM
-        elif self._within_handle(event.position(), QPointF(self._bounds.left(), center.y())):
+        elif self._within_handle(event.position(), QtCore.QPointF(self._bounds.left(), center.y())):
             self._manipulation = self.Manipulation.RESIZE_LEFT
-        elif self._within_handle(event.position(), QPointF(self._bounds.right(), center.y())):
+        elif self._within_handle(event.position(), QtCore.QPointF(self._bounds.right(), center.y())):
             self._manipulation = self.Manipulation.RESIZE_RIGHT
         elif self._within_handle(event.position(), self._bounds.topLeft()):
             self._manipulation = self.Manipulation.RESIZE_TOP_LEFT
@@ -1060,11 +1058,11 @@ class CncManipulateTool(CncTool):
             elif (self._within_handle(event.position(), self._bounds.topRight()) or
                   self._within_handle(event.position(), self._bounds.bottomLeft())):
                 self.view.setCursor(Qt.SizeBDiagCursor)
-            elif (self._within_handle(event.position(), QPointF(center.x(), self._bounds.top())) or
-                  self._within_handle(event.position(), QPointF(center.x(), self._bounds.bottom()))):
+            elif (self._within_handle(event.position(), QtCore.QPointF(center.x(), self._bounds.top())) or
+                  self._within_handle(event.position(), QtCore.QPointF(center.x(), self._bounds.bottom()))):
                 self.view.setCursor(Qt.SizeVerCursor)
-            elif (self._within_handle(event.position(), QPointF(self._bounds.left(), center.y())) or
-                  self._within_handle(event.position(), QPointF(self._bounds.right(), center.y()))):
+            elif (self._within_handle(event.position(), QtCore.QPointF(self._bounds.left(), center.y())) or
+                  self._within_handle(event.position(), QtCore.QPointF(self._bounds.right(), center.y()))):
                 self.view.setCursor(Qt.SizeHorCursor)
             elif self._within_handle(event.position(), self._bounds.center()):
                 self.view.setCursor(Qt.SizeAllCursor)
@@ -1084,10 +1082,10 @@ class CncManipulateTool(CncTool):
     def _draw_selection_handles(self, painter, geometries):
         with painter:
             painter.resetTransform()
-            pen = QPen(Qt.white, 2)
+            pen = QtGui.QPen(Qt.white, 2)
             pen.setCosmetic(True)
             painter.setPen(pen)
-            painter.setBrush(QColor('dimgrey'))
+            painter.setBrush(QtGui.QColor('dimgrey'))
 
             self._draw_box_handle(painter, self._bounds.topLeft())
             self._draw_box_handle(painter, self._bounds.topRight())
@@ -1096,22 +1094,22 @@ class CncManipulateTool(CncTool):
 
             center = self._bounds.center()
 
-            self._draw_box_handle(painter, QPointF(center.x(), self._bounds.top()))
-            self._draw_box_handle(painter, QPointF(center.x(), self._bounds.bottom()))
+            self._draw_box_handle(painter, QtCore.QPointF(center.x(), self._bounds.top()))
+            self._draw_box_handle(painter, QtCore.QPointF(center.x(), self._bounds.bottom()))
 
-            self._draw_box_handle(painter, QPointF(self._bounds.left(), center.y()))
-            self._draw_box_handle(painter, QPointF(self._bounds.right(), center.y()))
+            self._draw_box_handle(painter, QtCore.QPointF(self._bounds.left(), center.y()))
+            self._draw_box_handle(painter, QtCore.QPointF(self._bounds.right(), center.y()))
 
             self._draw_box_handle(painter, center)
 
-    def _draw_box_handle(self, painter, position, size=QSizeF(10, 10)):
+    def _draw_box_handle(self, painter, position, size=QtCore.QSizeF(10, 10)):
         """Draws box handle, position in canvas and size is in screen coordinates."""
         p = self.view.canvas_to_screen_point(position)
         painter.drawRect(p.x() - size.width()*0.5, p.y() - size.height()*0.5, size.width(), size.height());
 
 
-class CncVisualization(QWidget):
-    view_updated = Signal()
+class CncVisualization(QtWidgets.QWidget):
+    view_updated = QtCore.Signal()
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1121,12 +1119,12 @@ class CncVisualization(QWidget):
         self.setFocusPolicy(Qt.ClickFocus)
 
         self._scale = 1.0
-        self._offset = QPointF(0.0, 0.0)
-        self._x_label_size = QSize(30, 30)
-        self._y_label_size = QSize(40, 25)
+        self._offset = QtCore.QPointF(0.0, 0.0)
+        self._x_label_size = QtCore.QSize(30, 30)
+        self._y_label_size = QtCore.QSize(40, 25)
 
         self._panning = False
-        self._last_mouse_position = QPointF(0.0, 0.0)
+        self._last_mouse_position = QtCore.QPointF(0.0, 0.0)
         self._hide_selected_geometry = False
 
         # self.current_tool = CncTool(self.project, self)
@@ -1156,10 +1154,10 @@ class CncVisualization(QWidget):
         self.update()
 
     def zoom_in(self):
-        self._zoom(1.0 / 0.8, QPointF(self.width()/2, self.height()/2))
+        self._zoom(1.0 / 0.8, QtCore.QPointF(self.width()/2, self.height()/2))
 
     def zoom_out(self):
-        self._zoom(0.8, QPointF(self.width()/2, self.height()/2))
+        self._zoom(0.8, QtCore.QPointF(self.width()/2, self.height()/2))
 
     def zoom_to_fit(self):
         bounds = reduce(combine_bounds, [item.geometry.bounds for item in self.project.items])
@@ -1172,9 +1170,9 @@ class CncVisualization(QWidget):
         h = (bounds[3] - bounds[1]) * self._scale
         self._offset = self.canvas_to_screen_point(
             self.screen_to_canvas_point(
-                QPointF((self.width() - self._y_label_size.width() - 5 - w) * 0.5,
+                QtCore.QPointF((self.width() - self._y_label_size.width() - 5 - w) * 0.5,
                         (self.height() - self._x_label_size.height() - h) * 0.5)
-            ) - QPointF(bounds[0], bounds[1])
+            ) - QtCore.QPointF(bounds[0], bounds[1])
         )
         self.view_updated.emit()
         self.repaint()
@@ -1222,7 +1220,7 @@ class CncVisualization(QWidget):
                 self.screen_to_canvas_point(event.position())
             )
             if len(idxs) > 1:
-                popup = QMenu(self)
+                popup = QtWidgets.QMenu(self)
                 for idx in idxs:
                     popup.addAction(
                         self.project.items[idx].name,
@@ -1276,15 +1274,15 @@ class CncVisualization(QWidget):
 
     def paintEvent(self, event):
         painter = CncPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(self.rect(), QColor("white"))
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QtGui.QColor("white"))
 
-        clipRect = QRect(
+        clipRect = QtCore.QRect(
             self._y_label_size.width() + 5, 0,
             self.width() - self._y_label_size.width() - 5,
             self.height() - self._x_label_size.height()
         )
-        painter.setPen(QColor('black'))
+        painter.setPen(QtGui.QColor('black'))
         painter.drawRect(clipRect)
         painter.setClipRegion(clipRect)
 
@@ -1303,11 +1301,11 @@ class CncVisualization(QWidget):
 
             painter.setOpacity(0.5)
 
-            painter.setPen(QPen(Qt.red, 2.0))
-            painter.drawLine(QPointF(0, self._offset.y()), QPointF(self.width(), self._offset.y()))
+            painter.setPen(QtGui.QPen(Qt.red, 2.0))
+            painter.drawLine(QtCore.QPointF(0, self._offset.y()), QtCore.QPointF(self.width(), self._offset.y()))
 
-            painter.setPen(QPen(Qt.green, 2.0))
-            painter.drawLine(QPointF(self._offset.x(), 0), QPointF(self._offset.x(), self.height()))
+            painter.setPen(QtGui.QPen(Qt.green, 2.0))
+            painter.drawLine(QtCore.QPointF(self._offset.x(), 0), QtCore.QPointF(self._offset.x(), self.height()))
 
     def _draw_grid_with_step(self, painter, step):
         pmin = self.screen_to_canvas_point((0, 0))
@@ -1320,11 +1318,11 @@ class CncVisualization(QWidget):
 
             # draw horizontal lines
             for sy in ys:
-                painter.drawLine(QPointF(0, sy), QPointF(self.width(), sy))
+                painter.drawLine(QtCore.QPointF(0, sy), QtCore.QPointF(self.width(), sy))
 
             # draw vertical lines
             for sx in xs:
-                painter.drawLine(QPointF(sx, 0), QPointF(sx, self.height()))
+                painter.drawLine(QtCore.QPointF(sx, 0), QtCore.QPointF(sx, self.height()))
 
     def _draw_grid_labels(self, painter, step):
         pmin = self.screen_to_canvas_point((0, 0))
@@ -1363,7 +1361,12 @@ class CncVisualization(QWidget):
             for x in xs:
                 sx = x * self._scale + self._offset.x()
 
-                r = QRect(sx - self._x_label_size.width()*0.5, horizontal_text_y, self._x_label_size.width(), self._x_label_size.height())
+                r = QtCore.QRect(
+                    sx - self._x_label_size.width()*0.5,
+                    horizontal_text_y,
+                    self._x_label_size.width(),
+                    self._x_label_size.height(),
+                )
                 painter.drawText(r, Qt.AlignCenter, '%g' % x)
 
             # draw y axis labels
@@ -1374,7 +1377,12 @@ class CncVisualization(QWidget):
             for y in ys:
                 sy = y * self._scale + self._offset.y()
 
-                r = QRect(0, sy - self._y_label_size.height()*0.5, self._y_label_size.width(), self._y_label_size.height())
+                r = QtCore.QRect(
+                    0,
+                    sy - self._y_label_size.height()*0.5,
+                    self._y_label_size.width(),
+                    self._y_label_size.height(),
+                )
                 painter.drawText(r, Qt.AlignRight | Qt.AlignVCenter, '%g' % y)
 
 
@@ -1382,7 +1390,7 @@ class CncVisualization(QWidget):
         with painter:
             painter.resetTransform()
 
-            pen = QPen(QColor("grey"))
+            pen = QtGui.QPen(QtGui.QColor("grey"))
 
             painter.setOpacity(0.5)
 
@@ -1414,13 +1422,13 @@ class CncVisualization(QWidget):
                     item.draw(painter)
 
     def screen_to_canvas_point(self, point):
-        if not isinstance(point, QPointF):
-            point = QPointF(point[0], point[1])
+        if not isinstance(point, QtCore.QPointF):
+            point = QtCore.QPointF(point[0], point[1])
         return (point - self._offset) / self._scale
 
     def canvas_to_screen_point(self, point):
-        if not isinstance(point, QPointF):
-            point = QPointF(point[0], point[1])
+        if not isinstance(point, QtCore.QPointF):
+            point = QtCore.QPointF(point[0], point[1])
         return point * self._scale + self._offset
 
     def _find_geometry_at(self, point):
@@ -1444,8 +1452,8 @@ class CncVisualization(QWidget):
         self.update()
 
 
-class CncWindow(QDockWidget):
-    visibilityChanged = Signal()
+class CncWindow(QtWidgets.QDockWidget):
+    visibilityChanged = QtCore.Signal()
 
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1467,9 +1475,9 @@ class CncWindow(QDockWidget):
 
 
 class CncProjectWindow(CncWindow):
-    class ItemWidget(QListWidgetItem):
+    class ItemWidget(QtWidgets.QListWidgetItem):
         def __init__(self, project, item):
-            super().__init__(item.name, type=QListWidgetItem.UserType + 1)
+            super().__init__(item.name, type=QtWidgets.QListWidgetItem.UserType + 1)
             self.project = project
             self.item = item
             self.setFlags(
@@ -1480,33 +1488,33 @@ class CncProjectWindow(CncWindow):
             )
             self.setCheckState(Qt.Checked if self.item.visible else Qt.Unchecked)
 
-    class ColorBox(QWidget):
+    class ColorBox(QtWidgets.QWidget):
         def __init__(self, color, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.color = color
-            self.set = QPoint(30, 0)
-            self.setMinimumSize(QSize(70, 20))
+            self.set = QtCore.QPoint(30, 0)
+            self.setMinimumSize(QtCore.QSize(70, 20))
             self.checked = False
 
         def paintEvent(self, event):
             super().paintEvent(event)
 
-            painter = QPainter(self)
+            painter = QtGui.QPainter(self)
 
             if self.checked:
-                style = QStyleOptionButton(1)
-                style.rect = QRect(5, 2, 20, self.size().height() - 4)
-                style.state = QStyle.State_Enabled | QStyle.State_On
+                style = QtWidgets.QStyleOptionButton(1)
+                style.rect = QtCore.QRect(5, 2, 20, self.size().height() - 4)
+                style.state = QtWidgets.QStyle.State_Enabled | QtWidgets.QStyle.State_On
 
-                QApplication.style().drawPrimitive(
-                    QStyle.PE_IndicatorItemViewItemCheck,
+                QtWidgets.QApplication.style().drawPrimitive(
+                    QtWidgets.QStyle.PE_IndicatorItemViewItemCheck,
                     style, painter, self
                 )
 
-            color = QColor(self.color)
+            color = QtGui.QColor(self.color)
             color.setAlphaF(1.0)
             painter.fillRect(
-                QRect(25, 2, self.size().width() - 30, self.size().height() - 4),
+                QtCore.QRect(25, 2, self.size().width() - 30, self.size().height() - 4),
                 color
             )
 
@@ -1525,9 +1533,12 @@ class CncProjectWindow(CncWindow):
 
         self._updating_selection = False
 
-        self._view = QListWidget()
-        self._view.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self._view.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
+        self._view = QtWidgets.QListWidget()
+        self._view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self._view.setEditTriggers(
+              QtWidgets.QAbstractItemView.DoubleClicked
+            | QtWidgets.QAbstractItemView.EditKeyPressed
+        )
         self._view.itemSelectionChanged.connect(
             self._on_list_widget_item_selection_changed)
         self._view.itemChanged.connect(self._on_list_widget_item_changed)
@@ -1557,7 +1568,7 @@ class CncProjectWindow(CncWindow):
         selection_model = self._view.selectionModel()
         selection_model.clear()
         for idx in self.project.selection:
-            selection_model.select(model_index(idx), QItemSelectionModel.Select)
+            selection_model.select(model_index(idx), QtCore.QItemSelectionModel.Select)
 
         self._updating_selection = False
 
@@ -1581,13 +1592,13 @@ class CncProjectWindow(CncWindow):
 
         item = self._view.currentItem().item
 
-        popup = QMenu(self)
+        popup = QtWidgets.QMenu(self)
 
         color_menu = popup.addMenu('Color')
         for color_name, color in ITEM_COLORS:
             widget = self.ColorBox(color)
             widget.checked = item.color == color
-            set_color_action = QWidgetAction(self)
+            set_color_action = QtWidgets.QWidgetAction(self)
             set_color_action.setDefaultWidget(widget)
             set_color_action.triggered.connect(
                 (lambda c: lambda _checked: self._set_color(c))(color)
@@ -1625,7 +1636,7 @@ class CncToolOptionsWindow(CncWindow):
         self.setWindowTitle("Tool options")
 
 
-class CncMainWindow(QMainWindow):
+class CncMainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1635,18 +1646,18 @@ class CncMainWindow(QMainWindow):
         self.project_view = CncVisualization(self.project, self)
         self.setCentralWidget(self.project_view)
 
-        self.menu = QMenuBar()
+        self.menu = QtWidgets.QMenuBar()
         self.file_menu = self.menu.addMenu("File")
         self.file_menu.addAction('Import Gerber', self._import_gerber,
                                  shortcut='Ctrl+o')
 
         undo_action = APP.undo_stack.createUndoAction(self, "&Undo")
-        undo_action.setIcon(QIcon(":/icons/undo.png"))
-        undo_action.setShortcuts(QKeySequence.Undo)
+        undo_action.setIcon(QtGui.QIcon(":/icons/undo.png"))
+        undo_action.setShortcuts(QtGui.QKeySequence.Undo)
 
         redo_action = APP.undo_stack.createRedoAction(self, "&Redo")
-        redo_action.setIcon(QIcon(":/icons/redo.png"))
-        redo_action.setShortcuts(QKeySequence.Redo)
+        redo_action.setIcon(QtGui.QIcon(":/icons/redo.png"))
+        redo_action.setShortcuts(QtGui.QKeySequence.Redo)
 
         self.edit_menu = self.menu.addMenu("Edit")
         self.edit_menu.addAction(undo_action)
@@ -1656,13 +1667,13 @@ class CncMainWindow(QMainWindow):
 
         self.setMenuBar(self.menu)
 
-        self.toolbar = QToolBar()
+        self.toolbar = QtWidgets.QToolBar()
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_gerber)
         self.toolbar.addAction('Zoom To Fit', self.project_view.zoom_to_fit)
 
-        self.statusbar = QStatusBar()
+        self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
 
         self._windows = []
@@ -1693,7 +1704,7 @@ class CncMainWindow(QMainWindow):
         self._load_settings()
 
     def _import_gerber(self):
-        result = QFileDialog.getOpenFileName(
+        result = QtWidgets.QFileDialog.getOpenFileName(
             parent=self, caption='Import Gerber',
             # filter='Gerber (*.gbr);Excellon (*.drl)'
         )
@@ -1731,26 +1742,26 @@ class CncMainWindow(QMainWindow):
         super().closeEvent(event)
 
     def _save_settings(self):
-        settings = QSettings()
+        settings = QtCore.QSettings()
         settings.beginGroup("main_window")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
         settings.endGroup()
 
     def _load_settings(self):
-        settings = QSettings()
+        settings = QtCore.QSettings()
         settings.beginGroup("main_window")
         self.restoreGeometry(settings.value("geometry"))
         self.restoreState(settings.value("windowState"))
         settings.endGroup()
 
 
-class CncApplication(QApplication):
+class CncApplication(QtWidgets.QApplication):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.project = CncProject()
-        self.undo_stack = QUndoStack()
+        self.undo_stack = QtGui.QUndoStack()
 
 
 APP = CncApplication(sys.argv)
