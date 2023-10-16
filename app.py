@@ -913,19 +913,23 @@ class DeleteItemsEditorCommand(QtGui.QUndoCommand):
 class CreateIsolateJobEditorCommand(QtGui.QUndoCommand):
     def __init__(self, item, parent=None):
         super().__init__('Create Isolate Job', parent=parent)
-        self._item = item
-        self._job = None
+        self._source_item = item
+        self._result_item = None
 
     @property
-    def job(self):
-        return self._job
+    def source_item(self):
+        return self._source_item
+
+    @property
+    def result_item(self):
+        return self._result_item
 
     def redo(self):
-        self._job = CncIsolateJob(self._item)
-        APP.project.items.append(self._job)
+        self._result_item = CncIsolateJob(self._source_item)
+        APP.project.items.append(self._result_item)
 
     def undo(self):
-        APP.project.jobs.remove(self._job)
+        APP.project.items.remove(self._result_item)
 
 
 def combine_bounds(b1, b2):
@@ -1801,7 +1805,7 @@ class CncProjectWindow(CncWindow):
 
         command = CreateIsolateJobEditorCommand(self.project.selectedItems[0])
         APP.undo_stack.push(command)
-        APP.project.selectedItems = [command.job]
+        APP.project.selectedItems = [command.result_item]
 
 
 class StringEdit(QtWidgets.QLineEdit):
