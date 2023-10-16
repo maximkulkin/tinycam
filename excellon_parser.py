@@ -1,10 +1,10 @@
-from enum import Enum
-from functools import reduce
+import dataclasses
 import math
 import pyparsing as pp
 import shapely
 import shapely.affinity
-from geometry import Geometry
+from typing import Tuple
+from geometry import Geometry, Shape
 
 
 class Node:
@@ -137,6 +137,32 @@ class ExcellonError(Exception):
         self.location = location
 
 
+@dataclasses.dataclass
+class Tool:
+    id: int
+    diameter: float
+
+
+@dataclasses.dataclass
+class Drill:
+    tool_id: int
+    position: Tuple[float, float]
+
+
+@dataclasses.dataclass
+class Mill:
+    tool_id: int
+    positions: list[Tuple[float, float]]
+
+
+@dataclasses.dataclass
+class ExcellonFile:
+    tools: list[Tool]
+    drills: list[Drill]
+    mills: list[Mill]
+    geometry: Shape
+
+
 class ExcellonParser:
     def __init__(self, geometry=Geometry()):
         self._geometry = geometry
@@ -147,9 +173,13 @@ class ExcellonParser:
         self._units_scale = 1.0
         self._relative_positioning = False
 
-        self._tool_diameters = {'0': 0.0}
+        self._tools = {'0': Tool(id='0', diameter=0.0)}
         self._current_tool = None
         self._current_position = (0.0, 0.0)
+
+        self._drills = []
+        self._mills = []
+        self._last_mill = None
 
         self._shapes = None
 
@@ -160,7 +190,18 @@ class ExcellonParser:
         for node in nodes:
             self._process_node(node)
 
-        return self._shapes
+        used_tools = set()
+        for drill in self._drills:
+            used_tools.add(drill.tool_id)
+        for mill in self._mills:
+            used_tools.add(mill.tool_id)
+
+        return ExcellonFile(
+            tools = [self._tools[tool_id] for tool_id in used_tools],
+            drills = self._drills,
+            mills = self._mills,
+            geometry = self._shapes,
+        )
 
     def _eval_position(self, p):
         if self._relative_positioning:
@@ -201,30 +242,38 @@ class ExcellonParser:
         self._relative_positioning = True
 
     def _process_tool_definition(self, node):
-        self._tool_diameters[node.id] = node.diameter * self._units_scale
+        self._tools[node.id] = Tool(
+            id=node.id,
+            diameter=node.diameter * self._units_scale,
+        )
 
     def _process_select_tool(self, node):
-        if node.id not in self._tool_diameters:
+        if node.id not in self._tools:
             raise ExcellonError(node.location, 'Unknown tool %s' % node.id)
         self._current_tool = node.id
+        if self._last_mill and self._last_mill.tool_id != node.id:
+            self._last_mill = None
 
     def _process_drill(self, node):
         if self._current_tool is None:
             raise ExcellonError(node.location, 'Drill command without tool selected')
 
         position = self._eval_position((node.x, node.y))
+        self._drills.append(Drill(self._current_tool, position))
 
         self._shapes = self._geometry.union(
             self._shapes,
             self._geometry.circle(
-                diameter=self._tool_diameters[self._current_tool],
+                diameter=self._tools[self._current_tool].diameter,
                 center=position,
             ),
         )
         self._current_position = position
+        self._last_mill = None
 
     def _process_move(self, node):
         self._current_position = self._eval_position((node.x, node.y))
+        self._last_mill = None
 
     def _process_mill(self, node):
         if self._current_position is None:
@@ -235,12 +284,17 @@ class ExcellonParser:
         if self._current_tool is None:
             raise ExcellonError(node.location, 'Mill command without tool selected')
 
+        if self._last_mill is None:
+            self._last_mill = Mill(tool_id=self._current_tool,
+                                   positions=[self._current_position])
+
         position = self._eval_position((node.x, node.y))
+        self._last_mill.positions.append(position)
         self._shapes = self._geometry.union(
             self._shapes,
             self._geometry.line(
                 [self._current_position, position],
-                width=self._tool_diameters[self._current_tool],
+                width=self._tools[self._current_tool].diameter,
             ),
         )
         self._current_position = position
