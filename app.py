@@ -1294,6 +1294,8 @@ class CncVisualization(QtWidgets.QWidget):
 
         self.setCursor(Qt.CrossCursor)
 
+        self._update_graph_rect()
+
     @property
     def scale(self):
         return self._scale
@@ -1315,20 +1317,20 @@ class CncVisualization(QtWidgets.QWidget):
         self._zoom(0.8, QtCore.QPointF(self.width()/2, self.height()/2))
 
     def zoom_to_fit(self):
-        bounds = reduce(combine_bounds, [item.geometry.bounds for item in self.project.items])
+        bounds = reduce(combine_bounds, [
+            item.geometry.bounds for item in self.project.items
+        ])
 
-        self._scale = min(
-            (self.width() - self._y_label_size.width() - 5) / (bounds[2] - bounds[0]),
-            (self.height() - self._x_label_size.height()) / (bounds[3] - bounds[1])
-        ) * 0.9
-        w = (bounds[2] - bounds[0]) * self._scale
-        h = (bounds[3] - bounds[1]) * self._scale
-        self._offset = self.canvas_to_screen_point(
-            self.screen_to_canvas_point(
-                QtCore.QPointF((self.width() - self._y_label_size.width() - 5 - w) * 0.5,
-                        (self.height() - self._x_label_size.height() - h) * 0.5)
-            ) - QtCore.QPointF(bounds[0], bounds[1])
+        w, h = bounds[2] - bounds[0], bounds[3] - bounds[1]
+
+        self._scale = min(float(self._graph_rect.width()) / w,
+                          float(self._graph_rect.height()) / h) * 0.9
+
+        target_point = QtCore.QPoint(
+            (self._graph_rect.width() - w * self._scale) * 0.5,
+            (self._graph_rect.height() - h * self._scale) * 0.5
         )
+        self._offset = self._graph_rect.topLeft() + target_point - QtCore.QPoint(bounds[0], bounds[1]) * self._scale
         self.view_updated.emit()
         self.repaint()
 
@@ -1350,6 +1352,16 @@ class CncVisualization(QtWidgets.QWidget):
         self.current_tool.keyReleaseEvent(event)
         if event.isAccepted():
             return
+
+    def resizeEvent(self, event):
+        self._update_graph_rect()
+
+    def _update_graph_rect(self):
+        self._graph_rect = QtCore.QRect(
+            self._y_label_size.width(), 0,
+            self.width() - self._y_label_size.width(),
+            self.height() - self._x_label_size.height()
+        )
 
     def _select_items_at(self, idxs, modifiers=0):
         if modifiers & Qt.ShiftModifier:
