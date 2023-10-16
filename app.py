@@ -788,15 +788,9 @@ class CncProject(QtCore.QObject):
         self._items = self.ItemCollection()
         self._selection = self.Selection(self)
 
-        self._jobs = self.ItemCollection()
-
     @property
     def items(self):
         return self._items
-
-    @property
-    def jobs(self):
-        return self._jobs
 
     @property
     def selection(self):
