@@ -19,9 +19,12 @@ GEOMETRY = Geometry()
 APP = None
 
 ITEM_COLORS = [
-    ('Red', QtGui.QColor.fromRgbF(0.6, 0.0, 0.0, 0.6)),
-    ('Green', QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6)),
-    ('Blue', QtGui.QColor.fromRgbF(0.0, 0.0, 0.6, 0.6)),
+    QtGui.QColor.fromRgbF(0.6, 0.0, 0.0, 0.6),
+    QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6),
+    QtGui.QColor.fromRgbF(0.0, 0.0, 0.6, 0.6),
+    QtGui.QColor.fromRgbF(0.6, 0.0, 0.6, 0.6),
+    QtGui.QColor.fromRgbF(0.6, 0.6, 0.0, 0.6),
+    QtGui.QColor.fromRgbF(0.0, 0.6, 0.6, 0.6),
 ]
 
 
@@ -1778,7 +1781,7 @@ class CncProjectWindow(CncWindow):
         popup = QtWidgets.QMenu(self)
 
         color_menu = popup.addMenu('Color')
-        for color_name, color in ITEM_COLORS:
+        for color in ITEM_COLORS:
             widget = self.ColorBox(color)
             widget.checked = item.color == color
             set_color_action = QtWidgets.QWidgetAction(self)
