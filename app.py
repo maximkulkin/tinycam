@@ -10,6 +10,7 @@ import numpy as np
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
+from commands import CncCommandBuilder
 from geometry import Geometry
 from formats.excellon import parse_excellon
 from formats.gerber import parse_gerber
@@ -618,6 +619,35 @@ class CncIsolateJob(CncJob):
             painter.setPen(pen)
 
             painter.drawPath(self._geometry_cache)
+
+    def _find_closest(self, lines, point):
+        # TODO: implement finding closest line
+        return 0
+
+    def generate_commands(self):
+        # TODO: allow selecting different starting positions
+        builder = CncCommandBuilder(start_position=(0, 0, 0))
+
+        lines = list(GEOMETRY.lines(self._geometry))
+        while lines:
+            line_idx = self._find_closest(lines, builder.current_position)
+            line = lines.pop(line_idx)
+
+            points = line.coords[:]
+            # if line.is_closed:
+            #     p, _ = shapely.ops.nearest_points(line, shapely.Point(builder.current_position[:2]))
+            #     print(points)
+            #     start_index = points.index(p)
+            #     points = points[start_index:] + points[:start_index]
+
+            builder.travel(z=self._travel_height)
+            builder.travel(x=points[0][0], y=points[0][1])
+            builder.cut(z=-self._cut_depth)
+
+            for p in points[1:]:
+                builder.cut(x=p[0], y=p[1])
+
+        return builder.build()
 
 
 class CncProject(QtCore.QObject):
@@ -1799,7 +1829,8 @@ class CncProjectWindow(CncWindow):
             color_menu.addAction(set_color_action)
 
         popup.addAction('Delete', self._delete_items)
-        popup.addAction('Create Isolate Job', self._isolate_job)
+        if isinstance(item, GerberItem):
+            popup.addAction('Create Isolate Job', self._isolate_job)
 
         popup.exec(self.mapToGlobal(position))
 
