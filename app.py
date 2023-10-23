@@ -11,8 +11,8 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
 from geometry import Geometry
-from excellon_parser import parse_excellon
-from gerber_parser import parse_gerber
+from formats.excellon import parse_excellon
+from formats.gerber import parse_gerber
 
 
 GEOMETRY = Geometry()
