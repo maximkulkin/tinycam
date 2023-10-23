@@ -446,6 +446,9 @@ class CncJob(CncProjectItem):
     def geometry(self):
         return self._geometry
 
+    def generate_commands(self):
+        raise NotImplemented()
+
 
 class CncIsolateJob(CncJob):
     def __init__(self,
