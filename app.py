@@ -454,7 +454,6 @@ class CncIsolateJob(CncJob):
                  spindle_speed=1000,
                  cut_depth=0.1,
                  cut_speed=120,
-                 travel_speed=120,
                  travel_height=2,
                  pass_count=1,
                  pass_overlap=10):
@@ -471,7 +470,6 @@ class CncIsolateJob(CncJob):
         self._pass_overlap = pass_overlap
         self._spindle_speed = spindle_speed
         self._cut_speed = cut_speed
-        self._travel_speed = travel_speed
         self._travel_height = travel_height
 
         self._geometry = None
@@ -536,6 +534,15 @@ class CncIsolateJob(CncJob):
     @spindle_speed.setter
     def spindle_speed(self, value):
         self._spindle_speed = value
+        self._update()
+
+    @property
+    def travel_height(self):
+        return self._travel_height
+
+    @travel_height.setter
+    def travel_height(self, value):
+        self._travel_height = value
         self._update()
 
     def _on_source_item_changed(self, _item):
@@ -1985,6 +1992,10 @@ class CncIsolateJobOptionsView(CncOptionsView):
         self._spindle_speed_edit.setSingleStep(25)
         self._spindle_speed_edit.value_changed.connect(self._on_spindle_speed_changed)
 
+        self._travel_height_edit = self._add_float_edit("Travel Height")
+        self._travel_height_edit.setSingleStep(1)
+        self._travel_height_edit.value_changed.connect(self._on_travel_height_changed)
+
     def matches(self, items):
         return all(isinstance(item, CncIsolateJob) for item in items)
 
@@ -1999,6 +2010,7 @@ class CncIsolateJobOptionsView(CncOptionsView):
         self._pass_overlap_edit.setValue(self._item.pass_overlap)
         self._cut_speed_edit.setValue(self._item.cut_speed)
         self._spindle_speed_edit.setValue(self._item.spindle_speed)
+        self._travel_height_edit.setValue(self._item.travel_height)
 
     def _on_tool_diameter_changed(self):
         APP.undo_stack.push(
@@ -2040,6 +2052,13 @@ class CncIsolateJobOptionsView(CncOptionsView):
         APP.undo_stack.push(
             UpdateItemEditorCommand(self._item, {
                 'spindle_speed': self._spindle_speed_edit.value(),
+            })
+        )
+
+    def _on_travel_height_changed(self):
+        APP.undo_stack.push(
+            UpdateItemEditorCommand(self._item, {
+                'travel_height': self._travel_height_edit.value(),
             })
         )
 
