@@ -1,0 +1,6 @@
+**/__pycache__/
+
+# Ignore sample geometry files
+*.drl
+*.gbr
+*.gcode
