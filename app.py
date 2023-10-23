@@ -1337,6 +1337,9 @@ class CncVisualization(QtWidgets.QWidget):
         self._zoom(0.8, QtCore.QPointF(self.width()/2, self.height()/2))
 
     def zoom_to_fit(self):
+        if not self.project.items:
+            return
+
         bounds = reduce(combine_bounds, [
             item.geometry.bounds for item in self.project.items
         ])
