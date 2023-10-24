@@ -11,6 +11,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
 from commands import CncCommandBuilder
+from gcode import GcodeRenderer
 from geometry import Geometry
 from formats.excellon import parse_excellon
 from formats.gerber import parse_gerber
@@ -1831,6 +1832,8 @@ class CncProjectWindow(CncWindow):
         popup.addAction('Delete', self._delete_items)
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
+        elif isinstance(item, CncJob):
+            popup.addAction('Export G-code', self._export_gcode)
 
         popup.exec(self.mapToGlobal(position))
 
@@ -1847,6 +1850,33 @@ class CncProjectWindow(CncWindow):
         command = CreateIsolateJobEditorCommand(self.project.selectedItems[0])
         APP.undo_stack.push(command)
         APP.project.selectedItems = [command.result_item]
+
+    def _export_gcode(self):
+        if len(self.project.selection) == 0:
+            return
+
+        result = QtWidgets.QFileDialog.getSaveFileName(
+            parent=self, caption='Export Gcode',
+            filter='Gerber (*.gcode)',
+        )
+        if result[0] == '':
+            # cancelled
+            return
+
+        commands = self.project.selectedItems[0].generate_commands()
+        renderer = GcodeRenderer()
+        gcode = renderer.render(commands)
+
+        try:
+            with open(result[0], 'wt') as f:
+                f.write(gcode)
+        except Exception as e:
+            print('Failed to export Gcode to %s: %s' % (result[0], e))
+
+            info_box = QtWidgets.QMessageBox(self)
+            info_box.setWindowTitle('Export Gcode')
+            info_box.setText('Failed to export Gcode to %s' % result[0])
+            info_box.exec()
 
 
 class StringEdit(QtWidgets.QLineEdit):
