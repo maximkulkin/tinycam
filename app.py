@@ -2193,7 +2193,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.menu = QtWidgets.QMenuBar()
         self.file_menu = self.menu.addMenu("File")
-        self.file_menu.addAction('Import Gerber', self._import_gerber,
+        self.file_menu.addAction('Import Drawing', self._import_file,
                                  shortcut='Ctrl+o')
 
         undo_action = APP.undo_stack.createUndoAction(self, "&Undo")
@@ -2215,7 +2215,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar = QtWidgets.QToolBar()
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
-        self.toolbar.addAction('Import', self._import_gerber)
+        self.toolbar.addAction('Import', self._import_file)
         self.toolbar.addAction('Zoom To Fit', self.project_view.zoom_to_fit)
 
         self.statusbar = QtWidgets.QStatusBar()
@@ -2244,13 +2244,55 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self._load_settings()
 
-    def _import_gerber(self):
-        result = QtWidgets.QFileDialog.getOpenFileName(
-            parent=self, caption='Import Gerber',
-            # filter='Gerber (*.gbr);Excellon (*.drl)'
+    def _import_file(self):
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            parent=self, caption='Import Drawing',
+            filter='Gerber (*.gbr);;Excellon (*.drl);;All files (*)'
         )
-        if result[0] != '':
-            self.project.import_gerber(result[0])
+        if filename == '':
+            return
+
+        def critical_error(text):
+            QtWidgets.QMessageBox.critical(self, 'Import Drawing', text)
+
+        item = None
+        if filename.endswith('.gbr'):
+            try:
+                item = GerberItem.from_file(filename)
+            except gerber.GerberError as e:
+                critical_error(f'Error parsing Gerber file: {e}')
+                return
+
+        elif filename.endswith('.drl'):
+            try:
+                item = ExcellonItem.from_file(filename)
+            except excellon.ExcellonError as e:
+                QtWidgets.QMessageBox.critical(
+                    self, 'Import Drawing',
+                    f'Error parsing Excellon file: {e}',
+                )
+                return
+        else:
+            if item is None:
+                try:
+                    item = GerberItem.from_file(filename)
+                except gerber.GerberError:
+                    pass
+
+            if item is None:
+                try:
+                    item = ExcellonItem.from_file(filename)
+                except excellon.ExcellonError:
+                    pass
+
+        if item is None:
+            QtWidgets.QMessageBox.critical(
+                self, 'Import Drawing',
+                f'File format is not recognized for {filename}',
+            )
+            return
+
+        APP.project.items.append(item)
 
     def _add_dock_window(self, window, area, shortcut=''):
         self._windows.append(window)
