@@ -2,6 +2,7 @@ from enum import Enum
 from functools import reduce
 import math
 import pyparsing as pp
+import pyparsing.exceptions
 import shapely
 import shapely.affinity
 from geometry import Geometry
@@ -427,7 +428,11 @@ class GerberParser:
     def parse_string(self, s):
         self._reset()
 
-        nodes = gerber_file.parse_string(s)
+        try:
+            nodes = gerber_file.parse_string(s)
+        except pyparsing.exceptions.ParseException as e:
+            raise GerberError(None, 'Error parsing gerber: %s' % e)
+
         for node in nodes:
             self._process_node(node)
 
