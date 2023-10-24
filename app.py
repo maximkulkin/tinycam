@@ -1360,7 +1360,7 @@ class CncVisualization(QtWidgets.QWidget):
 
     def _zoom(self, k, position=None):
         self._scale *= k
-        self._offset = self._offset * k + position * (1 - k)
+        self._offset = self._offset * k + (position * (1 - k)).toPoint()
         self.view_updated.emit()
         self.update()
 
