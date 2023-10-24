@@ -13,8 +13,8 @@ from PySide6.QtCore import Qt
 from commands import CncCommandBuilder
 from gcode import GcodeRenderer
 from geometry import Geometry
-from formats.excellon import parse_excellon
-from formats.gerber import parse_gerber
+from formats import excellon
+from formats import gerber
 
 
 GEOMETRY = Geometry()
@@ -344,7 +344,7 @@ class GerberItem(CncProjectItem):
     @staticmethod
     def from_file(path):
         with open(path, 'rt') as f:
-            geometry = parse_gerber(f.read(), geometry=GEOMETRY)
+            geometry = gerber.parse_gerber(f.read(), geometry=GEOMETRY)
             # name, ext = os.path.splitext(os.path.basename(path))
             name = os.path.basename(path)
             return GerberItem(name, geometry)
@@ -434,7 +434,7 @@ class ExcellonItem(CncProjectItem):
     @staticmethod
     def from_file(path):
         with open(path, 'rt') as f:
-            excellon_file = parse_excellon(f.read(), geometry=GEOMETRY)
+            excellon_file = excellon.parse_excellon(f.read(), geometry=GEOMETRY)
             name = os.path.basename(path)
             return ExcellonItem(name, excellon_file)
 
