@@ -1,6 +1,7 @@
 import dataclasses
 import math
 import pyparsing as pp
+import pyparsing.exceptions
 import shapely
 import shapely.affinity
 from typing import Tuple
@@ -186,7 +187,11 @@ class ExcellonParser:
     def parse_string(self, s):
         self._reset()
 
-        nodes = excellon_file.parse_string(s)
+        try:
+            nodes = excellon_file.parse_string(s)
+        except pyparsing.exceptions.ParseException as e:
+            raise ExcellonError(None, 'Error parsing excellon: %s' % e)
+
         for node in nodes:
             self._process_node(node)
 
