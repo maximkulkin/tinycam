@@ -1,32 +1,44 @@
 from PySide6 import QtCore, QtGui
 import os.path
 
-from formats import gerber
-from globals import GEOMETRY
-from project.item import CncProjectItem
+from tinycam.formats import excellon
+from tinycam.globals import GEOMETRY
+from tinycam.project.item import CncProjectItem
 
 
-class GerberItem(CncProjectItem):
-    def __init__(self, name, geometry):
-        super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
-        self._geometry = geometry
+class ExcellonItem(CncProjectItem):
+    def __init__(self, name, excellon_file):
+        super().__init__(name, color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
+        self._excellon_file = excellon_file
+        self._geometry = self._excellon_file.geometry
         self._geometry_cache = None
 
     def clone(self):
-        clone = GerberItem(self.name, self._geometry)
+        clone = ExcellonItem(self.name, self._excellon_file)
         clone.color = self.color
         clone.selected = self.selected
         return clone
 
     @property
+    def tools(self):
+        return self._excellon_file.tools
+
+    @property
+    def drills(self):
+        return self._excellon_file.drills
+
+    @property
+    def mills(self):
+        return self._excellon_file.mills
+
+    @property
     def geometry(self):
-        return self._geometry
+        return self._excellon_file.geometry
 
     @geometry.setter
     def geometry(self, value):
         self._geometry = value
         self._geometry_cache = None
-        self._changed()
 
     def _precache_geometry(self):
         path = QtGui.QPainterPath()
@@ -78,9 +90,8 @@ class GerberItem(CncProjectItem):
     @staticmethod
     def from_file(path):
         with open(path, 'rt') as f:
-            geometry = gerber.parse_gerber(f.read(), geometry=GEOMETRY)
-            # name, ext = os.path.splitext(os.path.basename(path))
+            excellon_file = excellon.parse_excellon(f.read(), geometry=GEOMETRY)
             name = os.path.basename(path)
-            return GerberItem(name, geometry)
+            return ExcellonItem(name, excellon_file)
 
 

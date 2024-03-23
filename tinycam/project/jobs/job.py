@@ -1,4 +1,4 @@
-from project.item import CncProjectItem
+from tinycam.project.item import CncProjectItem
 
 
 class CncJob(CncProjectItem):

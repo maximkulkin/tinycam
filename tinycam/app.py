@@ -12,18 +12,18 @@ import numpy as np
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
-from commands import CncCommandBuilder
-from gcode import GcodeRenderer
-from geometry import Geometry
-from formats import excellon
-from formats import gerber
-from settings import SETTINGS
-from project import (
+from tinycam.commands import CncCommandBuilder
+from tinycam.gcode import GcodeRenderer
+from tinycam.geometry import Geometry
+from tinycam.formats import excellon
+from tinycam.formats import gerber
+from tinycam.settings import SETTINGS
+from tinycam.project import (
     CncProject, CncProjectItem, GerberItem, ExcellonItem,
     CncJob, CncIsolateJob, CncDrillJob
 )
-from ui.settings import CncSettingsDialog
-from ui.preview_3d import CncPreviewView
+from tinycam.ui.settings import CncSettingsDialog
+from tinycam.ui.preview_3d import CncPreviewView
 
 
 GEOMETRY = Geometry()

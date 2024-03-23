@@ -1,26 +1,32 @@
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
-from globals import GEOMETRY
-from project.jobs.job import CncJob
+from tinycam.globals import GEOMETRY
+from tinycam.project.jobs.job import CncJob
 
 
-class CncDrillJob(CncJob):
+class CncIsolateJob(CncJob):
     def __init__(self,
                  source_item,
+                 tool_diameter=0.1,
                  spindle_speed=1000,
                  cut_depth=0.1,
                  cut_speed=120,
-                 travel_height=2):
+                 travel_height=2,
+                 pass_count=1,
+                 pass_overlap=10):
         super().__init__(
-            'Drill %s' % source_item.name,
+            'Isolate %s' % source_item.name,
             color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
         )
 
         self._source_item = source_item
 
-        self._spindle_speed = spindle_speed
+        self._tool_diameter = tool_diameter
         self._cut_depth = cut_depth
+        self._pass_count = pass_count
+        self._pass_overlap = pass_overlap
+        self._spindle_speed = spindle_speed
         self._cut_speed = cut_speed
         self._travel_height = travel_height
 
@@ -35,12 +41,12 @@ class CncDrillJob(CncJob):
         return self._geometry
 
     @property
-    def spindle_speed(self):
-        return self._spindle_speed
+    def tool_diameter(self):
+        return self._tool_diameter
 
-    @spindle_speed.setter
-    def spindle_speed(self, value):
-        self._spindle_speed = value
+    @tool_diameter.setter
+    def tool_diameter(self, value):
+        self._tool_diameter = value
         self._update()
 
     @property
@@ -53,12 +59,39 @@ class CncDrillJob(CncJob):
         self._update()
 
     @property
+    def pass_count(self):
+        return self._pass_count
+
+    @pass_count.setter
+    def pass_count(self, value):
+        self._pass_count = value
+        self._update()
+
+    @property
+    def pass_overlap(self):
+        return self._pass_overlap
+
+    @pass_overlap.setter
+    def pass_overlap(self, value):
+        self._pass_overlap = value
+        self._update()
+
+    @property
     def cut_speed(self):
         return self._cut_speed
 
     @cut_speed.setter
     def cut_speed(self, value):
         self._cut_speed = value
+        self._update()
+
+    @property
+    def spindle_speed(self):
+        return self._spindle_speed
+
+    @spindle_speed.setter
+    def spindle_speed(self, value):
+        self._spindle_speed = value
         self._update()
 
     @property
