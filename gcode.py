@@ -15,7 +15,7 @@ class GcodeBuilder:
     def command(self, s, *args, **kwargs):
         self.commands.append(s.format(*args, **kwargs))
 
-    def rapid_move(self, x=None, y=None, z=None):
+    def rapid_move(self, x=None, y=None, z=None, feed_rate=None):
         words = []
         if self._last_command != 'G00':
             words.append('G00')
@@ -29,6 +29,10 @@ class GcodeBuilder:
 
         if z is not None:
             words.append(f'Z{z:g}')
+
+        if feed_rate is not None and feed_rate != self._last_feed_rate:
+            words.append(f'F{feed_rate:d}')
+            self._last_feed_rate = feed_rate
 
         self.command(''.join(words))
 

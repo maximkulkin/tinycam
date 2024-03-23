@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from collections.abc import Sequence
 import contextlib
 from enum import Enum
@@ -15,6 +17,13 @@ from gcode import GcodeRenderer
 from geometry import Geometry
 from formats import excellon
 from formats import gerber
+from settings import SETTINGS
+from project import (
+    CncProject, CncProjectItem, GerberItem, ExcellonItem,
+    CncJob, CncIsolateJob, CncDrillJob
+)
+from ui.settings import CncSettingsDialog
+from ui.preview_3d import CncPreviewView
 
 
 GEOMETRY = Geometry()
@@ -189,666 +198,6 @@ class CncPainter(QtGui.QPainter):
         self.restore()
 
 
-class CncProjectItem(QtCore.QObject):
-
-    def __init__(self, name, color=Qt.black):
-        super().__init__()
-        self._name = name
-        self._color = color
-        self._visible = True
-        self._selected = False
-        self._updating = False
-        self._updated = False
-
-    def clone(self):
-        clone = self.__class__(self.name, self.color)
-        clone.visible = self.visible
-        clone.selected = self.selected
-        return clone
-
-    def __enter__(self):
-        self._updating = True
-        self._updated = False
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self._updating = False
-        if self._updated:
-            self.changed.emit(self)
-
-    def _changed(self):
-        if self._updating:
-            self._updated = True
-        else:
-            self.changed.emit(self)
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        if self._name == value:
-            return
-        self._name = value
-        self._changed()
-
-    @property
-    def color(self):
-        return self._color
-
-    @color.setter
-    def color(self, value):
-        if self._color == value:
-            return
-        self._color = value
-        self._changed()
-
-    @property
-    def visible(self):
-        return self._visible
-
-    @visible.setter
-    def visible(self, value):
-        if self._visible == value:
-            return
-        self._visible = value
-        self._changed()
-
-    @property
-    def selected(self):
-        return self._selected
-
-    @selected.setter
-    def selected(self, value):
-        if self._selected == value:
-            return
-        self._selected = value
-        self._changed()
-
-    def draw(self, painter):
-        pass
-
-CncProjectItem.changed = QtCore.Signal(CncProjectItem)
-
-
-class GerberItem(CncProjectItem):
-    def __init__(self, name, geometry):
-        super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
-        self._geometry = geometry
-        self._geometry_cache = None
-
-    def clone(self):
-        clone = GerberItem(self.name, self._geometry)
-        clone.color = self.color
-        clone.selected = self.selected
-        return clone
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @geometry.setter
-    def geometry(self, value):
-        self._geometry = value
-        self._geometry_cache = None
-        self._changed()
-
-    def _precache_geometry(self):
-        path = QtGui.QPainterPath()
-
-        for polygon in GEOMETRY.polygons(self._geometry):
-            p = QtGui.QPainterPath()
-
-            for exterior in GEOMETRY.exteriors(polygon):
-                p.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(exterior)
-                    ])
-                )
-
-            for interior in GEOMETRY.interiors(polygon):
-                pi = QtGui.QPainterPath()
-                pi.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(interior)
-                    ])
-                )
-                p = p.subtracted(pi)
-
-            path = path.united(p)
-
-        self._geometry_cache = path
-
-    def draw(self, painter):
-        if not self.visible:
-            return
-
-        if not self._geometry_cache:
-            self._precache_geometry()
-
-        with painter:
-            color = self.color
-            if self.selected:
-                color = color.lighter(150)
-
-            painter.setBrush(QtGui.QBrush(color))
-            pen = QtGui.QPen(color.darker(150), 2.0)
-            pen.setCosmetic(True)
-            painter.setPen(pen)
-
-            painter.drawPath(self._geometry_cache)
-
-    @staticmethod
-    def from_file(path):
-        with open(path, 'rt') as f:
-            geometry = gerber.parse_gerber(f.read(), geometry=GEOMETRY)
-            # name, ext = os.path.splitext(os.path.basename(path))
-            name = os.path.basename(path)
-            return GerberItem(name, geometry)
-
-
-class ExcellonItem(CncProjectItem):
-    def __init__(self, name, excellon_file):
-        super().__init__(name, color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
-        self._excellon_file = excellon_file
-        self._geometry = self._excellon_file.geometry
-        self._geometry_cache = None
-
-    def clone(self):
-        clone = ExcellonItem(self.name, self._excellon_file)
-        clone.color = self.color
-        clone.selected = self.selected
-        return clone
-
-    @property
-    def tools(self):
-        return self._excellon_file.tools
-
-    @property
-    def drills(self):
-        return self._excellon_file.drills
-
-    @property
-    def mills(self):
-        return self._excellon_file.mills
-
-    @property
-    def geometry(self):
-        return self._excellon_file.geometry
-
-    @geometry.setter
-    def geometry(self, value):
-        self._geometry = value
-        self._geometry_cache = None
-
-    def _precache_geometry(self):
-        path = QtGui.QPainterPath()
-
-        for polygon in GEOMETRY.polygons(self._geometry):
-            p = QtGui.QPainterPath()
-
-            for exterior in GEOMETRY.exteriors(polygon):
-                p.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(exterior)
-                    ])
-                )
-
-            for interior in GEOMETRY.interiors(polygon):
-                pi = QtGui.QPainterPath()
-                pi.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(interior)
-                    ])
-                )
-                p = p.subtracted(pi)
-
-            path = path.united(p)
-
-        self._geometry_cache = path
-
-    def draw(self, painter):
-        if not self.visible:
-            return
-
-        if not self._geometry_cache:
-            self._precache_geometry()
-
-        with painter:
-            color = self.color
-            if self.selected:
-                color = color.lighter(150)
-
-            painter.setBrush(QtGui.QBrush(color))
-            pen = QtGui.QPen(color.darker(150), 2.0)
-            pen.setCosmetic(True)
-            painter.setPen(pen)
-
-            painter.drawPath(self._geometry_cache)
-
-    @staticmethod
-    def from_file(path):
-        with open(path, 'rt') as f:
-            excellon_file = excellon.parse_excellon(f.read(), geometry=GEOMETRY)
-            name = os.path.basename(path)
-            return ExcellonItem(name, excellon_file)
-
-
-class CncJob(CncProjectItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._geometry = None
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    def generate_commands(self):
-        raise NotImplemented()
-
-
-class CncIsolateJob(CncJob):
-    def __init__(self,
-                 source_item,
-                 tool_diameter=0.1,
-                 spindle_speed=1000,
-                 cut_depth=0.1,
-                 cut_speed=120,
-                 travel_height=2,
-                 pass_count=1,
-                 pass_overlap=10):
-        super().__init__(
-            'Isolate %s' % source_item.name,
-            color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
-        )
-
-        self._source_item = source_item
-
-        self._tool_diameter = tool_diameter
-        self._cut_depth = cut_depth
-        self._pass_count = pass_count
-        self._pass_overlap = pass_overlap
-        self._spindle_speed = spindle_speed
-        self._cut_speed = cut_speed
-        self._travel_height = travel_height
-
-        self._geometry = None
-        self._geometry_cache = None
-        # TODO:
-        # self._source_item.changed.connect(self._on_source_item_changed)
-        self._calculate_geometry()
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def tool_diameter(self):
-        return self._tool_diameter
-
-    @tool_diameter.setter
-    def tool_diameter(self, value):
-        self._tool_diameter = value
-        self._update()
-
-    @property
-    def cut_depth(self):
-        return self._cut_depth
-
-    @cut_depth.setter
-    def cut_depth(self, value):
-        self._cut_depth = value
-        self._update()
-
-    @property
-    def pass_count(self):
-        return self._pass_count
-
-    @pass_count.setter
-    def pass_count(self, value):
-        self._pass_count = value
-        self._update()
-
-    @property
-    def pass_overlap(self):
-        return self._pass_overlap
-
-    @pass_overlap.setter
-    def pass_overlap(self, value):
-        self._pass_overlap = value
-        self._update()
-
-    @property
-    def cut_speed(self):
-        return self._cut_speed
-
-    @cut_speed.setter
-    def cut_speed(self, value):
-        self._cut_speed = value
-        self._update()
-
-    @property
-    def spindle_speed(self):
-        return self._spindle_speed
-
-    @spindle_speed.setter
-    def spindle_speed(self, value):
-        self._spindle_speed = value
-        self._update()
-
-    @property
-    def travel_height(self):
-        return self._travel_height
-
-    @travel_height.setter
-    def travel_height(self, value):
-        self._travel_height = value
-        self._update()
-
-    def _on_source_item_changed(self, _item):
-        self._update()
-
-    def _update(self):
-        self._calculate_geometry()
-        self._changed()
-
-    def _calculate_geometry(self):
-        tool_radius = self._tool_diameter * 0.5
-        pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
-
-        geometry = None
-
-        g = GEOMETRY.simplify(
-            GEOMETRY.buffer(self._source_item.geometry, tool_radius),
-            # TODO: parametrize into settings
-            tolerance=0.01,
-        )
-
-        for pass_index in range(self._pass_count):
-            for polygon in GEOMETRY.polygons(g):
-                for exterior in GEOMETRY.exteriors(polygon):
-                    geometry = GEOMETRY.union(geometry, exterior)
-                for interior in GEOMETRY.interiors(polygon):
-                    geometry = GEOMETRY.union(geometry, interior)
-            g = GEOMETRY.buffer(g, pass_offset)
-
-        self._geometry = geometry
-        self._geometry_cache = None
-
-    def _precache_geometry(self):
-        path = QtGui.QPainterPath()
-        count = 0
-        for line in GEOMETRY.lines(self._geometry):
-            path.addPolygon(
-                QtGui.QPolygonF.fromList([
-                    QtCore.QPointF(x, y)
-                    for x, y in GEOMETRY.points(line)
-                ])
-            )
-            count += len(GEOMETRY.points(line))
-
-        self._geometry_cache = path
-
-    def draw(self, painter):
-        if not self.visible:
-            return
-
-        if self._geometry_cache is None:
-            self._precache_geometry()
-
-        with painter:
-            color = self.color
-            if self.selected:
-                color = color.lighter(150)
-
-            painter.setBrush(Qt.NoBrush)
-            pen = QtGui.QPen(color.darker(150), 2.0)
-            pen.setCosmetic(True)
-            painter.setPen(pen)
-
-            painter.drawPath(self._geometry_cache)
-
-            color.setAlphaF(0.2)
-            pen = QtGui.QPen(color, self._tool_diameter)
-            pen.setJoinStyle(Qt.RoundJoin)
-
-            painter.setPen(pen)
-
-            painter.drawPath(self._geometry_cache)
-
-    def _find_closest(self, lines, point):
-        # TODO: implement finding closest line
-        return 0
-
-    def generate_commands(self):
-        # TODO: allow selecting different starting positions
-        builder = CncCommandBuilder(start_position=(0, 0, 0))
-
-        lines = list(GEOMETRY.lines(self._geometry))
-        while lines:
-            line_idx = self._find_closest(lines, builder.current_position)
-            line = lines.pop(line_idx)
-
-            points = line.coords[:]
-            # if line.is_closed:
-            #     p, _ = shapely.ops.nearest_points(line, shapely.Point(builder.current_position[:2]))
-            #     print(points)
-            #     start_index = points.index(p)
-            #     points = points[start_index:] + points[:start_index]
-
-            builder.travel(z=self._travel_height)
-            builder.travel(x=points[0][0], y=points[0][1])
-            builder.cut(z=-self._cut_depth)
-
-            for p in points[1:]:
-                builder.cut(x=p[0], y=p[1])
-
-        return builder.build()
-
-
-class CncProject(QtCore.QObject):
-    class ItemCollection(QtCore.QObject):
-        added = QtCore.Signal(int)
-        removed = QtCore.Signal(int)
-        changed = QtCore.Signal(int)
-
-        def __init__(self):
-            super().__init__()
-            self._items = []
-            self._item_changed_callbacks = {}
-
-        def insert(self, index, item):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-
-            item.changed.connect(self._on_item_changed)
-
-            self._items.insert(index, item)
-            self.added.emit(index)
-
-        def append(self, item):
-            item.changed.connect(self._on_item_changed)
-
-            self._items.append(item)
-            self.added.emit(len(self._items) - 1)
-
-        def extend(self, items):
-            for item in items:
-                self.append(item)
-
-        def remove(self, item):
-            index = self.index(item)
-            item.changed.disconnect(self._on_item_changed)
-            self._items.remove(item)
-            self.removed.emit(index)
-
-        def clear(self):
-            for i in reversed(range(len(self))):
-                del self[i]
-
-        def index(self, item):
-            return self._items.index(item)
-
-        def __iter__(self):
-            yield from self._items
-
-        def __len__(self):
-            return len(self._items)
-
-        def __getitem__(self, index):
-            return self._items[index]
-
-        def __setitem__(self, index, item):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-
-            self._items[index].changed.disconnect(self._on_item_changed)
-            self._items[index] = item
-            item.changed.connect(self._on_item_changed)
-            self.changed.emit(index)
-
-        def __delitem__(self, index):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-            self._items[index].changed.disconnect(self._on_item_changed)
-            del self._items[index]
-            self.removed.emit(index)
-
-        def __contains__(self, item):
-            return item in self._items
-
-        def _on_item_changed(self, item):
-            index = self._items.index(item)
-            if index == -1:
-                return
-            self.changed.emit(index)
-
-    class Selection(QtCore.QObject):
-        changed = QtCore.Signal()
-
-        def __init__(self, project):
-            super().__init__()
-            self._project = project
-            self._indexes = set()
-
-        def _changed(self):
-            self.changed.emit()
-
-        def set(self, indexes):
-            indexes = set(indexes)
-
-            for index in (self._indexes - indexes):
-                self.remove(index)
-
-            self.add_all(indexes)
-
-        def add(self, index):
-            if index < 0 or index >= len(self._project.items):
-                raise ValueError("Selection index is out of range")
-
-            if index in self._indexes:
-                return
-
-            self._indexes.add(index)
-            self._project.items[index].selected = True
-            self._changed()
-
-        def add_all(self, indexes):
-            if not indexes:
-                return
-
-            for index in indexes:
-                if index < 0 or index >= len(self._project.items):
-                    raise ValueError("Selection index is out of range")
-
-                if index in self._indexes:
-                    continue
-
-                self._indexes.add(index)
-                self._project.items[index].selected = True
-
-            self._changed()
-
-        def remove(self, index):
-            if index not in self._indexes:
-                return
-
-            self._indexes.remove(index)
-            self._project.items[index].selected = False
-            self._changed()
-
-        def remove_all(self, indexes):
-            changed = False
-            for index in indexes:
-                if index not in self._indexes:
-                    continue
-
-                self._indexes.remove(index)
-                self._project.items[index].selected = False
-                changed = True
-
-            if changed:
-                self._changed()
-
-        def clear(self):
-            if not self._items:
-                return
-
-            for index in self._indexes:
-                self._project.items[index].selected = False
-
-            self._indexes = set()
-            self._changed()
-
-        def __iter__(self):
-            yield from self._indexes
-
-        def __len__(self):
-            return len(self._indexes)
-
-        def __contains__(self, index):
-            return index in self._indexes
-
-        def items(self):
-            for index in self._indexes:
-                yield self._project.items[index]
-
-    def __init__(self):
-        super().__init__()
-        self._items = self.ItemCollection()
-        self._selection = self.Selection(self)
-
-    @property
-    def items(self):
-        return self._items
-
-    @property
-    def selection(self):
-        return self._selection
-
-    @property
-    def selectedItems(self):
-        return [self._items[idx] for idx in self._selection]
-
-    @selectedItems.setter
-    def selectedItems(self, items):
-        self._selection.set([
-            idx for idx, item in enumerate(self._items)
-            if item in items
-        ])
-
-
 class UpdateItemEditorCommand(QtGui.QUndoCommand):
     def __init__(self, item, updates, parent=None):
         super().__init__('Update item', parent=parent)
@@ -964,6 +313,28 @@ class CreateIsolateJobEditorCommand(QtGui.QUndoCommand):
 
     def redo(self):
         self._result_item = CncIsolateJob(self._source_item)
+        APP.project.items.append(self._result_item)
+
+    def undo(self):
+        APP.project.items.remove(self._result_item)
+
+
+class CreateDrillJobEditorCommand(QtGui.QUndoCommand):
+    def __init__(self, item, parent=None):
+        super().__init__('Create Drill Job', parent=parent)
+        self._source_item = item
+        self._result_item = None
+
+    @property
+    def source_item(self):
+        return self._source_item
+
+    @property
+    def result_item(self):
+        return self._result_item
+
+    def redo(self):
+        self._result_item = CncDrillJob(self._source_item)
         APP.project.items.append(self._result_item)
 
     def undo(self):
@@ -1473,7 +844,7 @@ class CncVisualization(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         if self._panning:
-            self._offset += (event.position() - self._last_mouse_position)
+            self._offset += (event.position() - self._last_mouse_position).toPoint()
             self._last_mouse_position = event.position()
             self.view_updated.emit()
             self.repaint()
@@ -1832,6 +1203,8 @@ class CncProjectWindow(CncWindow):
         popup.addAction('Delete', self._delete_items)
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
+        elif isinstance(item, ExcellonItem):
+            popup.addAction('Create Drill Job', self._drill_job)
         elif isinstance(item, CncJob):
             popup.addAction('Export G-code', self._export_gcode)
 
@@ -1848,6 +1221,14 @@ class CncProjectWindow(CncWindow):
             return
 
         command = CreateIsolateJobEditorCommand(self.project.selectedItems[0])
+        APP.undo_stack.push(command)
+        APP.project.selectedItems = [command.result_item]
+
+    def _drill_job(self):
+        if len(self.project.selection) == 0:
+            return
+
+        command = CreateDrillJobEditorCommand(self.project.selectedItems[0])
         APP.undo_stack.push(command)
         APP.project.selectedItems = [command.result_item]
 
@@ -2189,7 +1570,14 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.project = APP.project
         self.project_view = CncVisualization(self.project, self)
-        self.setCentralWidget(self.project_view)
+
+        self.preview_view = CncPreviewView(self)
+
+        self.tabs = QtWidgets.QTabWidget()
+        self.tabs.addTab(self.project_view, 'Project')
+        self.tabs.addTab(self.preview_view, 'Preview')
+
+        self.setCentralWidget(self.tabs)
 
         self.menu = QtWidgets.QMenuBar()
         self.file_menu = self.menu.addMenu("File")
@@ -2207,6 +1595,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.edit_menu = self.menu.addMenu("Edit")
         self.edit_menu.addAction(undo_action)
         self.edit_menu.addAction(redo_action)
+        self.edit_menu.addSeparator()
+        self.edit_menu.addAction('Edit Settings', self._edit_settings,
+                                 shortcut='Ctrl+,')
 
         self.view_menu = self.menu.addMenu("View")
 
@@ -2294,6 +1685,10 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         APP.project.items.append(item)
 
+    def _edit_settings(self):
+        settings_dialog = CncSettingsDialog(APP.settings, self)
+        settings_dialog.exec()
+
     def _add_dock_window(self, window, area, shortcut=''):
         self._windows.append(window)
         self.addDockWidget(area, window)
@@ -2344,12 +1739,47 @@ class CncApplication(QtWidgets.QApplication):
         super().__init__(*args, **kwargs)
 
         self.project = CncProject()
+        self.settings = SETTINGS
         self.undo_stack = QtGui.QUndoStack()
+
+        self._load_settings()
+
+    def _save_settings(self):
+        settings = QtCore.Settings()
+        settings.beginGroup("settings")
+
+        for setting in self.settings:
+            if self.settings.is_default(setting.path):
+                continue
+
+            value = self.settings.get(setting.path)
+            settings.setValue(setting.path, setting.type.serialize(value))
+
+        settings.endGroup()
+
+    def _load_settings(self):
+        settings = QtCore.QSettings()
+        settings.beginGroup("settings")
+
+        for setting in self.settings:
+            value = settings.value(setting.path, None)
+            if value is None:
+                value = setting.default
+            else:
+                try:
+                    value = setting.type.deserialize(value)
+                except CncSettingError as e:
+                    print(e.message)
+                    continue
+
+                self.settings.set(setting.path, value)
+
+        settings.endGroup()
 
 
 APP = CncApplication(sys.argv)
-APP.project.items.append(GerberItem.from_file('sample.gbr'))
-APP.project.items.append(ExcellonItem.from_file('sample.drl'))
+# APP.project.items.append(GerberItem.from_file('sample.gbr'))
+# APP.project.items.append(ExcellonItem.from_file('sample.drl'))
 
 main_window = CncMainWindow()
 main_window.show()

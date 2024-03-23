@@ -2,6 +2,7 @@ import shapely
 import shapely.affinity
 from shapely.geometry.base import BaseGeometry as Shape
 
+
 class Shape:
     def __init__(self, data):
         self._data = data
