@@ -5,7 +5,7 @@ import pyparsing as pp
 import pyparsing.exceptions
 import shapely
 import shapely.affinity
-from geometry import Geometry
+from tinycam.geometry import Geometry
 
 class Node:
     def __init__(self, type, location, data=None):

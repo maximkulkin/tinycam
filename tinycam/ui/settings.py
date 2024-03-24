@@ -5,8 +5,8 @@ from typing import List, Mapping
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
-import settings as s
-from utils import find_if
+import tinycam.settings as s
+from tinycam.utils import find_if
 
 
 class CncSettingsModel(QtCore.QAbstractItemModel):

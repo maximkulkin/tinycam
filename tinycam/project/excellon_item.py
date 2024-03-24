@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui
 import os.path
 
 from tinycam.formats import excellon
-from tinycam.globals import GEOMETRY
+from tinycam.globals import CncGlobals
 from tinycam.project.item import CncProjectItem
 
 
@@ -43,23 +43,23 @@ class ExcellonItem(CncProjectItem):
     def _precache_geometry(self):
         path = QtGui.QPainterPath()
 
-        for polygon in GEOMETRY.polygons(self._geometry):
+        for polygon in CncGlobals.GEOMETRY.polygons(self._geometry):
             p = QtGui.QPainterPath()
 
-            for exterior in GEOMETRY.exteriors(polygon):
+            for exterior in CncGlobals.GEOMETRY.exteriors(polygon):
                 p.addPolygon(
                     QtGui.QPolygonF.fromList([
                         QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(exterior)
+                        for x, y in CncGlobals.GEOMETRY.points(exterior)
                     ])
                 )
 
-            for interior in GEOMETRY.interiors(polygon):
+            for interior in CncGlobals.GEOMETRY.interiors(polygon):
                 pi = QtGui.QPainterPath()
                 pi.addPolygon(
                     QtGui.QPolygonF.fromList([
                         QtCore.QPointF(x, y)
-                        for x, y in GEOMETRY.points(interior)
+                        for x, y in CncGlobals.GEOMETRY.points(interior)
                     ])
                 )
                 p = p.subtracted(pi)
@@ -90,7 +90,7 @@ class ExcellonItem(CncProjectItem):
     @staticmethod
     def from_file(path):
         with open(path, 'rt') as f:
-            excellon_file = excellon.parse_excellon(f.read(), geometry=GEOMETRY)
+            excellon_file = excellon.parse_excellon(f.read(), geometry=CncGlobals.GEOMETRY)
             name = os.path.basename(path)
             return ExcellonItem(name, excellon_file)
 

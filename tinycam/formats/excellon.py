@@ -5,7 +5,7 @@ import pyparsing.exceptions
 import shapely
 import shapely.affinity
 from typing import Tuple
-from geometry import Geometry, Shape
+from tinycam.geometry import Geometry, Shape
 
 
 class Node:
