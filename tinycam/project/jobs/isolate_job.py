@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.project.jobs.job import CncJob
 
 
@@ -116,19 +116,19 @@ class CncIsolateJob(CncJob):
 
         geometry = None
 
-        g = CncGlobals.GEOMETRY.simplify(
-            CncGlobals.GEOMETRY.buffer(self._source_item.geometry, tool_radius),
+        g = GLOBALS.GEOMETRY.simplify(
+            GLOBALS.GEOMETRY.buffer(self._source_item.geometry, tool_radius),
             # TODO: parametrize into settings
             tolerance=0.01,
         )
 
         for pass_index in range(self._pass_count):
-            for polygon in CncGlobals.GEOMETRY.polygons(g):
-                for exterior in CncGlobals.GEOMETRY.exteriors(polygon):
-                    geometry = CncGlobals.GEOMETRY.union(geometry, exterior)
-                for interior in CncGlobals.GEOMETRY.interiors(polygon):
-                    geometry = CncGlobals.GEOMETRY.union(geometry, interior)
-            g = CncGlobals.GEOMETRY.buffer(g, pass_offset)
+            for polygon in GLOBALS.GEOMETRY.polygons(g):
+                for exterior in GLOBALS.GEOMETRY.exteriors(polygon):
+                    geometry = GLOBALS.GEOMETRY.union(geometry, exterior)
+                for interior in GLOBALS.GEOMETRY.interiors(polygon):
+                    geometry = GLOBALS.GEOMETRY.union(geometry, interior)
+            g = GLOBALS.GEOMETRY.buffer(g, pass_offset)
 
         self._geometry = geometry
         self._geometry_cache = None
@@ -136,14 +136,14 @@ class CncIsolateJob(CncJob):
     def _precache_geometry(self):
         path = QtGui.QPainterPath()
         count = 0
-        for line in CncGlobals.GEOMETRY.lines(self._geometry):
+        for line in GLOBALS.GEOMETRY.lines(self._geometry):
             path.addPolygon(
                 QtGui.QPolygonF.fromList([
                     QtCore.QPointF(x, y)
-                    for x, y in CncGlobals.GEOMETRY.points(line)
+                    for x, y in GLOBALS.GEOMETRY.points(line)
                 ])
             )
-            count += len(CncGlobals.GEOMETRY.points(line))
+            count += len(GLOBALS.GEOMETRY.points(line))
 
         self._geometry_cache = path
 
@@ -182,7 +182,7 @@ class CncIsolateJob(CncJob):
         # TODO: allow selecting different starting positions
         builder = CncCommandBuilder(start_position=(0, 0, 0))
 
-        lines = list(CncGlobals.GEOMETRY.lines(self._geometry))
+        lines = list(GLOBALS.GEOMETRY.lines(self._geometry))
         while lines:
             line_idx = self._find_closest(lines, builder.current_position)
             line = lines.pop(line_idx)

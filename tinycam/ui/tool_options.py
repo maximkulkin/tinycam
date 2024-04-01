@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtWidgets
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.ui.window import CncWindow
 from tinycam.ui.options import CncProjectItemOptionsView, CncIsolateJobOptionsView
 
@@ -25,13 +25,13 @@ class CncToolOptionsWindow(CncWindow):
 
         self._current_view = None
         self._items = []
-        CncGlobals.APP.project.selection.changed.connect(self._on_project_selection_changed)
+        GLOBALS.APP.project.selection.changed.connect(self._on_project_selection_changed)
 
     def _on_project_selection_changed(self):
         if len(self._items) != 0:
             self._deactivate_view()
 
-        self._items = CncGlobals.APP.project.selectedItems
+        self._items = GLOBALS.APP.project.selectedItems
         if len(self._items) != 0:
             for view in self._options_views:
                 if view.matches(self._items):

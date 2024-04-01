@@ -1,4 +1,4 @@
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.project import CncIsolateJob
 from tinycam.ui.options_base import CncOptionsView
 from tinycam.ui.commands import UpdateItemsCommand
@@ -46,7 +46,7 @@ class CncIsolateJobOptionsView(CncOptionsView):
 
     @property
     def _item(self):
-        return CncGlobals.APP.project.selectedItems[0]
+        return GLOBALS.APP.project.selectedItems[0]
 
     def update(self):
         self._tool_diameter_edit.setValue(self._item.tool_diameter)
@@ -58,21 +58,21 @@ class CncIsolateJobOptionsView(CncOptionsView):
         self._travel_height_edit.setValue(self._item.travel_height)
 
     def _on_tool_diameter_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'tool_diameter': self._tool_diameter_edit.value(),
             })
         )
 
     def _on_cut_depth_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'cut_depth': self._cut_depth_edit.value(),
             })
         )
 
     def _on_pass_count_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'pass_count': self._pass_count_edit.value(),
             })
@@ -80,28 +80,28 @@ class CncIsolateJobOptionsView(CncOptionsView):
         self._pass_overlap_edit.enabled = (self._item.pass_count > 1)
 
     def _on_pass_overlap_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'pass_overlap': self._pass_overlap_edit.value(),
             })
         )
 
     def _on_cut_speed_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'cut_speed': self._cut_speed_edit.value(),
             })
         )
 
     def _on_spindle_speed_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'spindle_speed': self._spindle_speed_edit.value(),
             })
         )
 
     def _on_travel_height_changed(self):
-        CncGlobals.APP.undo_stack.push(
+        GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([self._item], {
                 'travel_height': self._travel_height_edit.value(),
             })

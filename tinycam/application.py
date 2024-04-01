@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.project import CncProject
 
 
@@ -9,7 +9,7 @@ class CncApplication(QtWidgets.QApplication):
         super().__init__(*args, **kwargs)
 
         self.project = CncProject()
-        self.settings = CncGlobals.SETTINGS
+        self.settings = GLOBALS.SETTINGS
         self.undo_stack = QtGui.QUndoStack()
 
         self._load_settings()

@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.project import ExcellonItem, GerberItem
 from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
@@ -164,26 +164,26 @@ class CncProjectWindow(CncWindow):
         popup.exec(self.mapToGlobal(position))
 
     def _set_color(self, color):
-        CncGlobals.APP.undo_stack.push(SetItemsColorCommand(self.project.selectedItems, color))
+        GLOBALS.APP.undo_stack.push(SetItemsColorCommand(self.project.selectedItems, color))
 
     def _delete_items(self):
-        CncGlobals.APP.undo_stack.push(DeleteItemsCommand(self.project.selectedItems))
+        GLOBALS.APP.undo_stack.push(DeleteItemsCommand(self.project.selectedItems))
 
     def _isolate_job(self):
         if len(self.project.selection) == 0:
             return
 
         command = CreateIsolateJobCommand(self.project.selectedItems[0])
-        CncGlobals.APP.undo_stack.push(command)
-        CncGlobals.APP.project.selectedItems = [command.result_item]
+        GLOBALS.APP.undo_stack.push(command)
+        GLOBALS.APP.project.selectedItems = [command.result_item]
 
     def _drill_job(self):
         if len(self.project.selection) == 0:
             return
 
         command = CreateDrillJobCommand(self.project.selectedItems[0])
-        CncGlobals.APP.undo_stack.push(command)
-        CncGlobals.APP.project.selectedItems = [command.result_item]
+        GLOBALS.APP.undo_stack.push(command)
+        GLOBALS.APP.project.selectedItems = [command.result_item]
 
     def _export_gcode(self):
         if len(self.project.selection) == 0:

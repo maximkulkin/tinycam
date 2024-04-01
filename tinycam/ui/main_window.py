@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
 from tinycam.ui.visualization import CncVisualization
@@ -17,7 +17,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.resize(600, 400)
 
-        self.project = CncGlobals.APP.project
+        self.project = GLOBALS.APP.project
         self.project_view = CncVisualization(self.project, self)
 
         self.preview_view = CncPreview3DView(self)
@@ -33,11 +33,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.file_menu.addAction('Import Drawing', self._import_file,
                                  shortcut='Ctrl+o')
 
-        undo_action = CncGlobals.APP.undo_stack.createUndoAction(self, "&Undo")
+        undo_action = GLOBALS.APP.undo_stack.createUndoAction(self, "&Undo")
         undo_action.setIcon(QtGui.QIcon(":/icons/undo.png"))
         undo_action.setShortcuts(QtGui.QKeySequence.Undo)
 
-        redo_action = CncGlobals.APP.undo_stack.createRedoAction(self, "&Redo")
+        redo_action = GLOBALS.APP.undo_stack.createRedoAction(self, "&Redo")
         redo_action.setIcon(QtGui.QIcon(":/icons/redo.png"))
         redo_action.setShortcuts(QtGui.QKeySequence.Redo)
 
@@ -132,10 +132,10 @@ class CncMainWindow(QtWidgets.QMainWindow):
             )
             return
 
-        CncGlobals.APP.project.items.append(item)
+        GLOBALS.APP.project.items.append(item)
 
     def _edit_settings(self):
-        settings_dialog = CncSettingsDialog(CncGlobals.APP.settings, self)
+        settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)
         settings_dialog.exec()
 
     def _add_dock_window(self, window, area, shortcut=''):

@@ -6,7 +6,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 import numpy as np
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 from tinycam.ui.utils import Point
 from tinycam.ui.commands import MoveItemsCommand, ScaleItemsCommand
 
@@ -226,7 +226,7 @@ class CncManipulateTool(CncTool):
     def _accept_manipulation(self):
         command = self._make_command(self.project.selectedItems)
         if command is not None:
-            CncGlobals.APP.undo_stack.push(command)
+            GLOBALS.APP.undo_stack.push(command)
 
         self._items = []
 

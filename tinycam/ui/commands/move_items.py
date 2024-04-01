@@ -1,6 +1,6 @@
 from PySide6 import QtGui
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 
 
 class MoveItemsCommand(QtGui.QUndoCommand):
@@ -11,7 +11,7 @@ class MoveItemsCommand(QtGui.QUndoCommand):
 
     def _move(self, offset):
         for item in self._items:
-            item.geometry = CncGlobals.GEOMETRY.translate(item.geometry, offset)
+            item.geometry = GLOBALS.GEOMETRY.translate(item.geometry, offset)
 
     def redo(self):
         self._move(self._offset)

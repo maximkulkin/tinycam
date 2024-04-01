@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtWidgets
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 
 
 class StringEdit(QtWidgets.QLineEdit):
@@ -92,14 +92,14 @@ class CncOptionsView(QtWidgets.QWidget):
             self._items.append(item)
 
         self.update()
-        CncGlobals.APP.project.selection.changed.connect(self._on_selection_changed)
+        GLOBALS.APP.project.selection.changed.connect(self._on_selection_changed)
         self.show()
 
     def deactivate(self):
         for item in self._items:
             item.changed.disconnect(self._on_item_changed)
 
-        CncGlobals.APP.project.selection.changed.disconnect(self._on_selection_changed)
+        GLOBALS.APP.project.selection.changed.disconnect(self._on_selection_changed)
         self.hide()
 
     def update(self):
@@ -112,7 +112,7 @@ class CncOptionsView(QtWidgets.QWidget):
         for item in self._items:
             item.changed.disconnect(self._on_selection_changed)
 
-        self._items = CncGlobals.APP.project.selectedItems
+        self._items = GLOBALS.APP.project.selectedItems
 
         for item in self._items:
             item.changed.connect(self._on_selection_changed)

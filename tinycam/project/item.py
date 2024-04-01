@@ -1,7 +1,7 @@
 from PySide6 import QtCore
 from PySide6.QtCore import Qt
 
-from tinycam.globals import CncGlobals
+from tinycam.globals import GLOBALS
 
 
 class CncProjectItem(QtCore.QObject):
@@ -82,7 +82,7 @@ class CncProjectItem(QtCore.QObject):
         self._changed()
 
     def contains(self, point):
-        return CncGlobals.GEOMETRY.contains(self._geometry, (point.x(), point.y()))
+        return GLOBALS.GEOMETRY.contains(self._geometry, (point.x(), point.y()))
 
     def draw(self, painter):
         pass
