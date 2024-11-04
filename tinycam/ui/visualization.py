@@ -333,7 +333,7 @@ class CncManipulateTool(CncTool):
             center = self._bounds.center()
 
             if (self._within_handle(event.position(), self._bounds.topLeft()) or
-                self._within_handle(event.position(), self._bounds.bottomRight())):
+                    self._within_handle(event.position(), self._bounds.bottomRight())):
                 self.view.setCursor(Qt.SizeFDiagCursor)
             elif (self._within_handle(event.position(), self._bounds.topRight()) or
                   self._within_handle(event.position(), self._bounds.bottomLeft())):
@@ -386,7 +386,7 @@ class CncManipulateTool(CncTool):
         """Draws box handle, position in canvas and size is in screen coordinates."""
         # TODO: change to use of CncHandle subclasses
         p = self.view.canvas_to_screen_point(position)
-        painter.drawRect(p.x() - size.width()*0.5, p.y() - size.height()*0.5, size.width(), size.height());
+        painter.drawRect(p.x() - size.width() * 0.5, p.y() - size.height() * 0.5, size.width(), size.height())
 
 
 class CncVisualization(QtWidgets.QWidget):
@@ -400,7 +400,7 @@ class CncVisualization(QtWidgets.QWidget):
         self.setFocusPolicy(Qt.ClickFocus)
 
         self._scale = 1.0
-        self._offset = QtCore.QPointF(0.0, 0.0)
+        self._offset: QtCore.QPointF = QtCore.QPointF(0.0, 0.0)
         self._x_label_size = QtCore.QSize(30, 30)
         self._y_label_size = QtCore.QSize(40, 25)
 
@@ -628,9 +628,6 @@ class CncVisualization(QtWidgets.QWidget):
             xs = np.arange(pmin.x() - pmin.x() % step + step, pmax.x(), step)
             ys = np.arange(pmin.y() - pmin.y() % step + step, pmax.y(), step)
 
-            text_height = painter.fontMetrics().height()
-            y_text_width = 30
-
             grid_screen_size = step * self._scale
             if grid_screen_size < max(self._x_label_size.width(), self._y_label_size.height()):
                 # paint only every even line
@@ -658,7 +655,7 @@ class CncVisualization(QtWidgets.QWidget):
                 sx = x * self._scale + self._offset.x()
 
                 r = QtCore.QRect(
-                    sx - self._x_label_size.width()*0.5,
+                    sx - self._x_label_size.width() * 0.5,
                     horizontal_text_y,
                     self._x_label_size.width(),
                     self._x_label_size.height(),
@@ -675,12 +672,11 @@ class CncVisualization(QtWidgets.QWidget):
 
                 r = QtCore.QRect(
                     0,
-                    sy - self._y_label_size.height()*0.5,
+                    sy - self._y_label_size.height() * 0.5,
                     self._y_label_size.width(),
                     self._y_label_size.height(),
                 )
                 painter.drawText(r, Qt.AlignRight | Qt.AlignVCenter, '%g' % y)
-
 
     def _draw_grid(self, painter):
         with painter:

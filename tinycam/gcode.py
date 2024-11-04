@@ -1,5 +1,4 @@
-import io
-import commands
+from tinycam import commands
 
 
 class GcodeBuilder:

@@ -1,4 +1,7 @@
 from PySide6 import QtCore
+from collections.abc import Sequence
+from tinycam.project.item import CncProjectItem
+from typing import Generator
 
 
 class CncProject(QtCore.QObject):
@@ -12,7 +15,7 @@ class CncProject(QtCore.QObject):
             self._items = []
             self._item_changed_callbacks = {}
 
-        def insert(self, index, item):
+        def insert(self, index: int, item: CncProjectItem):
             if index < 0:
                 index += len(self)
                 if index < 0:
@@ -23,17 +26,17 @@ class CncProject(QtCore.QObject):
             self._items.insert(index, item)
             self.added.emit(index)
 
-        def append(self, item):
+        def append(self, item: CncProjectItem):
             item.changed.connect(self._on_item_changed)
 
             self._items.append(item)
             self.added.emit(len(self._items) - 1)
 
-        def extend(self, items):
+        def extend(self, items: Sequence[CncProjectItem]):
             for item in items:
                 self.append(item)
 
-        def remove(self, item):
+        def remove(self, item: CncProjectItem):
             index = self.index(item)
             item.changed.disconnect(self._on_item_changed)
             self._items.remove(item)
@@ -43,19 +46,19 @@ class CncProject(QtCore.QObject):
             for i in reversed(range(len(self))):
                 del self[i]
 
-        def index(self, item):
+        def index(self, item: CncProjectItem) -> int:
             return self._items.index(item)
 
         def __iter__(self):
             yield from self._items
 
-        def __len__(self):
+        def __len__(self) -> int:
             return len(self._items)
 
-        def __getitem__(self, index):
+        def __getitem__(self, index: int):
             return self._items[index]
 
-        def __setitem__(self, index, item):
+        def __setitem__(self, index: int, item: CncProjectItem):
             if index < 0:
                 index += len(self)
                 if index < 0:
@@ -66,7 +69,7 @@ class CncProject(QtCore.QObject):
             item.changed.connect(self._on_item_changed)
             self.changed.emit(index)
 
-        def __delitem__(self, index):
+        def __delitem__(self, index: int):
             if index < 0:
                 index += len(self)
                 if index < 0:
@@ -75,10 +78,10 @@ class CncProject(QtCore.QObject):
             del self._items[index]
             self.removed.emit(index)
 
-        def __contains__(self, item):
+        def __contains__(self, item: CncProjectItem):
             return item in self._items
 
-        def _on_item_changed(self, item):
+        def _on_item_changed(self, item: CncProjectItem):
             index = self._items.index(item)
             if index == -1:
                 return
@@ -87,7 +90,7 @@ class CncProject(QtCore.QObject):
     class Selection(QtCore.QObject):
         changed = QtCore.Signal()
 
-        def __init__(self, project):
+        def __init__(self, project: 'CncProject'):
             super().__init__()
             self._project = project
             self._indexes = set()
@@ -95,7 +98,7 @@ class CncProject(QtCore.QObject):
         def _changed(self):
             self.changed.emit()
 
-        def set(self, indexes):
+        def set(self, indexes: Sequence[int]):
             indexes = set(indexes)
 
             for index in (self._indexes - indexes):
@@ -103,7 +106,7 @@ class CncProject(QtCore.QObject):
 
             self.add_all(indexes)
 
-        def add(self, index):
+        def add(self, index: int):
             if index < 0 or index >= len(self._project.items):
                 raise ValueError("Selection index is out of range")
 
@@ -114,7 +117,7 @@ class CncProject(QtCore.QObject):
             self._project.items[index].selected = True
             self._changed()
 
-        def add_all(self, indexes):
+        def add_all(self, indexes: Sequence[int]):
             if not indexes:
                 return
 
@@ -130,7 +133,7 @@ class CncProject(QtCore.QObject):
 
             self._changed()
 
-        def remove(self, index):
+        def remove(self, index: int):
             if index not in self._indexes:
                 return
 
@@ -138,7 +141,7 @@ class CncProject(QtCore.QObject):
             self._project.items[index].selected = False
             self._changed()
 
-        def remove_all(self, indexes):
+        def remove_all(self, indexes: Sequence[int]):
             changed = False
             for index in indexes:
                 if index not in self._indexes:
@@ -164,13 +167,13 @@ class CncProject(QtCore.QObject):
         def __iter__(self):
             yield from self._indexes
 
-        def __len__(self):
+        def __len__(self) -> int:
             return len(self._indexes)
 
-        def __contains__(self, index):
+        def __contains__(self, index: int):
             return index in self._indexes
 
-        def items(self):
+        def items(self) -> Generator[CncProjectItem, None, None]:
             for index in self._indexes:
                 yield self._project.items[index]
 
@@ -180,22 +183,20 @@ class CncProject(QtCore.QObject):
         self._selection = self.Selection(self)
 
     @property
-    def items(self):
+    def items(self) -> Sequence[CncProjectItem]:
         return self._items
 
     @property
-    def selection(self):
+    def selection(self) -> 'CncProject.Selection':
         return self._selection
 
     @property
-    def selectedItems(self):
+    def selectedItems(self) -> Sequence[CncProjectItem]:
         return [self._items[idx] for idx in self._selection]
 
     @selectedItems.setter
-    def selectedItems(self, items):
+    def selectedItems(self, items: Sequence[CncProjectItem]):
         self._selection.set([
             idx for idx, item in enumerate(self._items)
             if item in items
         ])
-
-

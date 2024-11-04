@@ -1,4 +1,4 @@
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
 from tinycam.globals import GLOBALS
@@ -6,7 +6,7 @@ from tinycam.globals import GLOBALS
 
 class CncProjectItem(QtCore.QObject):
 
-    def __init__(self, name, color=Qt.black):
+    def __init__(self, name, color: QtGui.QColor = Qt.black):
         super().__init__()
         self._name = name
         self._color = color
@@ -15,7 +15,7 @@ class CncProjectItem(QtCore.QObject):
         self._updating = False
         self._updated = False
 
-    def clone(self):
+    def clone(self) -> 'CncProjectItem':
         clone = self.__class__(self.name, self.color)
         clone.visible = self.visible
         clone.selected = self.selected
@@ -38,53 +38,54 @@ class CncProjectItem(QtCore.QObject):
             self.changed.emit(self)
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str):
         if self._name == value:
             return
         self._name = value
         self._changed()
 
     @property
-    def color(self):
+    def color(self) -> QtGui.QColor:
         return self._color
 
     @color.setter
-    def color(self, value):
+    def color(self, value: QtGui.QColor):
         if self._color == value:
             return
         self._color = value
         self._changed()
 
     @property
-    def visible(self):
+    def visible(self) -> bool:
         return self._visible
 
     @visible.setter
-    def visible(self, value):
+    def visible(self, value: bool):
         if self._visible == value:
             return
         self._visible = value
         self._changed()
 
     @property
-    def selected(self):
+    def selected(self) -> bool:
         return self._selected
 
     @selected.setter
-    def selected(self, value):
+    def selected(self, value: bool):
         if self._selected == value:
             return
         self._selected = value
         self._changed()
 
-    def contains(self, point):
+    def contains(self, point: QtCore.QPoint | QtCore.QPointF):
         return GLOBALS.GEOMETRY.contains(self._geometry, (point.x(), point.y()))
 
-    def draw(self, painter):
+    def draw(self, painter: QtGui.QPainter):
         pass
+
 
 CncProjectItem.changed = QtCore.Signal(CncProjectItem)

@@ -1,8 +1,9 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
+from tinycam.gcode import GcodeRenderer
 from tinycam.globals import GLOBALS
-from tinycam.project import ExcellonItem, GerberItem
+from tinycam.project import ExcellonItem, GerberItem, CncJob
 from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
     CreateIsolateJobCommand,
@@ -37,14 +38,14 @@ class CncProjectWindow(CncWindow):
             self.setCheckState(Qt.Checked if self.item.visible else Qt.Unchecked)
 
     class ColorBox(QtWidgets.QWidget):
-        def __init__(self, color, *args, **kwargs):
+        def __init__(self, color: QtGui.QColor, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.color = color
             self.set = QtCore.QPoint(30, 0)
             self.setMinimumSize(QtCore.QSize(70, 20))
             self.checked = False
 
-        def paintEvent(self, event):
+        def paintEvent(self, event: QtCore.QEvent):
             super().paintEvent(event)
 
             painter = QtGui.QPainter(self)
@@ -95,14 +96,14 @@ class CncProjectWindow(CncWindow):
         for item in self.project.items:
             self._view.addItem(self.ItemWidget(self.project, item))
 
-    def _on_item_added(self, index):
+    def _on_item_added(self, index: int):
         item = self.project.items[index]
         self._view.insertItem(index, self.ItemWidget(self.project, item))
 
-    def _on_item_removed(self, index):
+    def _on_item_removed(self, index: int):
         self._view.removeItem(index)
 
-    def _on_item_changed(self, index):
+    def _on_item_changed(self, index: int):
         pass
 
     def _on_project_selection_changed(self):
@@ -111,7 +112,8 @@ class CncProjectWindow(CncWindow):
 
         self._updating_selection = True
 
-        model_index = lambda idx: self._view.model().createIndex(idx, 0)
+        def model_index(idx: int) -> int:
+            return self._view.model().createIndex(idx, 0)
 
         selection_model = self._view.selectionModel()
         selection_model.clear()
@@ -134,7 +136,7 @@ class CncProjectWindow(CncWindow):
             view_item.name = item.text()
             view_item.visible = item.checkState() == Qt.Checked
 
-    def _on_context_menu(self, position):
+    def _on_context_menu(self, position: QtCore.QPoint):
         if self._view.currentItem() is None:
             return
 

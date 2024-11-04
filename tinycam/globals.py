@@ -1,14 +1,16 @@
 from tinycam.geometry import Geometry
-from tinycam.settings import SETTINGS
+from tinycam.settings import SETTINGS, CncSettings
 
 __all__ = [
     'CncGlobals',
     'GLOBALS',
 ]
 
+
 class CncGlobals:
-    GEOMETRY = Geometry()
+    GEOMETRY: Geometry = Geometry()
     APP = None
-    SETTINGS = SETTINGS
+    SETTINGS: CncSettings = SETTINGS
+
 
 GLOBALS = CncGlobals
