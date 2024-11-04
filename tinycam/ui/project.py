@@ -101,7 +101,7 @@ class CncProjectWindow(CncWindow):
         self._view.insertItem(index, self.ItemWidget(self.project, item))
 
     def _on_item_removed(self, index: int):
-        self._view.removeItem(index)
+        self._view.takeItem(index)
 
     def _on_item_changed(self, index: int):
         pass
