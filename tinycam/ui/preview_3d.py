@@ -2,7 +2,7 @@ from PySide6 import QtGui
 import shapely
 import moderngl
 from tinycam.types import Vector2, Vector3, Vector4
-from tinycam.project import GerberItem
+from tinycam.project import CncProjectItem, GerberItem, ExcellonItem
 from tinycam.ui.view import CncView
 from tinycam.ui.canvas import CncCanvas, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController
@@ -18,13 +18,14 @@ def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
     return Vector4((color.redF(), color.greenF(), color.blueF(), color.alphaF()))
 
 
-class GerberItemView(Polygon):
-    def __init__(self, context: moderngl.Context, model: GerberItem):
+class CncProjectItemView(Polygon):
+    def __init__(self, context: moderngl.Context, index: int, model: CncProjectItem):
         super().__init__(
             context,
             shapely.transform(model.geometry, lambda p: p * (1.0, -1.0)),
             qcolor_to_vec4(model.color),
         )
+        self.index = index
         self._model = model
         self._model.changed.connect(self._on_model_changed)
 
@@ -83,20 +84,28 @@ class CncPreview3DView(CncCanvas, CncView):
         item = self.project.items[index]
 
         view = None
-        if isinstance(item, GerberItem):
-            view = GerberItemView(self.ctx, item)
+        if isinstance(item, (GerberItem, ExcellonItem)):
+            view = CncProjectItemView(self.ctx, index, item)
+            for existing_view in self.objects:
+                if hasattr(existing_view, 'index') and existing_view.index >= index:
+                    existing_view.index += 1
 
-        if view is not None:
-            self.objects.append(view)
-            self.update()
+        if view is None:
+            return
+
+        self.objects.append(view)
+        self.update()
 
     def _on_project_item_removed(self, index: int):
-        # for view in self.objects:
-        #     if hasattr(view, 'model') and view.model is item:
-        #         self.objects.remove(view)
-        #         self.update()
-        #         break
-        pass
+        for view in self.objects:
+            if hasattr(view, 'index') and view.index == index:
+                self.objects.remove(view)
+                self.update()
+                break
+
+        for view in self.objects:
+            if hasattr(view, 'index') and view.index > index:
+                view.index -= 1
 
     def _on_project_item_changed(self, index: int):
         self.update()
