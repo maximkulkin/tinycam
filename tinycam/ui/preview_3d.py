@@ -71,14 +71,26 @@ class CncPreview3DView(CncCanvas, CncView):
         for i, _ in enumerate(self.project.items):
             self._on_project_item_added(i)
 
-    def screen_to_canvas_point(p: Vector2, depth: float = 0.0) -> Vector3:
-        cp = unproject(p, (self.width(), self.height()), self.camera)
+    def screen_to_canvas_point(self, p: QtCore.QPoint, depth: float = 0.0) -> Vector3:
+        return unproject((p.x(), p.y()), (self.width(), self.height()), self.camera)
 
-    def canvas_to_screen_point(p: Vector3) -> Vector2:
-        pass
+    def canvas_to_screen_point(self, p: Vector3) -> QtCore.QPoint:
+        sp = self.camera.projection_matrix * self.camera.view_matrix * Vector4((p[0], p[1], p[2], 1.0))
+        return QtCore.QPoint(
+            (sp[0] * 0.5 + 0.5) * self.width(),
+            (0.5 - sp[1] * 0.5) * self.height(),
+        )
 
-    def _zoom(self, amount: float, point: Optional[Vector2] = None):
-        pass
+    def _zoom(self, amount: float, point: Optional[QtCore.QPoint] = None):
+        p0 = self.screen_to_canvas_point(point)
+
+        self._camera.position *= Vector3((1.0, 1.0, 1.0 / amount))
+
+        p1 = self.screen_to_canvas_point(point)
+        d = p0 - p1
+
+        self._camera.position += Vector3((d.x, d.y, 0))
+        self.update()
 
     def _on_project_item_added(self, index: int):
         item = self.project.items[index]

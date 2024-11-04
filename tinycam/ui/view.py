@@ -1,6 +1,6 @@
 from PySide6 import QtCore
 from functools import reduce
-from tinycam.types import Vector2, Vector3
+from tinycam.types import Vector3
 from typing import Optional
 
 
@@ -13,10 +13,10 @@ class CncView:
 
     view_updated = QtCore.Signal()
 
-    def screen_to_canvas_point(p: QtCore.QPointF, depth: float = 0.0) -> Vector3:
+    def screen_to_canvas_point(self, p: QtCore.QPoint, depth: float = 0.0) -> Vector3:
         raise NotImplementedError()
 
-    def canvas_to_screen_point(p: Vector3) -> QtCore.QPointF:
+    def canvas_to_screen_point(self, p: Vector3) -> QtCore.QPoint:
         raise NotImplementedError()
 
     @property
