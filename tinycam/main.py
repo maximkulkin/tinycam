@@ -8,8 +8,8 @@ from tinycam.ui.main_window import CncMainWindow
 # from tinycam.project import GerberItem, ExcellonItem
 
 GLOBALS.APP = CncApplication(sys.argv)
-# tinycam.globals.APP.project.items.append(GerberItem.from_file('sample.gbr'))
-# tinycam.globals.APP.project.items.append(ExcellonItem.from_file('sample.drl'))
+# GLOBALS.APP.project.items.append(GerberItem.from_file('sample.gbr'))
+# GLOBALS.APP.project.items.append(ExcellonItem.from_file('sample.drl'))
 
 fmt = QtGui.QSurfaceFormat()
 fmt.setVersion(4, 1)
