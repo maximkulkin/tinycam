@@ -20,11 +20,12 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.project = GLOBALS.APP.project
         self.project_view = CncVisualization(self.project, self)
 
-        self.preview_view = CncPreview3DView(self)
+        self.preview_view = CncPreview3DView(self.project, self)
 
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.addTab(self.project_view, 'Project')
         self.tabs.addTab(self.preview_view, 'Preview')
+        self.tabs.setCurrentIndex(1)
 
         self.setCentralWidget(self.tabs)
 

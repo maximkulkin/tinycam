@@ -1,0 +1,9 @@
+moderngl
+numpy
+PySide6
+PySide6-Addons
+pyparsing
+pyserial
+pyserial-asyncio
+pyrr
+shapely

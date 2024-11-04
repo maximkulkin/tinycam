@@ -1,80 +1,115 @@
-import numpy as np
-from OpenGL import GL
-from PySide6 import Qt3DRender, QtGui, QtWidgets, QtOpenGL, QtOpenGLWidgets
+from PySide6 import QtGui
+import shapely
+import moderngl
+from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.project import GerberItem
+from tinycam.ui.view import CncView
+from tinycam.ui.canvas import CncCanvas, RenderState
+from tinycam.ui.camera_controllers import PanAndZoomController
+from tinycam.ui.renderables.grid_xy import GridXY
+from tinycam.ui.renderables.lines import Lines
+from tinycam.ui.renderables.lines2 import Lines2
+from tinycam.ui.renderables.polygon import Polygon
+from typing import Optional
+from tinycam.ui.utils import unproject
 
 
-_VERTEX_SHADER = '''
-    uniform mat4 projection_matrix;
-    uniform mat4 model_view_matrix;
-
-    attribute vec3 position;
-
-    void main() {
-        gl_Position = projection_matrix * model_view_matrix * vec4(position, 1.0);
-    }
-'''
-
-_FRAGMENT_SHADER = '''
-    void main() {
-        gl_FragColor = vec4(0.8, 0.8, 0.8, 1.0);
-    }
-'''
+def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
+    return Vector4((color.redF(), color.greenF(), color.blueF(), color.alphaF()))
 
 
-class CncPreview3DView(QtOpenGLWidgets.QOpenGLWidget):
-    # def __init__(self, parent=None):
-    #     super().__init__(parent=parent)
+class GerberItemView(Polygon):
+    def __init__(self, context: moderngl.Context, model: GerberItem):
+        super().__init__(
+            context,
+            shapely.transform(model.geometry, lambda p: p * (1.0, -1.0)),
+            qcolor_to_vec4(model.color),
+        )
+        self._model = model
+        self._model.changed.connect(self._on_model_changed)
 
-    #     fmt = QtGui.QSurfaceFormat()
-    #     fmt.setSamples(16)
-    #     self.setFormat(fmt)
+    def _on_model_changed(self):
+        color = self._model.color
+        if self._model.selected:
+            color = color.lighter(150)
+
+        self._program['color'].write(qcolor_to_vec4(color).astype('f4').tobytes())
+
+    def render(self, state: RenderState):
+        if not self._model.visible:
+            return
+
+        if self._model.debug:
+            self.context.wireframe = True
+        super().render(state)
+        if self._model.debug:
+            self.context.wireframe = False
+
+
+class CncPreview3DView(CncCanvas, CncView):
+    def __init__(self, project, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.project = project
+        self.project.items.added.connect(self._on_project_item_added)
+        self.project.items.removed.connect(self._on_project_item_removed)
+        self.project.items.changed.connect(self._on_project_item_changed)
+
+        self._controller = PanAndZoomController(self._camera)
+        self.installEventFilter(self._controller)
 
     def initializeGL(self):
-        # self._context = QtGui.QOpenGLContext()
-        # self._context.makeCurrent()
-        self.f = QtGui.QOpenGLContext.currentContext().functions()
-        self.f.glClearColor(0.8, 0.8, 0.8, 1.0)
+        super().initializeGL()
+        self.objects = [
+            GridXY(self.ctx),
+            Lines(self.ctx, [
+                (-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1),
+            ]),
+        ]
 
-        self._projection = QtGui.QMatrix4x4()
+        for i, _ in enumerate(self.project.items):
+            self._on_project_item_added(i)
 
-        self._camera = QtGui.QMatrix4x4()
-        self._camera.setToIdentity()
-        self._camera.translate(0.0, 0.0, -5.0)
+    def screen_to_canvas_point(p: Vector2, depth: float = 0.0) -> Vector3:
+        cp = unproject(p, (self.width(), self.height()), self.camera)
 
-        self._box_vao = QtOpenGL.QOpenGLVertexArrayObject()
-        self._box_vao.create()
+    def canvas_to_screen_point(p: Vector3) -> Vector2:
+        pass
 
-        vao_binder = QtOpenGL.QOpenGLVertexArrayObject.Binder(self._box_vao)
+    def _zoom(self, amount: float, point: Optional[Vector2] = None):
+        pass
 
-        self._box_vbo = QtOpenGL.QOpenGLBuffer()
-        self._box_vbo.create()
-        self._box_vbo.bind()
-        self._box_vbo.allocate(np.array([
-              0.0,   0.0, 0.0,
-              0.0, 100.0, 0.0,
-            100.0, 100.0, 0.0,
-            100.0,   0.0, 0.0,
-              0.0,   0.0, 0.0,
-        ], dtype='float32'), 5)
+    def _on_project_item_added(self, index: int):
+        item = self.project.items[index]
 
-        self._program = QtOpenGL.QOpenGLShaderProgram()
-        self._program.addShaderFromSourceCode(QtOpenGL.QOpenGLShader.Vertex, _VERTEX_SHADER)
-        self._program.addShaderFromSourceCode(QtOpenGL.QOpenGLShader.Fragment, _FRAGMENT_SHADER)
-        self._program.bindAttributeLocation("position", 0)
-        self._program.link()
-        self._projection_matrix_location = self._program.uniformLocation("projection_matrix");
-        self._model_view_matrix_location = self._program.uniformLocation("model_view_matrix");
+        view = None
+        if isinstance(item, GerberItem):
+            view = GerberItemView(self.ctx, item)
 
-    def resizeGL(self, w, h):
-        self._projection.setToIdentity()
-        self._projection.perspective(45.0, w / float(h), 0.001, 1000.0)
+        if view is not None:
+            self.objects.append(view)
+            self.update()
+
+    def _on_project_item_removed(self, index: int):
+        # for view in self.objects:
+        #     if hasattr(view, 'model') and view.model is item:
+        #         self.objects.remove(view)
+        #         self.update()
+        #         break
+        pass
+
+    def _on_project_item_changed(self, index: int):
+        self.update()
 
     def paintGL(self):
-        self.f.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
+        super().paintGL()
 
-        self._program.bind()
-        self._program.setUniformValue(self._projection_matrix_location, self._projection)
-        self._program.setUniformValue(self._model_view_matrix_location, self._camera)
-        self.f.glDrawArrays(GL.GL_TRIANGLES, 0, self._box_vbo.size())
+        self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
+        self.makeCurrent()
 
-        self._program.release()
+        state = RenderState()
+        state.screen_size = self.width(), self.height()
+        state.camera = self._camera
+
+        for obj in self.objects:
+            obj.render(state)

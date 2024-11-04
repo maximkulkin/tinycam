@@ -1,6 +1,9 @@
 from collections.abc import Sequence
-
+import math
+from pyrr import Vector3, Vector4, Quaternion
 from PySide6 import QtCore
+from tinycam.ui.camera import Camera
+from typing import Tuple
 
 
 class Point:
@@ -131,3 +134,36 @@ class Point:
 
 Point.ZERO = Point(0.0, 0.0)
 Point.ONES = Point(1.0, 1.0)
+
+
+def quaternion_to_eulers(q: Quaternion) -> Vector3:
+    t0 = 2.0 * (q.w * q.x + q.y * q.z)
+    t1 = 1.0 - 2.0 * (q.x * q.x + q.y * q.y)
+    roll = math.atan2(t0, t1)
+
+    pitch = max(-1.0, min(1.0, 2.0 * (q.w * q.y - q.z * q.x)))
+
+    t3 = 2.0 * (q.w * q.z + q.x * q.y)
+    t4 = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+    yaw = math.atan2(t3, t4)
+
+    return roll, pitch, yaw
+
+
+def unproject(point: Tuple[float, float],
+              screen_size: Tuple[float, float],
+              camera: 'Camera') -> Vector3:
+    vp = camera.projection_matrix * camera.view_matrix
+    ivp = vp.inverse
+
+    x = 2.0 * point[0] / screen_size[0] - 1.0
+    y = 2.0 * point[1] / screen_size[1] - 1.0
+
+    p = Vector4((x, -y, 0.0, 1.0))
+    v = ivp * p
+    if v.w != 0.0:
+        v /= v.w
+
+    r = Vector3((v.x, v.y, v.z))
+    r -= r.z * (camera.position - r) / (camera.position.z - r.z)
+    return r
