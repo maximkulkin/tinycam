@@ -11,6 +11,7 @@ class CncProjectItem(QtCore.QObject):
         self._name = name
         self._color = color
         self._visible = True
+        self._debug = False
         self._selected = False
         self._updating = False
         self._updated = False
@@ -68,6 +69,17 @@ class CncProjectItem(QtCore.QObject):
         if self._visible == value:
             return
         self._visible = value
+        self._changed()
+
+    @property
+    def debug(self) -> bool:
+        return self._debug
+
+    @debug.setter
+    def debug(self, value: bool):
+        if self._debug == value:
+            return
+        self._debug = value
         self._changed()
 
     @property

@@ -180,6 +180,7 @@ BOOLEAN = CncBooleanSettingType()
 
 
 SETTINGS = CncSettings()
+SETTINGS.register('dev_mode', BOOLEAN, default=True)
 SETTINGS.register('foo/bar', STRING, default='')
 SETTINGS.register('foo/baz', INTEGER, default=0)
 SETTINGS.register('foo/bam/quux', INTEGER, default=0)

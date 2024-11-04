@@ -155,6 +155,10 @@ class CncProjectWindow(CncWindow):
             )
             color_menu.addAction(set_color_action)
 
+        if GLOBALS.SETTINGS.get('dev_mode'):
+            debug_action = popup.addAction('Debug', self._debug_item)
+            debug_action.setChecked(item.debug)
+
         popup.addAction('Delete', self._delete_items)
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
@@ -167,6 +171,10 @@ class CncProjectWindow(CncWindow):
 
     def _set_color(self, color):
         GLOBALS.APP.undo_stack.push(SetItemsColorCommand(self.project.selectedItems, color))
+
+    def _debug_item(self):
+        item = self._view.currentItem().item
+        item.debug = not item.debug
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(self.project.selectedItems))
