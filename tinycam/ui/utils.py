@@ -132,6 +132,7 @@ class Point:
     def toPointF(self):
         return QtCore.QPointF(self._data[0], self._data[1])
 
+
 Point.ZERO = Point(0.0, 0.0)
 Point.ONES = Point(1.0, 1.0)
 
@@ -150,9 +151,11 @@ def quaternion_to_eulers(q: Quaternion) -> Vector3:
     return roll, pitch, yaw
 
 
-def unproject(point: Tuple[float, float],
-              screen_size: Tuple[float, float],
-              camera: 'Camera') -> Vector3:
+def unproject(
+    point: Tuple[float, float],
+    screen_size: Tuple[float, float],
+    camera: 'Camera',
+) -> Vector3:
     vp = camera.projection_matrix * camera.view_matrix
     ivp = vp.inverse
 
