@@ -1,14 +1,13 @@
-from PySide6 import QtGui
+from PySide6 import QtCore, QtGui
 import shapely
 import moderngl
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem
 from tinycam.ui.view import CncView
 from tinycam.ui.canvas import CncCanvas, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController
 from tinycam.ui.renderables.grid_xy import GridXY
 from tinycam.ui.renderables.lines import Lines
-from tinycam.ui.renderables.lines2 import Lines2
 from tinycam.ui.renderables.polygon import Polygon
 from typing import Optional
 from tinycam.ui.utils import unproject
