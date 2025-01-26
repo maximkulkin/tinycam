@@ -170,3 +170,12 @@ def unproject(
     r = Vector3((v.x, v.y, v.z))
     r -= r.z * (camera.position - r) / (camera.position.z - r.z)
     return r
+
+
+def clear_layout(layout):
+    while layout.count() > 0:
+        item = layout.takeAt(0)
+        if item.widget() is not None:
+            item.widget().deleteLater()
+        elif item.layout() is not None:
+            clear_layout(item.layout())

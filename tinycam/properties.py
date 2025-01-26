@@ -10,21 +10,26 @@ class Property:
         self._on_update: Callable[[object], None] | None = on_update
 
     @property
+    def name(self) -> str:
+        return self._name or ''
+
+    @property
     def label(self) -> str:
         return self._label or ''
 
     def __set_name__(self, objtype, name):
-        self._name = f'_{name}'
+        self._name = name
+        self._variable_name = f'_{name}'
         if self._label is None:
             self._label = name.replace('_', ' ').capitalize()
 
     def __get__(self, instance: object, objtype: type = None):
         if instance is None:
             return self
-        return instance.__dict__.get(self._name)
+        return instance.__dict__.get(self._variable_name)
 
-    def __set__(self, instance, value):
-        instance.__dict__[self._name] = value
+    def __set__(self, instance: object, value: object):
+        instance.__dict__[self._variable_name] = value
         if self._on_update is not None:
             self._on_update(instance)
 

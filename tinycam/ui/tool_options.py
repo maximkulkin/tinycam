@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 
 from tinycam.globals import GLOBALS
 from tinycam.ui.window import CncWindow
+from tinycam.ui.utils import clear_layout
 from tinycam.properties import Property, StringProperty, BoolProperty, IntProperty, FloatProperty, Vector2Property
 from tinycam.types import Vector2
 
@@ -10,93 +11,152 @@ from tinycam.types import Vector2
 __all__ = ['CncToolOptionsWindow']
 
 
-class ObjectPropertiesModel(QtCore.QAbstractItemModel):
-    def __init__(self, target: object):
-        super().__init__()
+class StringPropertyEditor(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(str)
+
+    def __init__(self, target: object, prop: Property, parent=None):
+        super().__init__(parent)
+
         self._target = target
-        self._attrs = [
-            attr
-            for name in dir(self._target)
-            for attr in [getattr(self._target.__class__, name, None)]
-            if isinstance(attr, Property)
-        ]
+        self._attr = prop
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._attrs)
+        self._editor = QtWidgets.QLineEdit(self)
+        self._editor.textChanged.connect(self._on_value_changed)
 
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        return 2
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._editor)
+        self.setLayout(layout)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return None
+        self.refreshValue()
 
-        if section == 0:
-            return 'Name'
-        elif section == 1:
-            return 'Value'
+    def value(self) -> str:
+        return self._editor.value()
 
-        return None
+    def setValue(self, value: str):
+        self._editor.setValue(value)
 
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._attr.name))
 
-        if index.row() >= len(self._attrs):
-            return None
-
-        if role == Qt.UserRole:
-            return self._attrs[index.row()]
-
-        if index.column() == 0:
-            if role != Qt.DisplayRole:
-                return None
-            return self._attrs[index.row()].label
-
-        elif index.column() == 1:
-            value = self._attrs[index.row()].__get__(self._target)
-            if role == Qt.DisplayRole:
-                return str(value)
-            elif role == Qt.EditRole:
-                return value
-
-        return None
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
-            return
-
-        if index.parent().isValid() or index.column() != 1 or index.row() >= len(self._attrs):
-            return
-
-        self._attrs[index.row()].__set__(self._target, value)
-
-    def index(self, row, column, parent=QtCore.QModelIndex()):
-        if parent.isValid():
-            return None
-
-        if row > len(self._attrs) or column >= 2:
-            return QtCore.QModelIndex()
-
-        return self.createIndex(row, column, None)
-
-    def parent(self, index):
-        return QtCore.QModelIndex()
-
-    def flags(self, index):
-        flags = Qt.ItemIsSelectable | Qt.ItemNeverHasChildren | Qt.ItemIsEnabled
-        if index.column() == 1:
-            flags = flags | Qt.ItemIsEditable
-        return flags
+    def _on_value_changed(self, value: str):
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
 
 
-class Vector2Editor(QtWidgets.QWidget):
+class BoolPropertyEditor(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(bool)
+
+    def __init__(self, target: object, prop: Property, parent=None):
+        super().__init__(parent)
+
+        self._target = target
+        self._attr = prop
+
+        self._editor = QtWidgets.QCheckBox(self)
+        self._editor.statChanged.connect(self._on_value_changed)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._editor)
+        self.setLayout(layout)
+
+        self.refreshValue()
+
+    def value(self) -> bool:
+        return self._editor.checked()
+
+    def setValue(self, value: bool):
+        self._editor.setChecked(value)
+
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._attr.name))
+
+    def _on_value_changed(self, state: Qt.CheckState):
+        value = state == Qt.Checked
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
+
+
+class IntPropertyEditor(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(int)
+
+    def __init__(self, target: object, prop: Property, parent=None):
+        super().__init__(parent)
+
+        self._target = target
+        self._attr = prop
+
+        self._editor = QtWidgets.QSpinBox(self)
+        self._editor.valueChanged.connect(self._on_value_changed)
+        if prop.min_value is not None:
+            self._editor.setMinimum(prop.min_value)
+        if prop.max_value is not None:
+            self._editor.setMaximum(prop.max_value)
+        if prop.suffix is not None:
+            self._editor.setSuffix(prop.suffix)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._editor)
+        self.setLayout(layout)
+
+        self.refreshValue()
+
+    def value(self) -> int:
+        return self._editor.value()
+
+    def setValue(self, value: int):
+        self._editor.setValue(value)
+
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._attr.name))
+
+    def _on_value_changed(self, value: int):
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
+
+
+class FloatPropertyEditor(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(float)
+
+    def __init__(self, target: object, prop: Property, parent=None):
+        super().__init__(parent)
+
+        self._target = target
+        self._attr = prop
+
+        self._editor = QtWidgets.QDoubleSpinBox(self)
+        self._editor.valueChanged.connect(self._on_value_changed)
+        if prop.min_value is not None:
+            self._editor.setMinimum(prop.min_value)
+        if prop.max_value is not None:
+            self._editor.setMaximum(prop.max_value)
+        if prop.suffix is not None:
+            self._editor.setSuffix(prop.suffix)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._editor)
+        self.setLayout(layout)
+
+        self.refreshValue()
+
+    def value(self) -> float:
+        return self._editor.value()
+
+    def setValue(self, value: float):
+        self._editor.setValue(value)
+
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._attr.name))
+
+    def _on_value_changed(self, value: float):
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
+
+
+class Vector2PropertyEditor(QtWidgets.QWidget):
     valueChanged = QtCore.Signal(Vector2)
 
-    def __init__(self, parent=None):
+    def __init__(self, target: object, prop: Property, parent=None):
         super().__init__(parent)
+
+        self._target = target
+        self._prop = prop
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -118,11 +178,7 @@ class Vector2Editor(QtWidgets.QWidget):
         layout.setStretch(3, 1)
         self.setLayout(layout)
 
-    def xEditor(self) -> QtWidgets.QDoubleSpinBox:
-        return self._x_editor
-
-    def yEditor(self) -> QtWidgets.QDoubleSpinBox:
-        return self._y_editor
+        self.refreshValue()
 
     def value(self) -> Vector2:
         return Vector2((self._x_editor.value(), self._y_editor.value()))
@@ -131,143 +187,16 @@ class Vector2Editor(QtWidgets.QWidget):
         self._x_editor.setValue(value[0])
         self._y_editor.setValue(value[1])
 
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._prop.name))
+
     def _on_value_changed(self, _: float):
-        self.valueChanged.emit(Vector2((self._x_editor.value(), self._y_editor.value())))
-
-
-class CustomWidgetDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, tree, parent=None):
-        super().__init__(parent)
-        self._tree: QtWidgets.QTreeView = tree
-        self._padding: int = 5
-
-    def sizeHint(self, option, index):
-        base_size = super().sizeHint(option, index)
-        return QtCore.QSize(
-            base_size.width() + 2 * self._padding,
-            base_size.height() + 2 * self._padding,
-        )
-
-    def paint(self, painter, option, index):
-        item_type = index.data(Qt.UserRole)
-        if item_type and self._tree.indexWidget(index) is not None:
-            return
-
-        padded_rect = option.rect.adjusted(self._padding, self._padding, -self._padding, -self._padding)
-        painter.save()
-
-        bg_color = option.palette.highlight() if option.state & QtWidgets.QStyledItemDelegate.State_Selected else option.palette.base()
-        painter.fillRect(option.rect, bg_color)
-
-        text = index.data(Qt.DisplayRole)
-        painter.drawText(padded_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-
-        painter.restore()
-
-    def createEditor(self, parent, option, index):
-        attr = index.data(Qt.UserRole)
-        match attr:
-            case StringProperty():
-                editor = QtWidgets.QLineEdit(parent)
-            case BoolProperty():
-                editor = QtWidgets.QCheckBox(parent)
-            case IntProperty():
-                editor = QtWidgets.QSpinBox(parent)
-                if attr.min_value is not None:
-                    editor.setMinimum(attr.min_value)
-                if attr.max_value is not None:
-                    editor.setMaximum(attr.max_value)
-                if attr.suffix is not None:
-                    editor.setSuffix(attr.suffix)
-            case FloatProperty():
-                editor = QtWidgets.QDoubleSpinBox(parent)
-                if attr.min_value is not None:
-                    editor.setMinimum(attr.min_value)
-                if attr.max_value is not None:
-                    editor.setMaximum(attr.max_value)
-                if attr.suffix is not None:
-                    editor.setSuffix(attr.suffix)
-            case Vector2Property():
-                editor = Vector2Editor(parent)
-                editor.valueChanged.connect(lambda value: self._on_vector2_value_changed(value, index))
-            case _:
-                editor = None
-
-        return editor
-
-    def _on_vector2_value_changed(self, value: Vector2, index: QtCore.QModelIndex):
-        index.model().setData(index, value, Qt.EditRole)
-
-    def setEditorData(self, editor, index):
-        value = index.data(Qt.EditRole)
-        if isinstance(editor, QtWidgets.QLineEdit):
-            editor.setText(value)
-
-            def deselect():
-                editor.deselect()
-
-            QtCore.QTimer.singleShot(0, deselect)
-        elif isinstance(editor, QtWidgets.QCheckBox):
-            editor.setChecked(bool(value))
-        elif isinstance(editor, QtWidgets.QSpinBox):
-            editor.setValue(int(value))
-
-            def deselect():
-                editor.lineEdit().deselect()
-
-            QtCore.QTimer.singleShot(0, deselect)
-        elif isinstance(editor, QtWidgets.QDoubleSpinBox):
-            editor.setValue(float(value))
-
-            def deselect():
-                editor.lineEdit().deselect()
-
-            QtCore.QTimer.singleShot(0, deselect)
-
-        elif isinstance(editor, QtWidgets.QLabel):
-            editor.setText(str(value))
-
-        elif isinstance(editor, Vector2Editor):
-            editor.setValue(value)
-
-            def deselect():
-                editor.xEditor().lineEdit().deselect()
-                editor.yEditor().lineEdit().deselect()
-
-            QtCore.QTimer.singleShot(0, deselect)
-
-    def setModelData(self, editor, model, index):
-        if isinstance(editor, QtWidgets.QLineEdit):
-            model.setData(index, editor.text(), Qt.EditRole)
-        elif isinstance(editor, QtWidgets.QCheckBox):
-            model.setData(index, editor.checked(), Qt.EditRole)
-        elif isinstance(editor, QtWidgets.QSpinBox):
-            model.setData(index, editor.value(), Qt.EditRole)
-        elif isinstance(editor, QtWidgets.QDoubleSpinBox):
-            model.setData(index, editor.value(), Qt.EditRole)
-        elif isinstance(editor, Vector2Editor):
-            model.setData(index, editor.value(), Qt.EditRole)
-
-    def updateEditorGeometry(self, editor, option, index):
-        rect = option.rect.adjusted(self._padding, self._padding, -self._padding, -self._padding)
-        editor.setGeometry(rect)
-
-
-class OptionsTreeView(QtWidgets.QTreeView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._delegate = CustomWidgetDelegate(self)
-        self.setItemDelegateForColumn(1, self._delegate)
-        self.setAlternatingRowColors(True)
-
-    def paintEvent(self, event):
-        model = self.model()
-        if model is not None:
-            for i in range(model.rowCount()):
-                index = model.index(i, 1)
-                self.openPersistentEditor(index)
-
-        super().paintEvent(event)
+        value = Vector2((
+            self._x_editor.value(),
+            self._y_editor.value(),
+        ))
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
 
 
 class CncToolOptionsWindow(CncWindow):
@@ -277,18 +206,74 @@ class CncToolOptionsWindow(CncWindow):
         self.setObjectName("tool_options_window")
         self.setWindowTitle("Tool options")
 
-        self._tree = OptionsTreeView(self)
-        self.setWidget(self._tree)
+        self._layout = QtWidgets.QGridLayout()
+        self._widget = QtWidgets.QWidget()
+        self._widget.setLayout(self._layout)
+
+        self._editors = []
+
+        self.setWidget(self._widget)
 
         GLOBALS.APP.project.selection.changed.connect(self._on_project_selection_changed)
 
     def _on_project_selection_changed(self):
         items = list(GLOBALS.APP.project.selection.items())
         if items:
-            self._populate_tree(items[0])
+            self._populate_attrs(items[0])
         else:
-            self._populate_tree(None)
+            self._populate_attrs(None)
 
-    def _populate_tree(self, target: object):
-        self._model = ObjectPropertiesModel(target)
-        self._tree.setModel(self._model)
+    def _populate_attrs(self, target: object):
+        for row in range(self._layout.rowCount()):
+            self._layout.setRowStretch(row, 0)
+        clear_layout(self._layout)
+        self._editors = []
+
+        self._target = target
+        if self._target is None:
+            return
+
+        props = [
+            prop
+            for name in dir(target)
+            for prop in [getattr(target.__class__, name, None)]
+            if isinstance(prop, Property)
+        ]
+
+        for prop in props:
+            span = False
+            match prop:
+                case StringProperty():
+                    editor = StringPropertyEditor(target, prop)
+                case BoolProperty():
+                    editor = BoolPropertyEditor(target, prop)
+                case IntProperty():
+                    editor = IntPropertyEditor(target, prop)
+                case FloatProperty():
+                    editor = FloatPropertyEditor(target, prop)
+                case Vector2Property():
+                    editor = Vector2PropertyEditor(target, prop)
+                    span = True
+                case _:
+                    editor = None
+
+            if editor is None:
+                continue
+
+            self._editors.append(editor)
+
+            row = self._layout.rowCount()
+            if span:
+                self._layout.addWidget(QtWidgets.QLabel(prop.label), row, 0, 1, 2, Qt.AlignLeft)
+                layout = QtWidgets.QHBoxLayout()
+                layout.addWidget(editor)
+                self._layout.addLayout(layout, row + 1, 0, 1, 2, Qt.AlignJustify)
+            else:
+                self._layout.addWidget(QtWidgets.QLabel(prop.label), row, 0)
+                self._layout.addWidget(editor, row, 1)
+
+        self._layout.setRowStretch(self._layout.rowCount(), 1)
+
+    def _update_editor_values(self):
+        for editor in self._editors:
+            editor.refreshValue()
