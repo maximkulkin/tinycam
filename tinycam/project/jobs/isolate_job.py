@@ -1,181 +1,130 @@
-from PySide6 import QtCore, QtGui
-from PySide6.QtCore import Qt
+from PySide6 import QtGui
 
+from tinycam.commands import CncCommandBuilder
+from tinycam.geometry import Line
 from tinycam.globals import GLOBALS
 from tinycam.project.jobs.job import CncJob
+from tinycam.properties import IntProperty, FloatProperty
+import tinycam.settings as s
+from tinycam.tasks import run_task
+
+
+with s.SETTINGS.section('jobs/isolate') as S:
+    S.register('spindle_speed', s.FLOAT, default=1000)
+    S.register('cut_depth', s.FLOAT, default=0.1)
+    S.register('cut_speed', s.FLOAT, default=120.0)
+    S.register('travel_height', s.FLOAT, default=2.0)
+    S.register('pass_count',
+               s.CncIntegerSettingType(minimum=1),
+               default=1)
+    S.register('pass_overlap',
+               s.CncIntegerSettingType(minimum=0, maximum=100, suffix=' %'),
+               default=10)
 
 
 class CncIsolateJob(CncJob):
     def __init__(self,
                  source_item,
+                 color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
                  tool_diameter=0.1,
-                 spindle_speed=1000,
-                 cut_depth=0.1,
-                 cut_speed=120,
-                 travel_height=2,
-                 pass_count=1,
-                 pass_overlap=10):
+                 spindle_speed=None,
+                 cut_depth=None,
+                 cut_speed=None,
+                 travel_height=None,
+                 pass_count=None,
+                 pass_overlap=None):
         super().__init__(
             'Isolate %s' % source_item.name,
-            color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
+            color=color,
         )
 
         self._source_item = source_item
+        # self._source_item.changed.connect(self._on_source_item_changed)
+
+        defaults = s.SETTINGS.section('jobs/isolate')
 
         self._tool_diameter = tool_diameter
-        self._cut_depth = cut_depth
-        self._pass_count = pass_count
-        self._pass_overlap = pass_overlap
-        self._spindle_speed = spindle_speed
-        self._cut_speed = cut_speed
-        self._travel_height = travel_height
+        self._cut_depth = cut_depth or defaults['cut_depth']
+        self._cut_speed = cut_speed or defaults['cut_speed']
+        self._pass_count = pass_count or defaults['pass_count']
+        self._pass_overlap = pass_overlap or defaults['pass_overlap']
+        self._spindle_speed = spindle_speed or defaults['spindle_speed']
+        self._travel_height = travel_height or defaults['travel_height']
 
         self._geometry = None
-        self._geometry_cache = None
-        # TODO:
-        # self._source_item.changed.connect(self._on_source_item_changed)
-        self._calculate_geometry()
+
+        self._updating_geometry = False
+        self._update_geometry()
 
     @property
     def geometry(self):
         return self._geometry
 
-    @property
-    def tool_diameter(self):
-        return self._tool_diameter
+    def _update(self):
+        self._update_geometry()
+        self._signal_changed()
 
-    @tool_diameter.setter
-    def tool_diameter(self, value):
-        self._tool_diameter = value
-        self._update()
-
-    @property
-    def cut_depth(self):
-        return self._cut_depth
-
-    @cut_depth.setter
-    def cut_depth(self, value):
-        self._cut_depth = value
-        self._update()
-
-    @property
-    def pass_count(self):
-        return self._pass_count
-
-    @pass_count.setter
-    def pass_count(self, value):
-        self._pass_count = value
-        self._update()
-
-    @property
-    def pass_overlap(self):
-        return self._pass_overlap
-
-    @pass_overlap.setter
-    def pass_overlap(self, value):
-        self._pass_overlap = value
-        self._update()
-
-    @property
-    def cut_speed(self):
-        return self._cut_speed
-
-    @cut_speed.setter
-    def cut_speed(self, value):
-        self._cut_speed = value
-        self._update()
-
-    @property
-    def spindle_speed(self):
-        return self._spindle_speed
-
-    @spindle_speed.setter
-    def spindle_speed(self, value):
-        self._spindle_speed = value
-        self._update()
-
-    @property
-    def travel_height(self):
-        return self._travel_height
-
-    @travel_height.setter
-    def travel_height(self, value):
-        self._travel_height = value
-        self._update()
+    tool_diameter = FloatProperty(on_update=_update)
+    pass_count = IntProperty(on_update=_update)
+    pass_overlap = IntProperty(on_update=_update, suffix=' %')
+    cut_depth = FloatProperty(on_update=_update)
+    cut_speed = FloatProperty(on_update=_update)
+    spindle_speed = IntProperty(on_update=_update)
+    travel_height = FloatProperty(on_update=_update)
 
     def _on_source_item_changed(self, _item):
         self._update()
 
-    def _update(self):
-        self._calculate_geometry()
-        self._changed()
-
-    def _calculate_geometry(self):
-        tool_radius = self._tool_diameter * 0.5
-        pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
-
-        geometry = None
-
-        g = GLOBALS.GEOMETRY.simplify(
-            GLOBALS.GEOMETRY.buffer(self._source_item.geometry, tool_radius),
-            # TODO: parametrize into settings
-            tolerance=0.01,
-        )
-
-        for pass_index in range(self._pass_count):
-            for polygon in GLOBALS.GEOMETRY.polygons(g):
-                for exterior in GLOBALS.GEOMETRY.exteriors(polygon):
-                    geometry = GLOBALS.GEOMETRY.union(geometry, exterior)
-                for interior in GLOBALS.GEOMETRY.interiors(polygon):
-                    geometry = GLOBALS.GEOMETRY.union(geometry, interior)
-            g = GLOBALS.GEOMETRY.buffer(g, pass_offset)
-
-        self._geometry = geometry
-        self._geometry_cache = None
-
-    def _precache_geometry(self):
-        path = QtGui.QPainterPath()
-        count = 0
-        for line in GLOBALS.GEOMETRY.lines(self._geometry):
-            path.addPolygon(
-                QtGui.QPolygonF.fromList([
-                    QtCore.QPointF(x, y)
-                    for x, y in GLOBALS.GEOMETRY.points(line)
-                ])
-            )
-            count += len(GLOBALS.GEOMETRY.points(line))
-
-        self._geometry_cache = path
-
-    def draw(self, painter):
-        if not self.visible:
+    def _update_geometry(self):
+        if self._updating_geometry:
             return
 
-        if self._geometry_cache is None:
-            self._precache_geometry()
+        self._updating_geometry = True
 
-        with painter:
-            color = self.color
-            if self.selected:
-                color = color.lighter(150)
+        @run_task('Isolate job')
+        def work(status):
+            tool_radius = self._tool_diameter * 0.5
+            pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
 
-            painter.setBrush(Qt.NoBrush)
-            pen = QtGui.QPen(color.darker(150), 2.0)
-            pen.setCosmetic(True)
-            painter.setPen(pen)
+            G = GLOBALS.GEOMETRY
+            g = G.simplify(
+                G.buffer(
+                    G.translate(
+                        G.scale(
+                            self._source_item.geometry,
+                            self._source_item.scale,
+                        ),
+                        self._source_item.offset,
+                    ),
+                    tool_radius,
+                ),
+                # TODO: parametrize into settings
+                tolerance=0.01,
+            )
 
-            painter.drawPath(self._geometry_cache)
+            status.min_value = 0
+            status.max_value = self._pass_count * len(G.polygons(g))
+            status.value = 0
 
-            color.setAlphaF(0.2)
-            pen = QtGui.QPen(color, self._tool_diameter)
-            pen.setJoinStyle(Qt.RoundJoin)
+            geometry = None
 
-            painter.setPen(pen)
+            for pass_index in range(self._pass_count):
+                for polygon in G.polygons(g):
+                    for exterior in G.exteriors(polygon):
+                        geometry = G.union(geometry, exterior)
+                    for interior in G.interiors(polygon):
+                        geometry = G.union(geometry, interior)
 
-            painter.drawPath(self._geometry_cache)
+                    status.value += 1
 
-    def _find_closest(self, lines, point):
-        # TODO: implement finding closest line
+                g = G.buffer(g, pass_offset)
+
+            self._geometry = geometry
+            self._updating_geometry = False
+            self._signal_updated()
+
+    def _find_closest(self, lines: list[Line], point) -> int:
+        # TODO: implement finding index of nearest line
         return 0
 
     def generate_commands(self):
@@ -189,10 +138,15 @@ class CncIsolateJob(CncJob):
 
             points = line.coords[:]
             # if line.is_closed:
-            #     p, _ = shapely.ops.nearest_points(line, shapely.Point(builder.current_position[:2]))
+            #     # It's a closed shape, find any closest point and rotate all points
+            #     # to make that one first
+            #     p, _ = GLOBALS.GEOMETRY.nearest(line, shapely.Point(builder.current_position[:2]))
             #     print(points)
             #     start_index = points.index(p)
             #     points = points[start_index:] + points[:start_index]
+            # else:
+            #     # Shape is open, pick the closest end and start with it
+            #     # TODO:
 
             builder.travel(z=self._travel_height)
             builder.travel(x=points[0][0], y=points[0][1])
@@ -202,5 +156,3 @@ class CncIsolateJob(CncJob):
                 builder.cut(x=p[0], y=p[1])
 
         return builder.build()
-
-

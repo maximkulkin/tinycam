@@ -21,6 +21,60 @@ class Axis(enum.Enum):
         raise ValueError('Invalid axis')
 
 
+class OrbitController(QtCore.QObject):
+    def __init__(
+        self,
+        camera: Camera,
+        mouse_sensitivity: Union[float, Tuple[float, float]] = 0.01,
+    ):
+        super().__init__()
+        self._widget = None
+
+        self._camera = camera
+        _, self._pitch, self._yaw = quaternion_to_eulers(self._camera.rotation)
+
+        sens = mouse_sensitivity
+        self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
+
+        self._last_position = None
+
+    def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
+        if widget != self._widget:
+            self._widget = widget
+
+        if (event.type() == QtCore.QEvent.MouseButtonPress
+                and event.button() == Qt.MiddleButton
+                and event.modifiers() & Qt.AltModifier):
+            self._last_position = event.position()
+            widget.grabKeyboard()
+            widget.grabMouse()
+            return True
+        elif (event.type() == QtCore.QEvent.MouseButtonRelease
+                and event.button() == Qt.MiddleButton
+                and self._last_position is not None):
+            self._last_position = None
+            widget.releaseKeyboard()
+            widget.releaseMouse()
+            return True
+        elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
+            v = self._camera.rotation.conjugate * Camera.FORWARD
+            orbit_point = self._camera.position + v * (self._camera.position.z / (v | Vector3((0.0, 0.0, -1.0))))
+
+            distance = (self._camera.position - orbit_point).length
+
+            delta = event.position() - self._last_position
+            self._yaw += delta.x() * self._mouse_sensitivity[1]
+            self._pitch += delta.y() * self._mouse_sensitivity[0]
+
+            self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
+            self._camera.position = orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
+
+            self._last_position = event.position()
+            widget.update()
+
+        return False
+
+
 class PanAndZoomController(QtCore.QObject):
     def __init__(
         self,
@@ -40,15 +94,13 @@ class PanAndZoomController(QtCore.QObject):
             self._widget = widget
 
         if (event.type() == QtCore.QEvent.MouseButtonPress
-                and (event.button() == Qt.MiddleButton
-                     or event.button() == Qt.LeftButton)):
+                and (event.button() == Qt.MiddleButton)):
             self._last_position = event.position()
             widget.grabKeyboard()
             widget.grabMouse()
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and (event.button() == Qt.MiddleButton
-                     or event.button() == Qt.LeftButton)
+                and (event.button() == Qt.MiddleButton)
                 and self._last_position is not None):
             self._last_position = None
             widget.releaseKeyboard()

@@ -5,11 +5,14 @@ from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
 from tinycam.ui.view import CncView
-from tinycam.ui.visualization import CncVisualization
+# from tinycam.ui.visualization import CncVisualization
+from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.preview_3d import CncPreview3DView
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
+from tinycam.ui.cnc_controller import CncControllerWindow
 from tinycam.ui.settings import CncSettingsDialog
+from tinycam.tasks import run_task
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -19,14 +22,14 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.resize(600, 400)
 
         self.project = GLOBALS.APP.project
-        self.project_view = CncVisualization(self.project, self)
+        # self.project_view = CncVisualization(self.project, self)
 
         self.preview_view = CncPreview3DView(self.project, self)
 
         self.tabs = QtWidgets.QTabWidget()
-        self.tabs.addTab(self.project_view, 'Project')
+        # self.tabs.addTab(self.project_view, 'Project')
         self.tabs.addTab(self.preview_view, 'Preview')
-        self.tabs.setCurrentIndex(1)
+        self.tabs.setCurrentIndex(0)
 
         self.setCentralWidget(self.tabs)
 
@@ -58,10 +61,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_file)
-        self.toolbar.addAction('Zoom To Fit', self.project_view.zoom_to_fit)
+        self.toolbar.addAction('Zoom To Fit', self._zoom_to_fit)
 
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
+        GLOBALS.APP.task_manager.statusbar = self.statusbar
 
         self._windows = []
         self._windows_menu = {}
@@ -73,6 +77,10 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._add_dock_window(
             CncToolOptionsWindow(self.project), Qt.RightDockWidgetArea,
             shortcut='Ctrl+2',
+        )
+        self._add_dock_window(
+            CncControllerWindow(self.project), Qt.RightDockWidgetArea,
+            shortcut='Ctrl+3',
         )
 
         self.view_menu.addSeparator()
@@ -87,8 +95,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
     @property
     def _active_view(self) -> CncView:
         match self.tabs.currentIndex():
-            case 0: return self.project_view
-            case 1: return self.preview_view
+            # case 0: return self.project_view
+            case 0: return self.preview_view
             case _: raise ValueError('Unexpected selected tab')
 
     def _zoom_in(self):
@@ -148,7 +156,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
             )
             return
 
-        GLOBALS.APP.project.items.append(item)
+        GLOBALS.APP.undo_stack.push(ImportFileCommand(filename, item))
 
     def _edit_settings(self):
         settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)
@@ -178,7 +186,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         for window in self._windows:
             self._windows_menu[window].setChecked(window.isVisible())
 
-        self.project_view.zoom_to_fit()
+        self._zoom_to_fit()
 
     def closeEvent(self, event):
         self._save_settings()
@@ -197,5 +205,3 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.restoreGeometry(settings.value("geometry"))
         self.restoreState(settings.value("windowState"))
         settings.endGroup()
-
-

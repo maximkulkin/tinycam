@@ -6,13 +6,16 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 import numpy as np
 
+from tinycam.ui.view import CncView
 from tinycam.globals import GLOBALS
 from tinycam.ui.utils import Point
 from tinycam.ui.commands import MoveItemsCommand, ScaleItemsCommand
+from tinycam.ui.tools import CncTool
 
 
 def combine_bounds(b1, b2):
     return (min(b1[0], b2[0]), min(b1[1], b2[1]), max(b1[2], b2[2]), max(b1[3], b2[3]))
+
 
 def total_bounds(shapes):
     coords = reduce(combine_bounds, [shape.bounds for shape in shapes])
@@ -148,7 +151,8 @@ class CncManipulateTool(CncTool):
     def _update(self):
         items = self._items or self.project.selectedItems
         if items:
-            self._bounds = total_bounds([item.geometry for item in items])
+            geometries = [item.geometry for item in items if item.geometry is not None]
+            self._bounds = total_bounds(geometries) if geometries else None
         else:
             self._bounds = None
 
@@ -389,7 +393,7 @@ class CncManipulateTool(CncTool):
         painter.drawRect(p.x() - size.width() * 0.5, p.y() - size.height() * 0.5, size.width(), size.height())
 
 
-class CncVisualization(QtWidgets.QWidget):
+class CncVisualization(QtWidgets.QWidget, CncView):
     view_updated = QtCore.Signal()
 
     def __init__(self, project, *args, **kwargs):
@@ -430,36 +434,27 @@ class CncVisualization(QtWidgets.QWidget):
     def offset(self):
         return self._offset
 
+    def _view_updated(self):
+        self.view_updated.emit()
+        self.repaint()
+
     def _zoom(self, k, position=None):
         self._scale *= k
         self._offset = self._offset * k + (position * (1 - k)).toPoint()
-        self.view_updated.emit()
-        self.update()
 
-    def zoom_in(self):
-        self._zoom(1.0 / 0.8, QtCore.QPointF(self.width()/2, self.height()/2))
+        self._view_updated()
 
-    def zoom_out(self):
-        self._zoom(0.8, QtCore.QPointF(self.width()/2, self.height()/2))
+    def _zoom_region(self, region: QtCore.QRectF):
+        # w, h = region.width(), region.height()
 
-    def zoom_to_fit(self):
-        if not self.project.items:
-            return
+        # self._scale = min(float(self.width()) / w, float(self.height()) / h) * 0.9
 
-        bounds = reduce(combine_bounds, [
-            item.geometry.bounds for item in self.project.items
-        ])
+        # target_point = QtCore.QPointF(
+        #     (self.width() - w * self._scale) * 0.5,
+        #     (self.height() - h * self._scale) * 0.5
+        # )
+        # self._offset = self.topLeft() + target_point - region.topLeft() * self._scale
 
-        w, h = bounds[2] - bounds[0], bounds[3] - bounds[1]
-
-        self._scale = min(float(self._graph_rect.width()) / w,
-                          float(self._graph_rect.height()) / h) * 0.9
-
-        target_point = QtCore.QPoint(
-            (self._graph_rect.width() - w * self._scale) * 0.5,
-            (self._graph_rect.height() - h * self._scale) * 0.5
-        )
-        self._offset = self._graph_rect.topLeft() + target_point - QtCore.QPoint(bounds[0], bounds[1]) * self._scale
         self.view_updated.emit()
         self.repaint()
 

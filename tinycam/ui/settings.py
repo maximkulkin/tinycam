@@ -9,31 +9,33 @@ import tinycam.settings as s
 from tinycam.utils import find_if
 
 
+@dataclasses.dataclass
+class TreeItem:
+    name: str
+    row: int
+    id: int
+    parent_id: int = 0
+    children: List['TreeItem'] = dataclasses.field(default_factory=list)
+    settings: List[s.CncSetting] = dataclasses.field(default_factory=list)
+
+
 class CncSettingsModel(QtCore.QAbstractItemModel):
-    @dataclasses.dataclass
-    class TreeItem:
-        name: str
-        row: int
-        id: int
-        parent_id: int = 0
-        children: List['TreeItem'] = dataclasses.field(default_factory=list)
-        settings: List[s.CncSetting] = dataclasses.field(default_factory=list)
 
     def __init__(self, settings: s.CncSettings):
         super().__init__()
         self._settings = settings
-        self._root = self.TreeItem('root', row=-1, id=0)
+        self._root = TreeItem('root', row=-1, id=0)
         self._items_by_id = {self._root.id: self._root}
 
         next_id = 1
-        for setting in sorted(self._settings):
+        for setting in self._settings:
             parts = setting.path.split('/')
 
             root = self._root
             for part in parts[:-1]:
                 child = find_if(root.children, lambda c: c.name == part)
                 if child is None:
-                    child = self.TreeItem(part, len(root.children), next_id, parent_id=root.id)
+                    child = TreeItem(part, len(root.children), next_id, parent_id=root.id)
                     root.children.append(child)
 
                     self._items_by_id[child.id] = child
@@ -112,11 +114,17 @@ class CncSettingsDialog(QtWidgets.QDialog):
         self._tree_view.setIndentation(20)
         self._tree_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self._tree_view.expandAll()
-        self._tree_view.activated.connect(self._on_category_activated)
+        self._tree_view.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self._tree_view.selectionModel().currentRowChanged.connect(self._on_selection_row_changed)
 
-        self._main_panel_layout = QtWidgets.QFormLayout()
+        self._main_panel_layout = QtWidgets.QGridLayout()
+
+        main_panel_layout = QtWidgets.QVBoxLayout()
+        main_panel_layout.addLayout(self._main_panel_layout)
+        main_panel_layout.addStretch()
+
         self._main_panel = QtWidgets.QWidget(self)
-        self._main_panel.setLayout(self._main_panel_layout)
+        self._main_panel.setLayout(main_panel_layout)
 
         main_area_layout = QtWidgets.QHBoxLayout()
         main_area_layout.addWidget(self._tree_view)
@@ -137,8 +145,8 @@ class CncSettingsDialog(QtWidgets.QDialog):
 
         self.setLayout(layout)
 
-    def _on_category_activated(self, index: QtCore.QModelIndex):
-        item = self._tree_model.get_item_by_index(index)
+    def _on_selection_row_changed(self, current: QtCore.QModelIndex, previous: QtCore.QModelIndex):
+        item = self._tree_model.get_item_by_index(current)
         if item is None:
             return
 
@@ -150,38 +158,61 @@ class CncSettingsDialog(QtWidgets.QDialog):
             item = layout.takeAt(0)
             item.widget().setParent(None)
 
-        for setting in settings:
+        for i, setting in enumerate(settings):
             widget = self._make_setting_widget(setting)
-            layout.addRow(setting.label, widget)
+            layout.addWidget(QtWidgets.QLabel(setting.label), i, 0)
+            layout.addWidget(widget, i, 1)
 
     def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget:
         match setting.type:
-            case s.STRING:
-                widget = QtWidgets.QLineEdit(self._main_panel)
-                widget.setText(self.settings.get(setting.path))
+            case s.CncStringSettingType():
+                widget = QtWidgets.QLineEdit()
+                widget.setText(self.settings.get(setting) or '')
                 widget.editingFinished.connect(
-                    lambda: self.settings.set(setting.path, widget.text())
+                    lambda: self.settings.set(setting, widget.text())
                 )
                 return widget
-            case s.INTEGER:
-                widget = QtWidgets.QSpinBox(self._main_panel)
-                widget.setValue(self.settings.get(setting.path))
+            case s.CncIntegerSettingType():
+                widget = QtWidgets.QSpinBox()
+                if setting.type.minimum is not None:
+                    widget.setMinimum(setting.type.minimum)
+                if setting.type.maximum is not None:
+                    widget.setMaximum(setting.type.maximum)
+                if setting.type.suffix is not None:
+                    widget.setSuffix(setting.type.suffix)
+                widget.setValue(self.settings.get(setting) or 0)
                 widget.valueChanged.connect(
-                    lambda: self.settings.set(setting.path, widget.value())
+                    lambda: self.settings.set(setting, widget.value())
                 )
                 return widget
-            case s.FLOAT:
-                widget = QtWidgets.QDoubleSpinBox(self._main_panel)
-                widget.setValue(self.settings.get(setting.path))
+            case s.CncFloatSettingType():
+                widget = QtWidgets.QDoubleSpinBox()
+                if setting.type.minimum is not None:
+                    widget.setMinimum(setting.type.minimum)
+                if setting.type.maximum is not None:
+                    widget.setMaximum(setting.type.maximum)
+                if setting.type.suffix is not None:
+                    widget.setSuffix(setting.type.suffix)
+                widget.setValue(self.settings.get(setting) or 0.0)
                 widget.valueChanged.connect(
-                    lambda: self.settings.set(setting.path, widget.value())
+                    lambda: self.settings.set(setting, widget.value())
                 )
                 return widget
-            case s.BOOLEAN:
-                widget = QtWidgets.QCheckBox(self._main_panel)
-                widget.setCheckState(Qt.Checked if self.settings.get(setting.path) else Qt.Unchecked)
+            case s.CncBooleanSettingType():
+                widget = QtWidgets.QCheckBox()
+                widget.setCheckState(Qt.Checked if self.settings.get(setting) else Qt.Unchecked)
                 widget.stateChanged.connect(
-                    lambda: self.settings.set(setting.path, widget.checkState == Qt.Checked)
+                    lambda: self.settings.set(setting, widget.checkState == Qt.Checked)
+                )
+                return widget
+            case s.CncEnumSettingType(enum_type):
+                widget = QtWidgets.QComboBox()
+                for value in enum_type:
+                    label = value.label if hasattr(value, 'label') else value.name
+                    widget.addItem(label, value)
+                widget.setCurrentIndex(widget.findData(self.settings.get(setting)))
+                widget.currentIndexChanged.connect(
+                    lambda idx: self.settings.set(setting, widget.itemData(idx))
                 )
                 return widget
             case _:

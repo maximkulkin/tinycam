@@ -1,39 +1,78 @@
 from PySide6 import QtCore, QtGui
 import shapely
+import math
 import moderngl
+from tinycam.globals import GLOBALS
 from tinycam.types import Vector3, Vector4
-from tinycam.project import CncProjectItem, GerberItem, ExcellonItem
+from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 from tinycam.ui.view import CncView
 from tinycam.ui.canvas import CncCanvas, RenderState
-from tinycam.ui.camera_controllers import PanAndZoomController
+from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.renderables.grid_xy import GridXY
-from tinycam.ui.renderables.lines import Lines
+from tinycam.ui.renderables.line2d import Line2D
+# from tinycam.ui.renderables.line3d import Line3D
 from tinycam.ui.renderables.polygon import Polygon
+from tinycam.ui.renderables.composite import Composite
+from tinycam.types import Matrix44
 from typing import Optional
 from tinycam.ui.utils import unproject
+from tinycam.ui.tools import PanTool
 
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
     return Vector4((color.redF(), color.greenF(), color.blueF(), color.alphaF()))
 
 
-class CncProjectItemView(Polygon):
+class CncProjectItemView(Composite):
     def __init__(self, context: moderngl.Context, index: int, model: CncProjectItem):
         super().__init__(
             context,
-            shapely.transform(model.geometry, lambda p: p * (1.0, -1.0)),
-            qcolor_to_vec4(model.color),
         )
         self.index = index
         self._model = model
         self._model.changed.connect(self._on_model_changed)
+        self._model.updated.connect(self._on_model_changed)
+        self._view = None
+        self._view_geometry = None
+        self._tool_diameter = None
+        self._update_geometry()
+
+    def _update_geometry(self):
+        if self._view_geometry is self._model.geometry:
+            return
+
+        if self._view is not None:
+            self.remove_item(self._view)
+
+        if self._model.geometry is not None:
+            view = Polygon(
+                self.context,
+                self._transform_geometry(self._model, self._model.geometry),
+                model_matrix=self._model_matrix(),
+                color=qcolor_to_vec4(self._model.color),
+            )
+            self._view_geometry = self._model.geometry
+            self.add_item(view)
+
+    def _transform_geometry(self, model, geometry):
+        return shapely.transform(geometry, lambda p: p * (1.0, -1.0))
+
+    def _model_matrix(self):
+        return (
+            Matrix44.from_translation((self._model.offset[0], self._model.offset[1], 0.0)) *
+            Matrix44.from_scale((self._model.scale[0], self._model.scale[1], 1.0))
+        )
 
     def _on_model_changed(self):
+        self._update_geometry()
+
         color = self._model.color
         if self._model.selected:
             color = color.lighter(150)
 
-        self._program['color'].write(qcolor_to_vec4(color).astype('f4').tobytes())
+        for item in self.items:
+            item.color = qcolor_to_vec4(color)
+            item.model_matrix = self._model_matrix()
 
     def render(self, state: RenderState):
         if not self._model.visible:
@@ -46,6 +85,34 @@ class CncProjectItemView(Polygon):
             self.context.wireframe = False
 
 
+class CncIsolateJobView(CncProjectItemView):
+
+    def _model_matrix(self):
+        return Matrix44.identity()
+
+    def _update_geometry(self):
+        if self._view_geometry is self._model.geometry and self._model.tool_diameter == self._tool_diameter:
+            return
+
+        self.clear_items()
+
+        G = GLOBALS.GEOMETRY
+
+        if self._model.geometry is not None:
+            for line in G.lines(self._model.geometry):
+                line_view = Line2D(
+                    self.context,
+                    G.points(self._transform_geometry(self._model, line)),
+                    closed=line.is_closed,
+                    color=qcolor_to_vec4(self._model.color),
+                    width=self._model.tool_diameter,
+                )
+                self.add_item(line_view)
+
+            self._view_geometry = self._model.geometry
+            self._tool_diameter = self._model.tool_diameter
+
+
 class CncPreview3DView(CncCanvas, CncView):
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,17 +121,43 @@ class CncPreview3DView(CncCanvas, CncView):
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
         self.project.items.changed.connect(self._on_project_item_changed)
+        self.project.items.updated.connect(self._on_project_item_updated)
 
-        self._controller = PanAndZoomController(self._camera)
-        self.installEventFilter(self._controller)
+        self._tool = PanTool(self.project, self)
+        self._tool.activate()
+
+        self._controllers = [
+            PanAndZoomController(self._camera),
+            OrbitController(self._camera),
+        ]
+        for controller in self._controllers:
+            self.installEventFilter(controller)
 
     def initializeGL(self):
         super().initializeGL()
         self.objects = [
             GridXY(self.ctx),
-            Lines(self.ctx, [
-                (-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1),
-            ]),
+            # Line3D(
+            #     self.ctx,
+            #     points=[
+            #         (0.0, 0.0, 0.0),
+            #         (5.0, 0.0, 0.0),
+            #         (5.0, 0.0, 5.0),
+            #         (5.0, 5.0, 5.0),
+            #     ],
+            #     color=Vector4((1.0, 1.0, 0.0, 1.0)),
+            # ),
+            # Line3D(
+            #     self.ctx,
+            #     points=[
+            #         (0.0, 0.0, 0.0),
+            #         (5.0, 0.0, 0.0),
+            #         (5.0, 0.0, 5.0),
+            #         (5.0, 5.0, 5.0),
+            #     ],
+            #     color=Vector4((1.0, 1.0, 0.0, 1.0)),
+            #     width=0.2,
+            # ),
         ]
 
         for i, _ in enumerate(self.project.items):
@@ -91,20 +184,31 @@ class CncPreview3DView(CncCanvas, CncView):
         self._camera.position += Vector3((d.x, d.y, 0))
         self.update()
 
+    def _zoom_region(self, region: QtCore.QRectF):
+        z = max(region.width() * 1.1 * 0.5 / math.tan(self._camera.fov * 0.5),
+                region.height() * 1.1 * 0.5 / math.tan(self._camera.fov * 0.5))
+        self._camera.position = Vector3((region.center().x(), -region.center().y(), z))
+        self.update()
+
+    def zoom_to_fit(self):
+        pass
+
     def _on_project_item_added(self, index: int):
         item = self.project.items[index]
 
         view = None
-        if isinstance(item, (GerberItem, ExcellonItem)):
+        if isinstance(item, CncIsolateJob):
+            view = CncIsolateJobView(self.ctx, index, item)
+        elif isinstance(item, (GerberItem, ExcellonItem, CncJob)):
             view = CncProjectItemView(self.ctx, index, item)
-            for existing_view in self.objects:
-                if hasattr(existing_view, 'index') and existing_view.index >= index:
-                    existing_view.index += 1
 
         if view is None:
             return
 
-        self.objects.append(view)
+        for existing_view in self.objects:
+            if hasattr(existing_view, 'index') and existing_view.index >= index:
+                existing_view.index += 1
+        self.objects.insert(index, view)
         self.update()
 
     def _on_project_item_removed(self, index: int):
@@ -119,6 +223,9 @@ class CncPreview3DView(CncCanvas, CncView):
                 view.index -= 1
 
     def _on_project_item_changed(self, index: int):
+        self.update()
+
+    def _on_project_item_updated(self, index: int):
         self.update()
 
     def paintGL(self):

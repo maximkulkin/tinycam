@@ -9,6 +9,7 @@ class CncProject(QtCore.QObject):
         added = QtCore.Signal(int)
         removed = QtCore.Signal(int)
         changed = QtCore.Signal(int)
+        updated = QtCore.Signal(int)
 
         def __init__(self):
             super().__init__()
@@ -22,12 +23,14 @@ class CncProject(QtCore.QObject):
                     raise KeyError()
 
             item.changed.connect(self._on_item_changed)
+            item.updated.connect(self._on_item_updated)
 
             self._items.insert(index, item)
             self.added.emit(index)
 
         def append(self, item: CncProjectItem):
             item.changed.connect(self._on_item_changed)
+            item.updated.connect(self._on_item_updated)
 
             self._items.append(item)
             self.added.emit(len(self._items) - 1)
@@ -39,6 +42,7 @@ class CncProject(QtCore.QObject):
         def remove(self, item: CncProjectItem):
             index = self.index(item)
             item.changed.disconnect(self._on_item_changed)
+            item.updated.disconnect(self._on_item_updated)
             self._items.remove(item)
             self.removed.emit(index)
 
@@ -65,8 +69,10 @@ class CncProject(QtCore.QObject):
                     raise KeyError()
 
             self._items[index].changed.disconnect(self._on_item_changed)
+            self._items[index].updated.disconnect(self._on_item_updated)
             self._items[index] = item
             item.changed.connect(self._on_item_changed)
+            item.updated.connect(self._on_item_updated)
             self.changed.emit(index)
 
         def __delitem__(self, index: int):
@@ -75,6 +81,7 @@ class CncProject(QtCore.QObject):
                 if index < 0:
                     raise KeyError()
             self._items[index].changed.disconnect(self._on_item_changed)
+            self._items[index].updated.disconnect(self._on_item_updated)
             del self._items[index]
             self.removed.emit(index)
 
@@ -87,6 +94,12 @@ class CncProject(QtCore.QObject):
                 return
             self.changed.emit(index)
 
+        def _on_item_updated(self, item: CncProjectItem):
+            index = self._items.index(item)
+            if index == -1:
+                return
+            self.updated.emit(index)
+
     class Selection(QtCore.QObject):
         changed = QtCore.Signal()
 
@@ -95,7 +108,7 @@ class CncProject(QtCore.QObject):
             self._project = project
             self._indexes = set()
 
-        def _changed(self):
+        def _signal_changed(self):
             self.changed.emit()
 
         def set(self, indexes: Sequence[int]):
@@ -115,7 +128,7 @@ class CncProject(QtCore.QObject):
 
             self._indexes.add(index)
             self._project.items[index].selected = True
-            self._changed()
+            self._signal_changed()
 
         def add_all(self, indexes: Sequence[int]):
             if not indexes:
@@ -131,15 +144,15 @@ class CncProject(QtCore.QObject):
                 self._indexes.add(index)
                 self._project.items[index].selected = True
 
-            self._changed()
+            self._signal_changed()
 
         def remove(self, index: int):
             if index not in self._indexes:
                 return
 
-            self._indexes.remove(index)
             self._project.items[index].selected = False
-            self._changed()
+            self._indexes.remove(index)
+            self._signal_changed()
 
         def remove_all(self, indexes: Sequence[int]):
             changed = False
@@ -152,7 +165,7 @@ class CncProject(QtCore.QObject):
                 changed = True
 
             if changed:
-                self._changed()
+                self._signal_changed()
 
         def clear(self):
             if not self._items:
@@ -162,7 +175,7 @@ class CncProject(QtCore.QObject):
                 self._project.items[index].selected = False
 
             self._indexes = set()
-            self._changed()
+            self._signal_changed()
 
         def __iter__(self):
             yield from self._indexes

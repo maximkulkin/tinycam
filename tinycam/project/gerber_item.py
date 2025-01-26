@@ -1,16 +1,29 @@
-from PySide6 import QtCore, QtGui
+from PySide6 import QtGui
 import os.path
 
 from tinycam.formats import gerber
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
+from tinycam.types import Vector2
+from tinycam.properties import Vector2Property
 
 
 class GerberItem(CncProjectItem):
     def __init__(self, name, geometry):
         super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
         self._geometry = geometry
-        self._geometry_cache = None
+
+        self._offset = Vector2((0.0, 0.0))
+        self._scale = Vector2((1.0, 1.0))
+
+        self._update_geometry()
+
+    def _update(self):
+        self._update_geometry()
+        self._signal_updated()
+
+    offset = Vector2Property(on_update=_update)
+    scale = Vector2Property(on_update=_update)
 
     def clone(self):
         clone = GerberItem(self.name, self._geometry)
@@ -22,58 +35,8 @@ class GerberItem(CncProjectItem):
     def geometry(self):
         return self._geometry
 
-    @geometry.setter
-    def geometry(self, value):
-        self._geometry = value
-        self._geometry_cache = None
-        self._changed()
-
-    def _precache_geometry(self):
-        path = QtGui.QPainterPath()
-
-        for polygon in GLOBALS.GEOMETRY.polygons(self._geometry):
-            p = QtGui.QPainterPath()
-
-            for exterior in GLOBALS.GEOMETRY.exteriors(polygon):
-                p.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GLOBALS.GEOMETRY.points(exterior)
-                    ])
-                )
-
-            for interior in GLOBALS.GEOMETRY.interiors(polygon):
-                pi = QtGui.QPainterPath()
-                pi.addPolygon(
-                    QtGui.QPolygonF.fromList([
-                        QtCore.QPointF(x, y)
-                        for x, y in GLOBALS.GEOMETRY.points(interior)
-                    ])
-                )
-                p = p.subtracted(pi)
-
-            path = path.united(p)
-
-        self._geometry_cache = path
-
-    def draw(self, painter):
-        if not self.visible:
-            return
-
-        if not self._geometry_cache:
-            self._precache_geometry()
-
-        with painter:
-            color = self.color
-            if self.selected:
-                color = color.lighter(150)
-
-            painter.setBrush(QtGui.QBrush(color))
-            pen = QtGui.QPen(color.darker(150), 2.0)
-            pen.setCosmetic(True)
-            painter.setPen(pen)
-
-            painter.drawPath(self._geometry_cache)
+    def _update_geometry(self):
+        pass
 
     @staticmethod
     def from_file(path):
@@ -82,5 +45,3 @@ class GerberItem(CncProjectItem):
             # name, ext = os.path.splitext(os.path.basename(path))
             name = os.path.basename(path)
             return GerberItem(name, geometry)
-
-

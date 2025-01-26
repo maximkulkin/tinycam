@@ -2,6 +2,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProject
+from tinycam.tasks import TaskManager
 
 
 class CncApplication(QtWidgets.QApplication):
@@ -11,6 +12,7 @@ class CncApplication(QtWidgets.QApplication):
         self.project = CncProject()
         self.settings = GLOBALS.SETTINGS
         self.undo_stack = QtGui.QUndoStack()
+        self.task_manager = TaskManager()
 
         self._load_settings()
 
@@ -38,12 +40,10 @@ class CncApplication(QtWidgets.QApplication):
             else:
                 try:
                     value = setting.type.deserialize(value)
-                except CncSettingError as e:
+                except Exception as e:
                     print(e.message)
                     continue
 
                 self.settings.set(setting.path, value)
 
         settings.endGroup()
-
-

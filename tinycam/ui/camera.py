@@ -2,6 +2,13 @@ from pyrr import Vector3, Quaternion, Matrix44
 
 
 class Camera:
+    UP = Vector3((0.0, 1.0, 0.0))
+    DOWN = Vector3((0.0, -1.0, 0.0))
+    FORWARD = Vector3((0.0, 0.0, -1.0))
+    BACKWARD = Vector3((0.0, 0.0, 1.0))
+    RIGHT = Vector3((1.0, 0.0, 0.0))
+    LEFT = Vector3((-1.0, 0.0, 0.0))
+
     def __init__(
         self,
         position: Vector3 = None,

@@ -1,11 +1,9 @@
 from enum import Enum
-from functools import reduce
 import math
 import pyparsing as pp
 import pyparsing.exceptions
-import shapely
-import shapely.affinity
 from tinycam.geometry import Geometry
+
 
 class Node:
     def __init__(self, type, location, data=None):

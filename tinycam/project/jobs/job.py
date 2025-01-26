@@ -11,5 +11,4 @@ class CncJob(CncProjectItem):
         return self._geometry
 
     def generate_commands(self):
-        raise NotImplemented()
-
+        raise NotImplementedError()

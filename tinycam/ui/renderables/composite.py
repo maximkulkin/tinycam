@@ -12,6 +12,19 @@ class Composite(Renderable):
         super().__init__(context)
         self._items = items or []
 
+    @property
+    def items(self) -> Sequence[Renderable]:
+        return self._items
+
+    def add_item(self, item: Renderable):
+        self._items.append(item)
+
+    def remove_item(self, item: Renderable):
+        self._items.remove(item)
+
+    def clear_items(self):
+        self._items.clear()
+
     def render(self, state: RenderState):
         for item in self._items:
             item.render(state)

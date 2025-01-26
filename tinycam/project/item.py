@@ -16,6 +16,9 @@ class CncProjectItem(QtCore.QObject):
         self._updating = False
         self._updated = False
 
+    def _update(self):
+        pass
+
     def clone(self) -> 'CncProjectItem':
         clone = self.__class__(self.name, self.color)
         clone.visible = self.visible
@@ -32,11 +35,14 @@ class CncProjectItem(QtCore.QObject):
         if self._updated:
             self.changed.emit(self)
 
-    def _changed(self):
+    def _signal_changed(self):
         if self._updating:
             self._updated = True
         else:
             self.changed.emit(self)
+
+    def _signal_updated(self):
+        self.updated.emit(self)
 
     @property
     def name(self) -> str:
@@ -47,7 +53,7 @@ class CncProjectItem(QtCore.QObject):
         if self._name == value:
             return
         self._name = value
-        self._changed()
+        self._signal_changed()
 
     @property
     def color(self) -> QtGui.QColor:
@@ -58,7 +64,7 @@ class CncProjectItem(QtCore.QObject):
         if self._color == value:
             return
         self._color = value
-        self._changed()
+        self._signal_changed()
 
     @property
     def visible(self) -> bool:
@@ -69,7 +75,7 @@ class CncProjectItem(QtCore.QObject):
         if self._visible == value:
             return
         self._visible = value
-        self._changed()
+        self._signal_changed()
 
     @property
     def debug(self) -> bool:
@@ -80,7 +86,7 @@ class CncProjectItem(QtCore.QObject):
         if self._debug == value:
             return
         self._debug = value
-        self._changed()
+        self._signal_changed()
 
     @property
     def selected(self) -> bool:
@@ -91,13 +97,11 @@ class CncProjectItem(QtCore.QObject):
         if self._selected == value:
             return
         self._selected = value
-        self._changed()
+        self._signal_changed()
 
     def contains(self, point: QtCore.QPoint | QtCore.QPointF):
         return GLOBALS.GEOMETRY.contains(self._geometry, (point.x(), point.y()))
 
-    def draw(self, painter: QtGui.QPainter):
-        pass
-
 
 CncProjectItem.changed = QtCore.Signal(CncProjectItem)
+CncProjectItem.updated = QtCore.Signal(CncProjectItem)
