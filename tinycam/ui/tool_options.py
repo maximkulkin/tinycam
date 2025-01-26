@@ -4,8 +4,8 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.ui.window import CncWindow
 from tinycam.ui.utils import clear_layout
-from tinycam.properties import Property, StringProperty, BoolProperty, IntProperty, FloatProperty, Vector2Property
-from tinycam.types import Vector2
+from tinycam.properties import Property, StringProperty, BoolProperty, IntProperty, FloatProperty, Vector2Property, Vector3Property
+from tinycam.types import Vector2, Vector3
 
 
 __all__ = ['CncToolOptionsWindow']
@@ -199,6 +199,70 @@ class Vector2PropertyEditor(QtWidgets.QWidget):
         self.valueChanged.emit(value)
 
 
+class Vector3PropertyEditor(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(Vector3)
+
+    def __init__(self, target: object, prop: Property, parent=None):
+        super().__init__(parent)
+
+        self._target = target
+        self._prop = prop
+
+        self._x_editor = QtWidgets.QDoubleSpinBox(self)
+        self._x_editor.setMinimum(-10000.0)
+        self._x_editor.setMaximum(10000.0)
+        self._x_editor.valueChanged.connect(self._on_value_changed)
+
+        self._y_editor = QtWidgets.QDoubleSpinBox(self)
+        self._y_editor.setMinimum(-10000.0)
+        self._y_editor.setMaximum(10000.0)
+        self._y_editor.valueChanged.connect(self._on_value_changed)
+
+        self._z_editor = QtWidgets.QDoubleSpinBox(self)
+        self._z_editor.setMinimum(-10000.0)
+        self._z_editor.setMaximum(10000.0)
+        self._z_editor.valueChanged.connect(self._on_value_changed)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QtWidgets.QLabel('X:'))
+        layout.addWidget(self._x_editor)
+        layout.addWidget(QtWidgets.QLabel('Y:'))
+        layout.addWidget(self._y_editor)
+        layout.addWidget(QtWidgets.QLabel('Z:'))
+        layout.addWidget(self._z_editor)
+        layout.setStretch(1, 1)
+        layout.setStretch(3, 1)
+        layout.setStretch(5, 1)
+        self.setLayout(layout)
+
+        self.refreshValue()
+
+    def value(self) -> Vector3:
+        return Vector3((
+            self._x_editor.value(),
+            self._y_editor.value(),
+            self._z_editor.value(),
+        ))
+
+    def setValue(self, value: Vector3):
+        self._x_editor.setValue(value[0])
+        self._y_editor.setValue(value[1])
+        self._z_editor.setValue(value[2])
+
+    def refreshValue(self):
+        self.setValue(getattr(self._target, self._prop.name))
+
+    def _on_value_changed(self, _: float):
+        value = Vector3((
+            self._x_editor.value(),
+            self._y_editor.value(),
+            self._z_editor.value(),
+        ))
+        setattr(self._target, self._prop.name, value)
+        self.valueChanged.emit(value)
+
+
 class CncToolOptionsWindow(CncWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -253,6 +317,9 @@ class CncToolOptionsWindow(CncWindow):
                     editor = FloatPropertyEditor(target, prop)
                 case Vector2Property():
                     editor = Vector2PropertyEditor(target, prop)
+                    span = True
+                case Vector3Property():
+                    editor = Vector3PropertyEditor(target, prop)
                     span = True
                 case _:
                     editor = None

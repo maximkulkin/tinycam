@@ -68,3 +68,7 @@ class FloatProperty(Property):
 
 class Vector2Property(Property):
     pass
+
+
+class Vector3Property(Property):
+    pass
