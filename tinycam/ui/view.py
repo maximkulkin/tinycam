@@ -1,8 +1,6 @@
 from PySide6 import QtCore
-from functools import reduce
 from tinycam.ui.camera import Camera
 from tinycam.types import Vector3
-from typing import Optional
 
 
 def combine_bounds(b1, b2):
