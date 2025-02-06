@@ -11,8 +11,8 @@ class Camera:
 
     def __init__(
         self,
-        position: Vector3 = None,
-        rotation: Quaternion = None,
+        position: Vector3 | None = None,
+        rotation: Quaternion | None = None,
         near: float = 0.1,
         far: float = 1000.0,
     ):
