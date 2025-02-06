@@ -43,6 +43,24 @@ class Camera:
         self._rotation = value
         self._invalidate_matrixes()
 
+    @property
+    def near(self) -> float:
+        return self._near
+
+    @near.setter
+    def near(self, value: float):
+        self._near = value
+        self._invalidate_projection_matrix
+
+    @property
+    def far(self) -> float:
+        return self._far
+
+    @far.setter
+    def far(self, value: float):
+        self._far = value
+        self._invalidate_projection_matrix()
+
     def _invalidate_matrixes(self) -> None:
         self._world_matrix = None
         self._view_matrix = None
