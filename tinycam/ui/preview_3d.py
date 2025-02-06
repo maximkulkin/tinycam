@@ -5,12 +5,14 @@ import moderngl
 from tinycam.globals import GLOBALS
 from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
+import tinycam.settings as s
 from tinycam.ui.view import CncView
 from tinycam.ui.canvas import CncCanvas, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.renderables.grid_xy import GridXY
 from tinycam.ui.renderables.line2d import Line2D
 # from tinycam.ui.renderables.line3d import Line3D
+from tinycam.ui.renderables.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
 from tinycam.ui.renderables.polygon import Polygon
 from tinycam.ui.renderables.composite import Composite
 from tinycam.types import Vector2, Matrix44
@@ -113,6 +115,11 @@ class CncIsolateJobView(CncProjectItemView):
             self._tool_diameter = self._model.tool_diameter
 
 
+s.SETTINGS.register('preview/orientation_cube_position',
+                    s.CncEnumSetting, enum_type=OrientationCubePosition,
+                    default=OrientationCubePosition.TOP_RIGHT)
+
+
 class CncPreview3DView(CncCanvas, CncView):
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -126,16 +133,29 @@ class CncPreview3DView(CncCanvas, CncView):
         self._tool = PanTool(self.project, self)
         self._tool.activate()
 
+        self._camera_orbit_controller = OrbitController(self._camera)
         self._controllers = [
             PanAndZoomController(self._camera),
-            OrbitController(self._camera),
+            self._camera_orbit_controller,
         ]
         for controller in self._controllers:
             self.installEventFilter(controller)
 
     def initializeGL(self):
         super().initializeGL()
+
+        self._orientation_cube = OrientationCube(
+            self.ctx,
+            self._camera,
+            size=1.5,
+            position=s.SETTINGS.get('preview/orientation_cube_position'),
+        )
+        self._orientation_cube.eventFilter.orientation_selected.connect(self._on_orientation_selected)
+        s.SETTINGS['preview/orientation_cube_position'].changed.connect(self._on_orienation_cube_position_changed)
+        self.installEventFilter(self._orientation_cube.eventFilter)
+
         self.objects = [
+            self._orientation_cube,
             GridXY(self.ctx),
             # Line3D(
             #     self.ctx,
@@ -192,6 +212,30 @@ class CncPreview3DView(CncCanvas, CncView):
 
     def zoom_to_fit(self):
         pass
+
+    def _on_orienation_cube_position_changed(self, value: OrientationCubePosition):
+        self._orientation_cube.position = value
+        self.update()
+
+    def _on_orientation_selected(self, orientation: Orientation):
+        pitch, yaw = None, None
+        PI = math.pi
+        PI2 = PI * 0.5
+        match orientation:
+            case Orientation.FRONT:
+                pitch, yaw = -PI2, 0.0
+            case Orientation.BACK:
+                pitch, yaw = -PI2, PI
+            case Orientation.TOP:
+                pitch, yaw = 0.0, 0.0
+            case Orientation.BOTTOM:
+                pitch, yaw = PI, 0.0
+            case Orientation.LEFT:
+                pitch, yaw = -PI2, PI2
+            case Orientation.RIGHT:
+                pitch, yaw = -PI2, -PI2
+
+        self._camera_orbit_controller.rotate(pitch=pitch, yaw=yaw, duration=0.5)
 
     def _on_project_item_added(self, index: int):
         item = self.project.items[index]
