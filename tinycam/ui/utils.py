@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 import math
-from pyrr import Vector3, Vector4, Quaternion
 from PySide6 import QtCore
+from tinycam.types import Vector3, Vector4, Quaternion
 from tinycam.ui.camera import Camera
 from typing import Tuple
 
@@ -162,12 +162,12 @@ def unproject(
     x = 2.0 * point[0] / screen_size[0] - 1.0
     y = 2.0 * point[1] / screen_size[1] - 1.0
 
-    p = Vector4((x, -y, 0.0, 1.0))
+    p = Vector4(x, -y, 0, 1)
     v = ivp * p
     if v.w != 0.0:
         v /= v.w
 
-    r = Vector3((v.x, v.y, v.z))
+    r = v.xyz
     r -= r.z * (camera.position - r) / (camera.position.z - r.z)
     return r
 

@@ -1,13 +1,13 @@
-from pyrr import Vector3, Quaternion, Matrix44
+from tinycam.types import Vector3, Quaternion, Matrix44
 
 
 class Camera:
-    UP = Vector3((0.0, 1.0, 0.0))
-    DOWN = Vector3((0.0, -1.0, 0.0))
-    FORWARD = Vector3((0.0, 0.0, -1.0))
-    BACKWARD = Vector3((0.0, 0.0, 1.0))
-    RIGHT = Vector3((1.0, 0.0, 0.0))
-    LEFT = Vector3((-1.0, 0.0, 0.0))
+    UP = Vector3(0, 1, 0)
+    DOWN = Vector3(0, -1, 0)
+    FORWARD = Vector3(0, 0, -1)
+    BACKWARD = Vector3(0, 0, 1)
+    RIGHT = Vector3(1, 0, 0)
+    LEFT = Vector3(-1, 0, 0)
 
     def __init__(
         self,
@@ -108,7 +108,7 @@ class PerspectiveCamera(Camera):
     def look_at(
         self,
         target: Vector3,
-        up: Vector3 = Vector3((0, 1, 0)),
+        up: Vector3 = Vector3(0, 1, 0),
     ) -> None:
         _, r, _ = (
             Matrix44.look_at(self.position, target, up).decompose()

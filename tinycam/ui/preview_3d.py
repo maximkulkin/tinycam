@@ -13,14 +13,14 @@ from tinycam.ui.renderables.line2d import Line2D
 # from tinycam.ui.renderables.line3d import Line3D
 from tinycam.ui.renderables.polygon import Polygon
 from tinycam.ui.renderables.composite import Composite
-from tinycam.types import Matrix44
+from tinycam.types import Vector2, Matrix44
 from typing import Optional
 from tinycam.ui.utils import unproject
 from tinycam.ui.tools import PanTool
 
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
-    return Vector4((color.redF(), color.greenF(), color.blueF(), color.alphaF()))
+    return Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
 
 
 class CncProjectItemView(Composite):
@@ -145,7 +145,7 @@ class CncPreview3DView(CncCanvas, CncView):
             #         (5.0, 0.0, 5.0),
             #         (5.0, 5.0, 5.0),
             #     ],
-            #     color=Vector4((1.0, 1.0, 0.0, 1.0)),
+            #     color=Vector4(1.0, 1.0, 0.0, 1.0),
             # ),
             # Line3D(
             #     self.ctx,
@@ -167,7 +167,7 @@ class CncPreview3DView(CncCanvas, CncView):
         return unproject((p.x(), p.y()), (self.width(), self.height()), self.camera)
 
     def canvas_to_screen_point(self, p: Vector3) -> QtCore.QPoint:
-        sp = self.camera.projection_matrix * self.camera.view_matrix * Vector4((p[0], p[1], p[2], 1.0))
+        sp = self.camera.projection_matrix * self.camera.view_matrix * Vector4(p[0], p[1], p[2], 1.0)
         return QtCore.QPoint(
             (sp[0] * 0.5 + 0.5) * self.width(),
             (0.5 - sp[1] * 0.5) * self.height(),
@@ -176,18 +176,18 @@ class CncPreview3DView(CncCanvas, CncView):
     def _zoom(self, amount: float, point: Optional[QtCore.QPoint] = None):
         p0 = self.screen_to_canvas_point(point)
 
-        self._camera.position *= Vector3((1.0, 1.0, 1.0 / amount))
+        self._camera.position *= Vector3(1.0, 1.0, 1.0 / amount)
 
         p1 = self.screen_to_canvas_point(point)
         d = p0 - p1
 
-        self._camera.position += Vector3((d.x, d.y, 0))
+        self._camera.position += Vector3(d.x, d.y, 0)
         self.update()
 
     def _zoom_region(self, region: QtCore.QRectF):
         z = max(region.width() * 1.1 * 0.5 / math.tan(self._camera.fov * 0.5),
                 region.height() * 1.1 * 0.5 / math.tan(self._camera.fov * 0.5))
-        self._camera.position = Vector3((region.center().x(), -region.center().y(), z))
+        self._camera.position = Vector3(region.center().x(), -region.center().y(), z)
         self.update()
 
     def zoom_to_fit(self):
@@ -235,7 +235,7 @@ class CncPreview3DView(CncCanvas, CncView):
         self.makeCurrent()
 
         state = RenderState()
-        state.screen_size = self.width(), self.height()
+        state.screen_size = Vector2(self.width(), self.height())
         state.camera = self._camera
 
         for obj in self.objects:

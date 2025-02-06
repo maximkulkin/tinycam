@@ -1,6 +1,6 @@
 import moderngl
 import numpy as np
-from pyrr import Vector3, Vector4, Quaternion, Matrix44
+from tinycam.types import Vector3, Vector4, Quaternion, Matrix44
 from tinycam.ui.canvas import Renderable, RenderState
 
 
@@ -10,7 +10,7 @@ class Triangle(Renderable):
         context: moderngl.Context,
         position: Vector3 = Vector3(),
         rotation: Quaternion = Quaternion(),
-        color: Vector4 = Vector4((1, 1, 1, 1)),
+        color: Vector4 = Vector4(1, 1, 1, 1),
     ):
         super().__init__(context)
 
@@ -50,14 +50,14 @@ class Triangle(Renderable):
         self._vao = self.context.vertex_array(self._program, [
             (self._vbo, '3f', 'position'),
         ])
-        self._program['color'].write(color.astype('f4').tobytes())
+        self._program['color'].write(color.tobytes())
 
     def render(self, state: RenderState):
         self.context.disable(moderngl.CULL_FACE)
         model_matrix = Matrix44.from_translation(self._position) * Matrix44.from_quaternion(self._rotation)
         camera = state.camera
         self._program['mvp'].write(
-            (camera.projection_matrix * camera.view_matrix * model_matrix).astype('f4').tobytes()
+            (camera.projection_matrix * camera.view_matrix * model_matrix).tobytes()
         )
 
         self._vao.render(moderngl.TRIANGLE_STRIP)

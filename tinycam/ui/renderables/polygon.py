@@ -13,7 +13,7 @@ class Polygon(Renderable):
         context: moderngl.Context,
         polygon: Union[shapely.Polygon, shapely.MultiPolygon],
         model_matrix: Optional[Matrix44] = None,
-        color: Vector4 = Vector4((1, 1, 1, 1)),
+        color: Vector4 = Vector4(1, 1, 1, 1),
     ):
         super().__init__(context)
 

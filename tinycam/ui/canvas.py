@@ -1,12 +1,12 @@
 import moderngl
-from pyrr import Vector3
 from PySide6 import QtOpenGLWidgets
+from tinycam.types import Vector2, Vector3
 from tinycam.ui.camera import Camera, PerspectiveCamera
 from typing import Tuple
 
 
 class RenderState:
-    screen_size: Tuple[int, int]
+    screen_size: Vector2
     camera: Camera
 
 
@@ -27,7 +27,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._camera = PerspectiveCamera()
-        self._camera.position += Vector3((0, 0, 5))
+        self._camera.position += Vector3(0, 0, 5)
         self._camera.look_at(Vector3())
 
     @property
@@ -48,7 +48,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         super().paintGL()
 
         state = RenderState()
-        state.screen_size = self.width(), self.height()
+        state.screen_size = Vector2(self.width(), self.height())
         state.camera = self._camera
 
         for obj in self.objects:

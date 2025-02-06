@@ -15,7 +15,7 @@ class Line3D(Renderable):
         context: moderngl.Context,
         points: list[Point3],
         closed: bool = False,
-        color: Vector4 = Vector4((0.8, 0.8, 0.8, 1.0)),
+        color: Vector4 = Vector4(0.8, 0.8, 0.8, 1.0),
         width: Optional[float] = None,
     ):
         super().__init__(context)

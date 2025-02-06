@@ -13,8 +13,8 @@ class GerberItem(CncProjectItem):
         super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
         self._geometry = geometry
 
-        self._offset = Vector2((0.0, 0.0))
-        self._scale = Vector2((1.0, 1.0))
+        self._offset = Vector2(0, 0)
+        self._scale = Vector2(1, 1)
 
         self._update_geometry()
 

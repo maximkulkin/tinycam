@@ -1,7 +1,7 @@
 import enum
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
-from pyrr import Vector3, Quaternion, Matrix44
+from tinycam.types import Vector3, Quaternion, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.utils import quaternion_to_eulers, unproject
 from typing import Callable, Tuple, Union
@@ -112,7 +112,7 @@ class PanAndZoomController(QtCore.QObject):
             p1 = self._unproject(position)
             d = p0 - p1
 
-            self._camera.position += Vector3((d.x, d.y, 0))
+            self._camera.position += Vector3(d.x, d.y, 0)
             self._last_position = position
             widget.update()
             return True
@@ -121,12 +121,12 @@ class PanAndZoomController(QtCore.QObject):
             p0 = self._unproject(screen_point)
 
             scale = 0.9 ** (event.angleDelta().y() / 120.0)
-            self._camera.position *= Vector3((1.0, 1.0, scale))
+            self._camera.position *= Vector3(1, 1, scale)
 
             p1 = self._unproject(screen_point)
             d = p0 - p1
 
-            self._camera.position += Vector3((d.x, d.y, 0))
+            self._camera.position += Vector3(d.x, d.y, 0)
             widget.update()
 
         return False
@@ -194,17 +194,17 @@ class FreeMoveController(QtCore.QObject):
     def _update_movement(self):
         v = Vector3()
         if self._directions & self.Direction.LEFT != 0:
-            v = v + Vector3((-1, 0, 0))
+            v = v + Vector3(-1, 0, 0)
         if self._directions & self.Direction.RIGHT != 0:
-            v = v + Vector3((1, 0, 0))
+            v = v + Vector3(1, 0, 0)
         if self._directions & self.Direction.UP != 0:
-            v = v + Vector3((0, 1, 0))
+            v = v + Vector3(0, 1, 0)
         if self._directions & self.Direction.DOWN != 0:
-            v = v + Vector3((0, -1, 0))
+            v = v + Vector3(0, -1, 0)
         if self._directions & self.Direction.FORWARD != 0:
-            v = v + Vector3((0, 0, -1))
+            v = v + Vector3(0, 0, -1)
         if self._directions & self.Direction.BACKWARD != 0:
-            v = v + Vector3((0, 0, 1))
+            v = v + Vector3(0, 0, 1)
 
         self._movement = v * (self._move_speed * 3 if self._turbo else self._move_speed)
 
@@ -219,7 +219,7 @@ class FreeMoveController(QtCore.QObject):
     def look_at(
         self,
         target: Vector3,
-        up: Vector3 = Vector3((0, 1, 0)),
+        up: Vector3 = Vector3(0, 1, 0),
     ) -> None:
         _, r, _ = (
             Matrix44.look_at(self.position, target, up).decompose()

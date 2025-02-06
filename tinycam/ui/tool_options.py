@@ -239,11 +239,11 @@ class Vector3PropertyEditor(QtWidgets.QWidget):
         self.refreshValue()
 
     def value(self) -> Vector3:
-        return Vector3((
+        return Vector3(
             self._x_editor.value(),
             self._y_editor.value(),
             self._z_editor.value(),
-        ))
+        )
 
     def setValue(self, value: Vector3):
         self._x_editor.setValue(value[0])
@@ -254,11 +254,11 @@ class Vector3PropertyEditor(QtWidgets.QWidget):
         self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, _: float):
-        value = Vector3((
+        value = Vector3(
             self._x_editor.value(),
             self._y_editor.value(),
             self._z_editor.value(),
-        ))
+        )
         setattr(self._target, self._prop.name, value)
         self.valueChanged.emit(value)
 
