@@ -22,6 +22,53 @@ class Axis(enum.Enum):
         raise ValueError('Invalid axis')
 
 
+class CameraOrbitAnimation(QtCore.QObject):
+    finished = QtCore.Signal()
+
+    def __init__(self, controller: 'OrbitController', pitch: float, yaw: float, duration: float):
+        super().__init__()
+
+        self._controller = controller
+
+        self._start_pitch = self._controller.pitch
+        self._start_yaw = self._controller.yaw
+        self._target_pitch = pitch
+        self._target_yaw = yaw
+
+        self._duration_ms = int(duration * 1000)
+
+        self._timer = QtCore.QTimer()
+        self._timer.setInterval(20)
+        self._timer.setTimerType(Qt.CoarseTimer)
+        self._timer.timeout.connect(self._on_timeout)
+
+    def start(self):
+        self._start_time = QtCore.QTime.currentTime()
+        self._timer.start()
+
+    def stop(self):
+        self._timer.stop()
+
+    @property
+    def is_active(self):
+        return self._timer.isActive()
+
+    def _on_timeout(self):
+        delta_time_ms = self._start_time.msecsTo(QtCore.QTime.currentTime())
+        if delta_time_ms > self._duration_ms:
+            self._timer.stop()
+            self.finished.emit()
+            return
+
+        t = delta_time_ms / self._duration_ms
+        # TODO: implement slerp instead of lerp
+        pitch = self._start_pitch + t * (self._target_pitch - self._start_pitch)
+        yaw = self._start_yaw + t * (self._target_yaw - self._start_yaw)
+        self._controller.rotate(pitch, yaw)
+
+        self._timer.start()
+
+
 class OrbitController(QtCore.QObject):
     def __init__(
         self,
@@ -41,6 +88,7 @@ class OrbitController(QtCore.QObject):
         self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
 
         self._last_position = None
+        self._animation = None
 
     @property
     def pitch(self) -> float:
@@ -50,7 +98,15 @@ class OrbitController(QtCore.QObject):
     def yaw(self) -> float:
         return self._yaw
 
-    def rotate(self, pitch: float, yaw: float):
+    def rotate(self, pitch: float, yaw: float, duration: float | None = None):
+        if duration is not None:
+            if self._animation is not None:
+                self._animation.stop()
+            self._animation = CameraOrbitAnimation(self, pitch, yaw, duration)
+            self._animation.finished.connect(self._on_animation_finished)
+            self._animation.start()
+            return
+
         self._pitch = pitch
         self._yaw = yaw
 
@@ -62,6 +118,9 @@ class OrbitController(QtCore.QObject):
         self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
         self._camera.position = orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
         self._widget.update()
+
+    def _on_animation_finished(self):
+        self._animation = None
 
     def _on_control_type_changed(self, value: ControlType):
         match value:
