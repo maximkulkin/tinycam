@@ -59,6 +59,7 @@ class OrbitController(QtCore.QObject):
             self._last_position = event.position()
             widget.grabKeyboard()
             widget.grabMouse()
+            widget.setCursor(QtGui.QCursor(Qt.SizeAllCursor))
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == self._orbit_button
@@ -66,6 +67,7 @@ class OrbitController(QtCore.QObject):
             self._last_position = None
             widget.releaseKeyboard()
             widget.releaseMouse()
+            widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
             v = self._camera.rotation.conjugate * Camera.FORWARD
@@ -119,6 +121,7 @@ class PanAndZoomController(QtCore.QObject):
             self._last_position = event.position()
             widget.grabKeyboard()
             widget.grabMouse()
+            widget.setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == self._pan_button
@@ -126,6 +129,7 @@ class PanAndZoomController(QtCore.QObject):
             self._last_position = None
             widget.releaseKeyboard()
             widget.releaseMouse()
+            widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
             position = self._widget.mapFromGlobal(QtGui.QCursor.pos())
