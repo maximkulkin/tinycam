@@ -15,9 +15,9 @@ from tinycam.ui.renderables.line2d import Line2D
 from tinycam.ui.renderables.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
 from tinycam.ui.renderables.polygon import Polygon
 from tinycam.ui.renderables.composite import Composite
-from tinycam.types import Vector2, Matrix44
+from tinycam.types import Matrix44
 from typing import Optional
-from tinycam.ui.utils import unproject
+from tinycam.ui.utils import project, unproject
 from tinycam.ui.tools import PanTool
 
 
@@ -184,14 +184,11 @@ class CncPreview3DView(CncCanvas, CncView):
             self._on_project_item_added(i)
 
     def screen_to_canvas_point(self, p: QtCore.QPoint, depth: float = 0.0) -> Vector3:
-        return unproject((p.x(), p.y()), (self.width(), self.height()), self.camera)
+        return unproject((p.x(), p.y()), self.camera)
 
     def canvas_to_screen_point(self, p: Vector3) -> QtCore.QPoint:
-        sp = self.camera.projection_matrix * self.camera.view_matrix * Vector4(p[0], p[1], p[2], 1.0)
-        return QtCore.QPoint(
-            (sp[0] * 0.5 + 0.5) * self.width(),
-            (0.5 - sp[1] * 0.5) * self.height(),
-        )
+        v = project(p, self.camera)
+        return QtCore.QPoint(v.x, v.y)
 
     def _zoom(self, amount: float, point: Optional[QtCore.QPoint] = None):
         p0 = self.screen_to_canvas_point(point)

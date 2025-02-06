@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 import math
 from PySide6 import QtCore
-from tinycam.types import Vector3, Vector4, Quaternion
+from tinycam.types import Vector2, Vector3, Vector4, Quaternion
 from tinycam.ui.camera import Camera
 from typing import Tuple
 
@@ -151,18 +151,18 @@ def quaternion_to_eulers(q: Quaternion) -> Vector3:
     return roll, pitch, yaw
 
 
-def unproject(
-    point: Tuple[float, float],
-    screen_size: Tuple[float, float],
-    camera: 'Camera',
-) -> Vector3:
+def project(point: Vector3, camera: Camera) -> Vector2:
+    sp = camera.projection_matrix * camera.view_matrix * Vector4(*point, 1.0)
+    return camera.ndc_to_screen_point(sp)
+
+
+def unproject(point: Tuple[float, float], camera: Camera) -> Vector3:
     vp = camera.projection_matrix * camera.view_matrix
     ivp = vp.inverse
 
-    x = 2.0 * point[0] / screen_size[0] - 1.0
-    y = 2.0 * point[1] / screen_size[1] - 1.0
+    ndc = camera.screen_to_ndc_point(Vector2(point))
 
-    p = Vector4(x, -y, 0, 1)
+    p = Vector4(*ndc, 1)
     v = ivp * p
     if v.w != 0.0:
         v /= v.w

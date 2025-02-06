@@ -184,7 +184,7 @@ class PanAndZoomController(QtCore.QObject):
                 self._pan_button = Qt.LeftButton
 
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
-        return unproject((p.x(), p.y()), (self._widget.width(), self._widget.height()), self._camera)
+        return unproject((p.x(), p.y()), self._camera)
 
     def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
