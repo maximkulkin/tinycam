@@ -151,15 +151,15 @@ class Line3D(Renderable):
     @color.setter
     def color(self, value: Vector4):
         self._color = value
-        self._program['color'].write(self._color.astype('f4').tobytes())
+        self._program['color'].write(self._color.tobytes())
 
     def render(self, state: RenderState):
         self._program['mvp'].write(
-            (state.camera.projection_matrix * state.camera.view_matrix).astype('f4').tobytes()
+            (state.camera.projection_matrix * state.camera.view_matrix).tobytes()
         )
 
         if self._width is None:
             self._vao.render(moderngl.LINE_STRIP)
         else:
-            self._program['resolution'].write(np.array(state.screen_size, dtype='f4').tobytes())
+            self._program['resolution'].write(state.camera.pixel_size.tobytes())
             self._vao.render(moderngl.TRIANGLE_STRIP)
