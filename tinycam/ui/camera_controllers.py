@@ -1,6 +1,7 @@
 import enum
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
+from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector3, Quaternion, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.utils import quaternion_to_eulers, unproject
@@ -30,6 +31,9 @@ class OrbitController(QtCore.QObject):
         super().__init__()
         self._widget = None
 
+        SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
+        self._on_control_type_changed(SETTINGS.get('general/control_type'))
+
         self._camera = camera
         _, self._pitch, self._yaw = quaternion_to_eulers(self._camera.rotation)
 
@@ -38,19 +42,26 @@ class OrbitController(QtCore.QObject):
 
         self._last_position = None
 
+    def _on_control_type_changed(self, value: ControlType):
+        match value:
+            case ControlType.MOUSE:
+                self._orbit_button = Qt.MiddleButton
+            case ControlType.TOUCHPAD:
+                self._orbit_button = Qt.LeftButton
+
     def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
         if (event.type() == QtCore.QEvent.MouseButtonPress
-                and event.button() == Qt.MiddleButton
+                and event.button() == self._orbit_button
                 and event.modifiers() & Qt.AltModifier):
             self._last_position = event.position()
             widget.grabKeyboard()
             widget.grabMouse()
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and event.button() == Qt.MiddleButton
+                and event.button() == self._orbit_button
                 and self._last_position is not None):
             self._last_position = None
             widget.releaseKeyboard()
@@ -86,6 +97,16 @@ class PanAndZoomController(QtCore.QObject):
         self._camera = camera
         self._last_position = None
 
+        SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
+        self._on_control_type_changed(SETTINGS.get('general/control_type'))
+
+    def _on_control_type_changed(self, value: ControlType):
+        match value:
+            case ControlType.MOUSE:
+                self._pan_button = Qt.MiddleButton
+            case ControlType.TOUCHPAD:
+                self._pan_button = Qt.LeftButton
+
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
         return unproject((p.x(), p.y()), (self._widget.width(), self._widget.height()), self._camera)
 
@@ -94,13 +115,13 @@ class PanAndZoomController(QtCore.QObject):
             self._widget = widget
 
         if (event.type() == QtCore.QEvent.MouseButtonPress
-                and (event.button() == Qt.MiddleButton)):
+                and event.button() == self._pan_button):
             self._last_position = event.position()
             widget.grabKeyboard()
             widget.grabMouse()
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and (event.button() == Qt.MiddleButton)
+                and event.button() == self._pan_button
                 and self._last_position is not None):
             self._last_position = None
             widget.releaseKeyboard()
