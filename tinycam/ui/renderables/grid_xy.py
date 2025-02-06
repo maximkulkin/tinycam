@@ -99,6 +99,6 @@ class GridXY(Renderable):
 
         self._program['mvp_matrix'].write(mvp.astype('f4').tobytes())
         self._program['scale'] = pow(10, 1 - int(math.log(abs(state.camera.position.z * 0.25), 10)))
-        self._program['screen_size'] = state.screen_size
+        self._program['screen_size'] = state.camera.pixel_size
 
         self._vao.render(moderngl.TRIANGLE_STRIP)

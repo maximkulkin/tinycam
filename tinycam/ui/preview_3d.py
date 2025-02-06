@@ -279,7 +279,6 @@ class CncPreview3DView(CncCanvas, CncView):
         self.makeCurrent()
 
         state = RenderState()
-        state.screen_size = Vector2(self.width(), self.height())
         state.camera = self._camera
 
         for obj in self.objects:

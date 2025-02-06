@@ -6,7 +6,6 @@ from typing import Tuple
 
 
 class RenderState:
-    screen_size: Vector2
     camera: Camera
 
 
@@ -42,13 +41,12 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         super().resizeGL(width, height)
 
         self.ctx.viewport = (0, 0, width, height)
-        self._camera.aspect = width / height if width > 0 else 1
+        self._camera.pixel_size = Vector2(width, height)
 
     def paintGL(self):
         super().paintGL()
 
         state = RenderState()
-        state.screen_size = Vector2(self.width(), self.height())
         state.camera = self._camera
 
         for obj in self.objects:

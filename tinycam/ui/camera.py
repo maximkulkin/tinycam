@@ -1,4 +1,4 @@
-from tinycam.types import Vector3, Quaternion, Matrix44
+from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
 
 
 class Camera:
@@ -24,6 +24,7 @@ class Camera:
         self._world_matrix = None
         self._view_matrix = None
         self._projection_matrix = None
+        self._pixel_size = Vector2()
 
     @property
     def position(self) -> Vector3:
@@ -42,6 +43,22 @@ class Camera:
     def rotation(self, value: Quaternion) -> None:
         self._rotation = value
         self._invalidate_matrixes()
+
+    @property
+    def pixel_size(self) -> Vector2:
+        return self._pixel_size
+
+    @pixel_size.setter
+    def pixel_size(self, value: Vector2):
+        self._pixel_size = value
+
+    @property
+    def pixel_width(self) -> float:
+        return self.pixel_size.x
+
+    @property
+    def pixel_height(self) -> float:
+        return self.pixel_size.y
 
     @property
     def near(self) -> float:
@@ -92,6 +109,19 @@ class Camera:
             self._projection_matrix = self._calculate_projection_matrix()
         return self._projection_matrix
 
+    def screen_to_ndc_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
+        return Vector3(
+            2. * screen_point.x / self.pixel_width - 1.,
+            1. - 2. * screen_point.y / self.pixel_height,
+            z
+        )
+
+    def ndc_to_screen_point(self, ndc_point: Vector3) -> Vector2:
+        return Vector2(
+            (ndc_point.x + 1.) * 0.5 * self.pixel_width,
+            (1. - ndc_point.y) * 0.5 * self.pixel_height,
+        )
+
 
 class PerspectiveCamera(Camera):
     def __init__(
@@ -122,6 +152,15 @@ class PerspectiveCamera(Camera):
     def aspect(self, value: float) -> None:
         self._aspect = value
         self._invalidate_projection_matrix()
+
+    @property
+    def pixel_size(self) -> Vector2:
+        return super().pixel_size
+
+    @pixel_size.setter
+    def pixel_size(self, value: Vector2):
+        Camera.pixel_size.fset(self, value)
+        self.aspect = value.x / value.y if value.x > 0 else 1
 
     def look_at(
         self,
