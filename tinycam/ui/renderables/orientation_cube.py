@@ -246,25 +246,25 @@ class OrientationCube(Renderable):
             case OrientationCubePosition.TOP_LEFT:
                 screen_position = Vector2(
                     self.OFFSET.x,
-                    state.screen_size.y - self.OFFSET.y,
+                    self.OFFSET.y,
                 )
             case OrientationCubePosition.TOP_RIGHT:
                 screen_position = Vector2(
-                    state.screen_size.x - self.OFFSET.x,
-                    state.screen_size.y - self.OFFSET.y,
+                    state.camera.pixel_width - self.OFFSET.x,
+                    self.OFFSET.y,
                 )
             case OrientationCubePosition.BOTTOM_LEFT:
                 screen_position = Vector2(
                     self.OFFSET.x,
-                    self.OFFSET.y,
+                    state.camera.pixel_height - self.OFFSET.y,
                 )
             case OrientationCubePosition.BOTTOM_RIGHT:
                 screen_position = Vector2(
-                    state.screen_size.x - self.OFFSET.x,
-                    self.OFFSET.y,
+                    state.camera.pixel_width - self.OFFSET.x,
+                    state.camera.pixel_height - self.OFFSET.y,
                 )
 
-        p = screen_position / state.screen_size * 2.0 - 1.0
+        p = state.camera.screen_to_ndc_point(screen_position)
 
         self._matrix = (
             # move into screen position
