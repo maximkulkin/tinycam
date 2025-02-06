@@ -30,7 +30,7 @@ class Vector3Proxy:
         self._index = index
 
     def __get__(self, obj: object, cls) -> 'Vector3':
-        return Vector2(obj[self._index,])
+        return Vector3(obj[self._index,])
 
     def __set__(self, obj: object, value: 'Vector3 | np.ndarray | list[number | np.number]'):
         obj[self._index,] = value
