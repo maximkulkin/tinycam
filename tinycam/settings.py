@@ -1,8 +1,8 @@
 import collections
-import dataclasses
 import enum
-from typing import Any, TypeVar, Generic, override, get_type_hints
+from typing import Any, Type, override
 from tinycam.types import Vector2
+from PySide6 import QtCore
 
 
 def humanize(s: str) -> str:
@@ -11,31 +11,71 @@ def humanize(s: str) -> str:
     return ' '.join(parts)
 
 
-class CncSettingType:
-    def __init__(self):
-        pass
+class CncSetting(QtCore.QObject):
+    changed = QtCore.Signal(object)
 
-    def serialize(self, _data: object) -> str:
-        raise NotImplementedError()
+    def __init__(
+        self,
+        path: str,
+        label: str | None = None,
+        description: str | None = None,
+        default: object | None = None,
+    ):
+        super().__init__()
+        self._path = path
+        self._value = None
+        self._label = label
+        self._description = description
+        self._default = default
 
-    def deserialize(self, _data: str) -> object:
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @property
+    def label(self) -> str | None:
+        return self._label
+
+    @property
+    def description(self) -> str | None:
+        return self._description
+
+    @property
+    def value(self) -> object:
+        return self._value
+
+    @value.setter
+    def value(self, value: object):
+        if self._value == value:
+            return
+
+        error = self.validate(value)
+        if error is not None:
+            raise CncInvalidSettingValueError(self._path, error)
+        self._value = value
+        self.changed.emit(self._value)
+
+    def reset(self):
+        self._value = None
+
+    @property
+    def default(self) -> object | None:
+        return self._default
+
+    def save(self) -> str:
+        return str(self.value)
+
+    def load(self, _data: str):
         raise NotImplementedError()
 
     def validate(self, _data: object) -> str | None:
         raise NotImplementedError()
 
-    def default(self) -> object:
-        raise NotImplementedError()
 
-
-class CncStringSettingType(CncSettingType):
+class CncStringSetting(CncSetting):
     @override
-    def serialize(self, data: object) -> str:
-        return str(data)
-
-    @override
-    def deserialize(self, data: str) -> object:
-        return str(data)
+    def load(self, value: str):
+        self._value = value
 
     @override
     def validate(self, data: object) -> str | None:
@@ -46,72 +86,115 @@ class CncStringSettingType(CncSettingType):
         return 'STRING'
 
 
-class CncIntegerSettingType(CncSettingType):
+class CncIntegerSetting(CncSetting):
     def __init__(
         self,
+        *args,
         minimum: int | None = None,
         maximum: int | None = None,
         suffix: str | None = None,
+        **kwargs
     ):
-        super().__init__()
-        self.minimum: int | None = minimum
-        self.maximum: int | None = maximum
-        self.suffix: str | None = suffix
+        super().__init__(*args, **kwargs)
+        self._minimum: int | None = minimum
+        self._maximum: int | None = maximum
+        self._suffix: str | None = suffix
+
+    @property
+    def minimum(self) -> int | None:
+        return self._minimum
+
+    @property
+    def maximum(self) -> int | None:
+        return self._maximum
+
+    @property
+    def suffix(self) -> str | None:
+        return self._suffix
 
     @override
-    def serialize(self, data: object) -> str:
-        return str(data)
+    def load(self, data: str):
+        value = int(data)
+        if self.minimum is not None and self.minimum > value:
+            value = self.minimum
+        if self.maximum is not None and value > self.maximum:
+            value = self.maximum
+        self._value = value
 
     @override
-    def deserialize(self, data: str) -> object:
-        return int(data)
-
-    @override
-    def validate(self, data: object) -> str | None:
-        return None if isinstance(data, int) else 'Value is not an integer'
+    def validate(self, value: object) -> str | None:
+        if not isinstance(value, int):
+            return 'Value is not an integer'
+        if self.minimum is not None and value < self.minimum:
+            return f'Value should not be less than {self.minimum}'
+        if self.maximum is not None and value > self.maximum:
+            return f'Value should not be greater than {self.minimum}'
+        return None
 
     @override
     def __str__(self):
         return 'INTEGER'
 
 
-class CncFloatSettingType(CncSettingType):
+class CncFloatSetting(CncSetting):
     def __init__(
         self,
+        *args,
         minimum: float | None = None,
         maximum: float | None = None,
         suffix: str | None = None,
+        **kwargs
     ):
-        super().__init__()
-        self.minimum: float | None = minimum
-        self.maximum: float | None = maximum
-        self.suffix: str | None = suffix
+        super().__init__(*args, **kwargs)
+        self._minimum: float | None = minimum
+        self._maximum: float | None = maximum
+        self._suffix: str | None = suffix
+
+    @property
+    def minimum(self) -> float | None:
+        return self._minimum
+
+    @property
+    def maximum(self) -> float | None:
+        return self._maximum
+
+    @property
+    def suffix(self) -> str | None:
+        return self._suffix
 
     @override
-    def serialize(self, data: object) -> str:
-        return str(data)
+    def load(self, data: str):
+        value = float(data)
+        if self.minimum is not None and self.minimum > value:
+            value = self.minimum
+        if self.maximum is not None and value > self.maximum:
+            value = self.maximum
+        self._value = value
 
     @override
-    def deserialize(self, data: str) -> object:
-        return float(data)
-
-    @override
-    def validate(self, data: object) -> str | None:
-        return None if isinstance(data, float) else 'Value is not a float'
+    def validate(self, value: object) -> str | None:
+        if not isinstance(value, float):
+            return 'Value is not a float'
+        if self.minimum is not None and value < self.minimum:
+            return f'Value should not be less than {self.minimum}'
+        if self.maximum is not None and value > self.maximum:
+            return f'Value should not be greater than {self.minimum}'
+        return None
 
     @override
     def __str__(self):
         return 'FLOAT'
 
 
-class CncBooleanSettingType(CncSettingType):
+class CncBooleanSetting(CncSetting):
     @override
-    def serialize(self, data: object) -> str:
-        return 'true' if bool(data) else 'false'
+    def save(self) -> str:
+        data = 'true' if bool(self.value) else 'false'
+        return data
 
     @override
-    def deserialize(self, data: str) -> object:
-        return True if data == 'true' else False
+    def load(self, data: str):
+        self._value = data == 'true'
 
     @override
     def validate(self, data: object) -> str | None:
@@ -122,14 +205,14 @@ class CncBooleanSettingType(CncSettingType):
         return 'BOOLEAN'
 
 
-class CncVector2SettingType(CncSettingType):
+class CncVector2Setting(CncSetting):
     @override
-    def serialize(self, data: object) -> str:
-        return f'{data[0]},{data[1]}'
+    def save(self) -> str:
+        return f'{self.value[0]},{self.value[1]}'
 
     @override
-    def deserialize(self, data: str) -> object:
-        return Vector2((float(x) for x in data.split(',', 1)))
+    def load(self, data: str) -> object:
+        self._value = Vector2((float(x) for x in data.split(',', 1)))
 
     @override
     def validate(self, data: object) -> str | None:
@@ -140,31 +223,41 @@ class CncVector2SettingType(CncSettingType):
         return 'VECTOR2'
 
 
-class CncEnumSettingType(CncSettingType):
-    def __init__(self, enum_type):
-        super().__init__()
-        self.enum_type = enum_type
+class CncEnumSetting(CncSetting):
+    def __init__(self, *args, enum_type: Type[enum.Enum] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if enum_type is None:
+            raise ValueError('Enum type is not specified')
+        self._enum_type = enum_type
 
-    __match_args__ = ('enum_type',)
+    @property
+    def enum_type(self) -> Type[enum.Enum]:
+        return self._enum_type
 
     @override
-    def serialize(self, data: object) -> str:
-        raise NotImplementedError()
+    def save(self) -> str:
+        return str(self.value.value)
 
     @override
-    def deserialize(self, data: str) -> object:
-        raise NotImplementedError()
+    def load(self, data: str) -> object:
+        self._value = self._enum_type(int(data))
 
     @override
     def validate(self, data: object) -> str | None:
-        raise NotImplementedError()
+        return None if isinstance(data, self._enum_type) else f'Value is not a {self.enum_type}'
 
     @override
     def __str__(self):
         return f'{self.enum_type}'
 
 
-class CncListSettingType[T](CncSettingType):
+class CncListSetting[T](CncSetting):
+    def __init__(self, item_type, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.item_type = item_type
+
+    __match_args__ = ('item_type',)
+
     @override
     def serialize(self, data: object) -> str:
         raise NotImplementedError()
@@ -211,15 +304,6 @@ class CncInvalidSettingValueError(CncSettingError):
         self.error: Exception = error
 
 
-@dataclasses.dataclass(order=True)
-class CncSetting:
-    path: str
-    type: CncSettingType
-    label: str
-    description: str | None
-    default: object
-
-
 class CncSectionSettings:
     def __init__(self, settings: 'CncSettings', path: str):
         self._settings: CncSettings = settings
@@ -236,17 +320,19 @@ class CncSectionSettings:
     def _make_path(self, path: str) -> str:
         return f'{self._path}/{path}'
 
-    def register(self, path: str, type: CncSettingType, **kwargs):
-        return self._settings.register(self._make_path(path), type, **kwargs)
+    def register(self, path: str, type: Type[CncSetting], *args, **kwargs):
+        return self._settings.register(self._make_path(path), type, *args, **kwargs)
 
-    def __getitem__(self, path: str | CncSetting) -> Any:
-        return self.get(path)
+    def __getitem__(self, path: str) -> CncSetting:
+        return self._settings[self._make_path(path)]
 
-    def __setitem__(self, path: str | CncSetting, value: Any):
-        self.set(path, value)
+    def __contains__(self, path: str | CncSetting):
+        return path in self._settings
 
-    def get(self, path: str) -> Any:
-        return self._settings.get(self._make_path(path))
+    def get(self, path: str | CncSetting) -> Any:
+        if isinstance(path, str):
+            path = self._make_path(path)
+        return self._settings.get(path)
 
     def set(self, path: str | CncSetting, value: Any):
         if isinstance(path, str):
@@ -275,19 +361,28 @@ class CncSectionSettings:
                 yield v
 
 
-class CncSettings:
+class CncSettings(QtCore.QObject):
+    changed = QtCore.Signal()
 
     def __init__(self):
-        self._metadata = collections.OrderedDict[str, CncSetting]()
+        super().__init__()
+        self._settings = collections.OrderedDict[str, CncSetting]()
         self._values = {}
 
     def section(self, path: str) -> CncSectionSettings:
         return CncSectionSettings(self, path)
 
-    def register(self, path: str, type: CncSettingType, *, label: str = None,
-                 description: str | None = None,
-                 default: Any = None):
-        if path in self._metadata:
+    def register(
+        self,
+        path: str,
+        setting_type: Type[CncSetting],
+        *args,
+        label: str | None = None,
+        description: str | None = None,
+        default: object | None = None,
+        **kwargs
+    ):
+        if path in self._settings:
             raise CncSettingAlreadyExistsError(path)
 
         parts = path.split('/')
@@ -297,91 +392,102 @@ class CncSettings:
         if label is None:
             label = humanize(parts[-1])
 
-        self._metadata[path] = CncSetting(
-            path=path, type=type, label=label, description=description,
-            default=default,
+        self._settings[path] = setting_type(
+            path, *args, label=label, description=description,
+            default=default, **kwargs
         )
 
-    def __getitem__(self, path: str | CncSetting) -> Any:
-        return self.get(path)
+    def __getitem__(self, path: str) -> CncSetting:
+        return self._settings[path]
 
-    def __setitem__(self, path: str | CncSetting, value: Any):
-        self.set(path, value)
+    def __contains__(self, path: str | CncSetting):
+        if isinstance(path, CncSetting):
+            path = path.path
+
+        return path in self._settings
 
     def get(self, path: str | CncSetting) -> Any:
         if isinstance(path, CncSetting):
             path = path.path
 
-        metadata = self._metadata.get(path, None)
-        if metadata is None:
+        setting = self._settings.get(path, None)
+        if setting is None:
             raise CncUnknownSettingError(path)
 
-        return self._values.get(path, metadata.default)
+        return setting.value if setting.value is not None else setting.default
 
     def set(self, path: str | CncSetting, value: Any):
         if isinstance(path, CncSetting):
             path = path.path
 
-        metadata = self._metadata.get(path, None)
-        if metadata is None:
+        setting = self._settings.get(path, None)
+        if setting is None:
             raise CncSettingAlreadyExistsError(path)
 
-        error = metadata.type.validate(value)
+        error = setting.validate(value)
         if error is not None:
             raise CncInvalidSettingValueError(path, error)
 
-        self._values[path] = value
+        setting.value = value
 
     def reset(self, path: str | CncSetting):
         if isinstance(path, CncSetting):
             path = path.path
 
-        if path not in self._values:
-            return
-        del self._values[path]
+        setting = self._settings.get(path, None)
+        if setting is None:
+            raise CncSettingAlreadyExistsError(path)
+        setting.reset()
 
     def is_default(self, path: str | CncSetting) -> bool:
         if isinstance(path, CncSetting):
             path = path.path
 
-        if path not in self._metadata:
+        if path not in self._settings:
             raise CncUnknownSettingError(path)
 
-        metadata = self._metadata[path]
-        return path not in self._values or self._values[path] == metadata.default
+        setting = self._settings[path]
+        return setting.value == setting.default
 
     def validate(self, path: str | CncSetting, value: Any):
         if isinstance(path, CncSetting):
             path = path.path
 
-        metadata = self._metadata.get(path, None)
-        if metadata is None:
+        setting = self._settings.get(path, None)
+        if setting is None:
             raise CncUnknownSettingError(path)
 
-        return metadata.validate(value)
+        return setting.validate(value)
 
     def __iter__(self):
-        yield from self._metadata.values()
+        yield from self._settings.values()
 
-
-# Common types
-STRING = CncStringSettingType()
-INTEGER = CncIntegerSettingType()
-FLOAT = CncFloatSettingType()
-BOOLEAN = CncBooleanSettingType()
-VECTOR2 = CncVector2SettingType()
 
 # Settings
 SETTINGS = CncSettings()
-SETTINGS.register('general/dev_mode', BOOLEAN, default=True)
+SETTINGS.register('general/dev_mode', CncBooleanSetting, default=True)
+
+
+class Units(enum.Enum):
+    IN = 1
+    MM = 2
+
+    def __str__(self) -> str:
+        match self:
+            case Units.IN: return 'Inches'
+            case Units.MM: return 'Millimeters'
 
 
 class ControlType(enum.Enum):
-    MOUSE = (1, 'Mouse')
-    TOUCHPAD = (2, 'Touchpad')
+    MOUSE = 1
+    TOUCHPAD = 2
 
-    def __init__(self, value: int, label: str):
-        self.label = label
+    def __str__(self) -> str:
+        match self:
+            case ControlType.MOUSE: return 'Mouse'
+            case ControlType.TOUCHPAD: return 'Touchpad'
 
 
-SETTINGS.register('general/control_type', CncEnumSettingType(ControlType), default=ControlType.MOUSE)
+SETTINGS.register('general/units', CncEnumSetting, enum_type=Units, default=Units.MM)
+SETTINGS.register('general/control_type', CncEnumSetting, enum_type=ControlType,
+                  default=ControlType.MOUSE)

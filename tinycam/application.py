@@ -15,17 +15,14 @@ class CncApplication(QtWidgets.QApplication):
         self.task_manager = TaskManager()
 
         self._load_settings()
+        self.aboutToQuit.connect(self._save_settings)
 
     def _save_settings(self):
-        settings = QtCore.Settings()
+        settings = QtCore.QSettings()
         settings.beginGroup("settings")
 
         for setting in self.settings:
-            if self.settings.is_default(setting.path):
-                continue
-
-            value = self.settings.get(setting.path)
-            settings.setValue(setting.path, setting.type.serialize(value))
+            settings.setValue(setting.path, setting.save())
 
         settings.endGroup()
 
@@ -34,16 +31,11 @@ class CncApplication(QtWidgets.QApplication):
         settings.beginGroup("settings")
 
         for setting in self.settings:
-            value = settings.value(setting.path, None)
-            if value is None:
-                value = setting.default
-            else:
+            data = settings.value(setting.path, None)
+            if data is not None:
                 try:
-                    value = setting.type.deserialize(value)
-                except Exception as e:
-                    print(e.message)
+                    setting.load(data)
+                except Exception:
                     continue
-
-                self.settings.set(setting.path, value)
 
         settings.endGroup()

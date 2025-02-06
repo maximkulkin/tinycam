@@ -10,16 +10,13 @@ from tinycam.tasks import run_task
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
-    S.register('spindle_speed', s.FLOAT, default=1000)
-    S.register('cut_depth', s.FLOAT, default=0.1)
-    S.register('cut_speed', s.FLOAT, default=120.0)
-    S.register('travel_height', s.FLOAT, default=2.0)
-    S.register('pass_count',
-               s.CncIntegerSettingType(minimum=1),
-               default=1)
-    S.register('pass_overlap',
-               s.CncIntegerSettingType(minimum=0, maximum=100, suffix=' %'),
-               default=10)
+    S.register('spindle_speed', s.CncIntegerSetting, default=1000, minimum=0, maximum=100000, suffix='rpm')
+    S.register('cut_depth', s.CncFloatSetting, default=0.1, suffix='{units}')
+    S.register('cut_speed', s.CncFloatSetting, default=120.0, suffix='{units}/s')
+    S.register('travel_height', s.CncFloatSetting, default=2.0, suffix='{units}')
+    S.register('pass_count', s.CncIntegerSetting, minimum=1, default=1)
+    S.register('pass_overlap', s.CncIntegerSetting,
+               minimum=0, maximum=100, default=10, suffix='%')
 
 
 class CncIsolateJob(CncJob):

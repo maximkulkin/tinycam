@@ -9,10 +9,10 @@ from tinycam.tasks import run_task
 
 
 with s.SETTINGS.section('jobs/drill') as S:
-    S.register('spindle_speed', s.FLOAT, default=1000.0)
-    S.register('cut_depth', s.FLOAT, default=0.1)
-    S.register('cut_speed', s.FLOAT, default=120.0)
-    S.register('travel_height', s.FLOAT, default=2.0)
+    S.register('spindle_speed', s.CncIntegerSetting, default=1000, minimum=0, suffix='rpm')
+    S.register('cut_depth', s.CncFloatSetting, default=0.1, minimum=0.0, suffix='{units}')
+    S.register('cut_speed', s.CncFloatSetting, default=120.0, minimum=0.0, suffix='{units}/s')
+    S.register('travel_height', s.CncFloatSetting, default=2.0, suffix='{units}')
 
 
 class CncDrillJob(CncJob):

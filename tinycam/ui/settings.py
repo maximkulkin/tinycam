@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 import dataclasses
-from typing import List, Mapping
+from typing import List
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
 import tinycam.settings as s
@@ -164,51 +164,51 @@ class CncSettingsDialog(QtWidgets.QDialog):
             layout.addWidget(widget, i, 1)
 
     def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget:
-        match setting.type:
-            case s.CncStringSettingType():
+        match setting:
+            case s.CncStringSetting():
                 widget = QtWidgets.QLineEdit()
                 widget.setText(self.settings.get(setting) or '')
                 widget.editingFinished.connect(
                     lambda: self.settings.set(setting, widget.text())
                 )
                 return widget
-            case s.CncIntegerSettingType():
+            case s.CncIntegerSetting():
                 widget = QtWidgets.QSpinBox()
-                if setting.type.minimum is not None:
-                    widget.setMinimum(setting.type.minimum)
-                if setting.type.maximum is not None:
-                    widget.setMaximum(setting.type.maximum)
-                if setting.type.suffix is not None:
-                    widget.setSuffix(setting.type.suffix)
+                if setting.minimum is not None:
+                    widget.setMinimum(setting.minimum)
+                if setting.maximum is not None:
+                    widget.setMaximum(setting.maximum)
+                if setting.suffix is not None:
+                    widget.setSuffix(self._format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0)
                 widget.valueChanged.connect(
                     lambda: self.settings.set(setting, widget.value())
                 )
                 return widget
-            case s.CncFloatSettingType():
+            case s.CncFloatSetting():
                 widget = QtWidgets.QDoubleSpinBox()
-                if setting.type.minimum is not None:
-                    widget.setMinimum(setting.type.minimum)
-                if setting.type.maximum is not None:
-                    widget.setMaximum(setting.type.maximum)
-                if setting.type.suffix is not None:
-                    widget.setSuffix(setting.type.suffix)
+                if setting.minimum is not None:
+                    widget.setMinimum(setting.minimum)
+                if setting.maximum is not None:
+                    widget.setMaximum(setting.maximum)
+                if setting.suffix is not None:
+                    widget.setSuffix(self._format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0.0)
                 widget.valueChanged.connect(
                     lambda: self.settings.set(setting, widget.value())
                 )
                 return widget
-            case s.CncBooleanSettingType():
+            case s.CncBooleanSetting():
                 widget = QtWidgets.QCheckBox()
                 widget.setCheckState(Qt.Checked if self.settings.get(setting) else Qt.Unchecked)
-                widget.stateChanged.connect(
-                    lambda: self.settings.set(setting, widget.checkState == Qt.Checked)
+                widget.checkStateChanged.connect(
+                    lambda state: self.settings.set(setting, state == Qt.Checked)
                 )
                 return widget
-            case s.CncEnumSettingType(enum_type):
+            case s.CncEnumSetting():
                 widget = QtWidgets.QComboBox()
-                for value in enum_type:
-                    label = value.label if hasattr(value, 'label') else value.name
+                for value in setting.enum_type:
+                    label = str(value)
                     widget.addItem(label, value)
                 widget.setCurrentIndex(widget.findData(self.settings.get(setting)))
                 widget.currentIndexChanged.connect(
@@ -218,3 +218,13 @@ class CncSettingsDialog(QtWidgets.QDialog):
             case _:
                 print(f'Unknown setting type: {setting.type}')
                 return None
+
+    def _format_suffix(self, suffix: str) -> str:
+        units = 'mm'
+        match s.SETTINGS.get('general/units'):
+            case s.Units.MM:
+                units = 'mm'
+            case s.Units.IN:
+                units = 'in'
+
+        return ' ' + suffix.format(units=units)
