@@ -42,6 +42,27 @@ class OrbitController(QtCore.QObject):
 
         self._last_position = None
 
+    @property
+    def pitch(self) -> float:
+        return self._pitch
+
+    @property
+    def yaw(self) -> float:
+        return self._yaw
+
+    def rotate(self, pitch: float, yaw: float):
+        self._pitch = pitch
+        self._yaw = yaw
+
+        v = self._camera.rotation.conjugate * Camera.FORWARD
+        orbit_point = self._camera.position + v * (self._camera.position.z / (v | Vector3(0, 0, -1)))
+
+        distance = (self._camera.position - orbit_point).length
+
+        self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
+        self._camera.position = orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
+        self._widget.update()
+
     def _on_control_type_changed(self, value: ControlType):
         match value:
             case ControlType.MOUSE:
@@ -70,20 +91,14 @@ class OrbitController(QtCore.QObject):
             widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
-            v = self._camera.rotation.conjugate * Camera.FORWARD
-            orbit_point = self._camera.position + v * (self._camera.position.z / (v | Vector3((0.0, 0.0, -1.0))))
-
-            distance = (self._camera.position - orbit_point).length
-
             delta = event.position() - self._last_position
-            self._yaw += delta.x() * self._mouse_sensitivity[1]
-            self._pitch += delta.y() * self._mouse_sensitivity[0]
-
-            self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
-            self._camera.position = orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
 
             self._last_position = event.position()
-            widget.update()
+
+            self.rotate(
+                yaw=self._yaw + delta.x() * self._mouse_sensitivity[1],
+                pitch=self._pitch + delta.y() * self._mouse_sensitivity[0],
+            )
 
         return False
 
