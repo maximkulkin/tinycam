@@ -41,12 +41,12 @@ class CncIsolateJob(CncJob):
         defaults = s.SETTINGS.section('jobs/isolate')
 
         self._tool_diameter = tool_diameter
-        self._cut_depth = cut_depth or defaults['cut_depth']
-        self._cut_speed = cut_speed or defaults['cut_speed']
-        self._pass_count = pass_count or defaults['pass_count']
-        self._pass_overlap = pass_overlap or defaults['pass_overlap']
-        self._spindle_speed = spindle_speed or defaults['spindle_speed']
-        self._travel_height = travel_height or defaults['travel_height']
+        self._cut_depth = cut_depth or defaults['cut_depth'].value
+        self._cut_speed = cut_speed or defaults['cut_speed'].value
+        self._pass_count = pass_count or defaults['pass_count'].value
+        self._pass_overlap = pass_overlap or defaults['pass_overlap'].value
+        self._spindle_speed = spindle_speed or defaults['spindle_speed'].value
+        self._travel_height = travel_height or defaults['travel_height'].value
 
         self._geometry = None
 

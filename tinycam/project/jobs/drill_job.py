@@ -34,10 +34,10 @@ class CncDrillJob(CncJob):
         defaults = s.SETTINGS.section('jobs/drill')
 
         self._tool_diameter = tool_diameter
-        self._spindle_speed = spindle_speed or defaults['spindle_speed']
-        self._cut_depth = cut_depth or defaults['cut_depth']
-        self._cut_speed = cut_speed or defaults['cut_speed']
-        self._travel_height = travel_height or defaults['travel_height']
+        self._spindle_speed = spindle_speed or defaults['spindle_speed'].value
+        self._cut_depth = cut_depth or defaults['cut_depth'].value
+        self._cut_speed = cut_speed or defaults['cut_speed'].value
+        self._travel_height = travel_height or defaults['travel_height'].value
 
         self._geometry = None
         self._updating_geometry = False
