@@ -56,6 +56,7 @@ class CameraOrbitAnimation(QtCore.QObject):
     def _on_timeout(self):
         delta_time_ms = self._start_time.msecsTo(QtCore.QTime.currentTime())
         if delta_time_ms > self._duration_ms:
+            self._controller.rotate(self._target_pitch, self._target_yaw)
             self._timer.stop()
             self.finished.emit()
             return
