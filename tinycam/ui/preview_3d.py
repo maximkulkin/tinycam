@@ -2,6 +2,7 @@ from PySide6 import QtCore, QtGui
 import shapely
 import math
 import moderngl
+import numpy as np
 from tinycam.globals import GLOBALS
 from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
@@ -215,22 +216,39 @@ class CncPreview3DView(CncCanvas, CncView):
         self.update()
 
     def _on_orientation_selected(self, orientation: Orientation):
-        pitch, yaw = None, None
+        pitch = self._camera_orbit_controller.pitch
+        yaw = self._camera_orbit_controller.yaw
+
         PI = math.pi
-        PI2 = PI * 0.5
+        PI2 = PI * 2.0
+        HPI = PI * 0.5
+
+        def pick_closest_angle(angle: float, target: float) -> float:
+            return min([target, target - PI2, target + PI2],
+                       key=lambda x: abs(x - angle))
+
+        def pick_closest_pitch_yaw(
+            target_pitch: float,
+            target_yaw: float,
+        ) -> tuple[float, float]:
+            return (
+                pick_closest_angle(pitch, target_pitch),
+                pick_closest_angle(yaw, target_yaw),
+            )
+
         match orientation:
             case Orientation.FRONT:
-                pitch, yaw = -PI2, 0.0
+                pitch, yaw = pick_closest_pitch_yaw(-HPI, 0.0)
             case Orientation.BACK:
-                pitch, yaw = -PI2, PI
+                pitch, yaw = pick_closest_pitch_yaw(-HPI, PI)
             case Orientation.TOP:
-                pitch, yaw = 0.0, 0.0
+                pitch, yaw = pick_closest_pitch_yaw(0.0, round(yaw / HPI) * HPI)
             case Orientation.BOTTOM:
-                pitch, yaw = PI, 0.0
+                pitch, yaw = pick_closest_pitch_yaw(PI, round(yaw / HPI) * HPI)
             case Orientation.LEFT:
-                pitch, yaw = -PI2, PI2
+                pitch, yaw = pick_closest_pitch_yaw(-HPI, HPI)
             case Orientation.RIGHT:
-                pitch, yaw = -PI2, -PI2
+                pitch, yaw = pick_closest_pitch_yaw(-HPI, -HPI)
 
         self._camera_orbit_controller.rotate(pitch=pitch, yaw=yaw, duration=0.5)
 
