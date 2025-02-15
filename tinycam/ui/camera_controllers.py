@@ -1,4 +1,5 @@
 import enum
+import math
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 from tinycam.settings import SETTINGS, ControlType
@@ -108,8 +109,9 @@ class OrbitController(QtCore.QObject):
             self._animation.start()
             return
 
-        self._pitch = pitch
-        self._yaw = yaw
+        two_pi = 2. * math.pi
+        self._pitch = (pitch + two_pi) % (two_pi * 2.) - two_pi
+        self._yaw = (yaw + two_pi) % (two_pi * 2.0) - two_pi
 
         v = self._camera.rotation.conjugate * Camera.FORWARD
         orbit_point = self._camera.position + v * (self._camera.position.z / (v | Vector3(0, 0, -1)))
