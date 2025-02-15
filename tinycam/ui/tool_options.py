@@ -18,7 +18,7 @@ class StringPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._attr = prop
+        self._prop = prop
 
         self._editor = QtWidgets.QLineEdit(self)
         self._editor.textChanged.connect(self._on_value_changed)
@@ -36,7 +36,7 @@ class StringPropertyEditor(QtWidgets.QWidget):
         self._editor.setValue(value)
 
     def refreshValue(self):
-        self.setValue(getattr(self._target, self._attr.name))
+        self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, value: str):
         setattr(self._target, self._prop.name, value)
@@ -50,7 +50,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._attr = prop
+        self._prop = prop
 
         self._editor = QtWidgets.QCheckBox(self)
         self._editor.statChanged.connect(self._on_value_changed)
@@ -67,7 +67,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self._editor.setChecked(value)
 
     def refreshValue(self):
-        self.setValue(getattr(self._target, self._attr.name))
+        self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, state: Qt.CheckState):
         value = state == Qt.Checked
@@ -82,7 +82,7 @@ class IntPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._attr = prop
+        self._prop = prop
 
         self._editor = QtWidgets.QSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
@@ -105,7 +105,7 @@ class IntPropertyEditor(QtWidgets.QWidget):
         self._editor.setValue(value)
 
     def refreshValue(self):
-        self.setValue(getattr(self._target, self._attr.name))
+        self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, value: int):
         setattr(self._target, self._prop.name, value)
@@ -119,7 +119,7 @@ class FloatPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._attr = prop
+        self._prop = prop
 
         self._editor = QtWidgets.QDoubleSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
@@ -142,7 +142,7 @@ class FloatPropertyEditor(QtWidgets.QWidget):
         self._editor.setValue(value)
 
     def refreshValue(self):
-        self.setValue(getattr(self._target, self._attr.name))
+        self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, value: float):
         setattr(self._target, self._prop.name, value)
@@ -283,11 +283,11 @@ class CncToolOptionsWindow(CncWindow):
     def _on_project_selection_changed(self):
         items = list(GLOBALS.APP.project.selection.items())
         if items:
-            self._populate_attrs(items[0])
+            self._populate_props(items[0])
         else:
-            self._populate_attrs(None)
+            self._populate_props(None)
 
-    def _populate_attrs(self, target: object):
+    def _populate_props(self, target: object):
         for row in range(self._layout.rowCount()):
             self._layout.setRowStretch(row, 0)
         clear_layout(self._layout)
