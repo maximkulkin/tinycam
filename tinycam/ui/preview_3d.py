@@ -4,6 +4,7 @@ import math
 import moderngl
 import numpy as np
 from tinycam.globals import GLOBALS
+from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 import tinycam.settings as s
@@ -12,7 +13,7 @@ from tinycam.ui.canvas import CncCanvas, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.renderables.grid_xy import GridXY
 from tinycam.ui.renderables.line2d import Line2D
-# from tinycam.ui.renderables.line3d import Line3D
+from tinycam.ui.renderables.line3d import Line3D
 from tinycam.ui.renderables.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
 from tinycam.ui.renderables.polygon import Polygon
 from tinycam.ui.renderables.composite import Composite
@@ -24,6 +25,12 @@ from tinycam.ui.tools import PanTool
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
     return Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
+
+
+PATH_COLORS = {
+    CncPathType.TRAVEL: Vector4(0, 0, 1, 1),
+    CncPathType.CUT: Vector4(1, 0, 1, 1),
+}
 
 
 class CncProjectItemView(Composite):
@@ -88,6 +95,16 @@ class CncProjectItemView(Composite):
             self.context.wireframe = False
 
 
+class CncPathView(Line3D):
+    @property
+    def color(self) -> Vector4:
+        return self._color
+
+    @color.setter
+    def color(self, value: Vector4):
+        pass
+
+
 class CncIsolateJobView(CncProjectItemView):
 
     def _model_matrix(self):
@@ -111,6 +128,35 @@ class CncIsolateJobView(CncProjectItemView):
                     width=self._model.tool_diameter,
                 )
                 self.add_item(line_view)
+
+            commands = self._model.generate_commands()
+            tracer = CncPathTracer()
+            tracer.execute_commands(commands)
+
+            current_path_points = []
+            current_path_type = None
+            for path in tracer.paths:
+                if path.type != current_path_type:
+                    if current_path_points:
+                        path_view = CncPathView(
+                            self.context,
+                            current_path_points,
+                            color=PATH_COLORS[current_path_type],
+                        )
+                        self.add_item(path_view)
+
+                    current_path_points = [path.start * Vector3(1, -1, 1), path.end * Vector3(1, -1, 1)]
+                    current_path_type = path.type
+                else:
+                    current_path_points.append(path.end * Vector3(1, -1, 1))
+
+            if current_path_points:
+                path_view = CncPathView(
+                    self.context,
+                    current_path_points,
+                    color=PATH_COLORS[current_path_type],
+                )
+                self.add_item(path_view)
 
             self._view_geometry = self._model.geometry
             self._tool_diameter = self._model.tool_diameter
