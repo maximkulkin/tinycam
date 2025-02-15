@@ -7,7 +7,7 @@ from PySide6 import QtCore
 from PySide6.QtCore import Qt
 from tinycam.types import Vector2, Vector3, Vector4, Matrix44
 from tinycam.ui.camera import Camera
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 Point2d = Vector2 | np.ndarray | tuple[float, float]
@@ -160,7 +160,7 @@ class OrientationCube(Renderable):
 
     def __init__(
         self,
-        context: moderngl.Context,
+        context: Context,
         camera: Camera,
         size: float = 1.0,
         position: OrientationCubePosition = OrientationCubePosition.TOP_RIGHT,
@@ -238,9 +238,6 @@ class OrientationCube(Renderable):
         self._position = value
 
     def render(self, state: RenderState):
-        self.context.enable(moderngl.DEPTH_TEST)
-        self.context.front_face = 'ccw'
-
         screen_position = None
         match self._position:
             case OrientationCubePosition.TOP_LEFT:
@@ -279,7 +276,8 @@ class OrientationCube(Renderable):
 
         self._program['mvp'].write(self._matrix.tobytes())
 
-        self._texture.use(0)
-        self._vao.render(moderngl.TRIANGLES)
+        with self.context.scope(enable=moderngl.DEPTH_TEST, front_face='ccw'):
+            self._texture.use(0)
+            self._vao.render(moderngl.TRIANGLES)
 
         self.eventFilter.matrix = self._matrix

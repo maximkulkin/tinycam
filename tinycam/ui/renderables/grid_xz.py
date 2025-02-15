@@ -1,11 +1,11 @@
 import math
 import moderngl
 import numpy as np
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 class GridXZ(Renderable):
-    def __init__(self, context: moderngl.Context, scale: float = 1.0):
+    def __init__(self, context: Context, scale: float = 1.0):
         super().__init__(context)
 
         self._program = self.context.program(

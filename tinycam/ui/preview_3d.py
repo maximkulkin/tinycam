@@ -1,15 +1,13 @@
 from PySide6 import QtCore, QtGui
 import shapely
 import math
-import moderngl
-import numpy as np
 from tinycam.globals import GLOBALS
 from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 import tinycam.settings as s
 from tinycam.ui.view import CncView
-from tinycam.ui.canvas import CncCanvas, RenderState
+from tinycam.ui.canvas import Context, CncCanvas, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.renderables.grid_xy import GridXY
 from tinycam.ui.renderables.line2d import Line2D
@@ -34,7 +32,7 @@ PATH_COLORS = {
 
 
 class CncProjectItemView(Composite):
-    def __init__(self, context: moderngl.Context, index: int, model: CncProjectItem):
+    def __init__(self, context: Context, index: int, model: CncProjectItem):
         super().__init__(
             context,
         )
@@ -88,11 +86,8 @@ class CncProjectItemView(Composite):
         if not self._model.visible:
             return
 
-        if self._model.debug:
-            self.context.wireframe = True
-        super().render(state)
-        if self._model.debug:
-            self.context.wireframe = False
+        with self.context.scope(wireframe=self._model.debug):
+            super().render(state)
 
 
 class CncPathView(Line3D):

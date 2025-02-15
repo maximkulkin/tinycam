@@ -1,10 +1,10 @@
 import moderngl
 import numpy as np
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 class Quad(Renderable):
-    def __init__(self, context):
+    def __init__(self, context: Context):
         super().__init__(context)
 
         self._program = self.context.program(
@@ -43,11 +43,9 @@ class Quad(Renderable):
         ])
 
     def render(self, state: RenderState):
-        self.context.disable(moderngl.CULL_FACE)
-        self.context.enable(moderngl.DEPTH_TEST)
-
         self._program['mvp'].write(
-            (state.camera.projection_matrix * state.camera.view_matrix).astype('f4').tobytes()
+            (state.camera.projection_matrix * state.camera.view_matrix).tobytes()
         )
 
-        self._vao.render(moderngl.TRIANGLE_STRIP)
+        with self.context.scope(enable_only=[moderngl.DEPTH_TEST]):
+            self._vao.render(moderngl.TRIANGLE_STRIP)

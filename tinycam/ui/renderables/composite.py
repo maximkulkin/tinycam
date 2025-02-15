@@ -1,12 +1,11 @@
 from collections.abc import Sequence
-import moderngl
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 class Composite(Renderable):
     def __init__(
         self,
-        context: moderngl.Context,
+        context: Context,
         items: Sequence[Renderable] = None,
     ):
         super().__init__(context)

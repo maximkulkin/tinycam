@@ -2,7 +2,7 @@ import moderngl
 import numpy as np
 from typing import Optional
 from tinycam.types import Vector4
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 type Vector3 = np.ndarray
@@ -12,7 +12,7 @@ type Point3 = Vector3
 class Line3D(Renderable):
     def __init__(
         self,
-        context: moderngl.Context,
+        context: Context,
         points: list[Point3],
         closed: bool = False,
         color: Vector4 = Vector4(0.8, 0.8, 0.8, 1.0),

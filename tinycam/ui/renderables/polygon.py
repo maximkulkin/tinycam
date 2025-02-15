@@ -3,14 +3,14 @@ import numpy as np
 import shapely
 import shapely.geometry as sg
 from tinycam.types import Vector4, Matrix44
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 from typing import Union, Optional
 
 
 class Polygon(Renderable):
     def __init__(
         self,
-        context: moderngl.Context,
+        context: Context,
         polygon: Union[shapely.Polygon, shapely.MultiPolygon],
         model_matrix: Optional[Matrix44] = None,
         color: Vector4 = Vector4(1, 1, 1, 1),

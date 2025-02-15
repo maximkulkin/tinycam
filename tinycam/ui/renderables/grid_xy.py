@@ -1,11 +1,11 @@
 import math
 import moderngl
 import numpy as np
-from tinycam.ui.canvas import Renderable, RenderState
+from tinycam.ui.canvas import Context, Renderable, RenderState
 
 
 class GridXY(Renderable):
-    def __init__(self, context: moderngl.Context):
+    def __init__(self, context: Context):
         super().__init__(context)
 
         self._program = self.context.program(
@@ -101,4 +101,5 @@ class GridXY(Renderable):
         self._program['scale'] = pow(10, 1 - int(math.log(abs(state.camera.position.z * 0.25), 10)))
         self._program['screen_size'] = state.camera.pixel_size
 
-        self._vao.render(moderngl.TRIANGLE_STRIP)
+        with self.context.scope(enable=moderngl.DEPTH_TEST, disable=moderngl.CULL_FACE):
+            self._vao.render(moderngl.TRIANGLE_STRIP)
