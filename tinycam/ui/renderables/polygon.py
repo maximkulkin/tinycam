@@ -1,4 +1,4 @@
-import moderngl
+import moderngl as mgl
 import numpy as np
 import shapely
 import shapely.geometry as sg
@@ -43,8 +43,6 @@ class Polygon(Renderable):
         self._model_matrix = model_matrix if model_matrix is not None else Matrix44.identity()
         self._color = color
         self._program['color'].write(color.astype('f4').tobytes())
-
-        self._scope = self.context.scope()
 
         polygons = []
         if isinstance(polygon, sg.Polygon):
@@ -94,4 +92,5 @@ class Polygon(Renderable):
             (state.camera.projection_matrix * state.camera.view_matrix * self._model_matrix).astype('f4').tobytes()
         )
 
-        self._vao.render(moderngl.TRIANGLES)
+        with self.context.scope(flags=mgl.DEPTH_TEST):
+            self._vao.render(mgl.TRIANGLES)
