@@ -99,6 +99,11 @@ class Context:
         self._context.enable_only(flags)
         self._flags = flags
 
+    # Workaround for non-implemented depth_func property getter in moderngl
+    @property
+    def depth_func(self) -> str:
+        return self._context.mglo.depth_func
+
     def __getattr__(self, name: str) -> object:
         return getattr(self._context, name)
 
