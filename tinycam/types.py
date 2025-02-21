@@ -256,10 +256,34 @@ class Matrix44(pyrr.Matrix44):
             raise ValueError(f'Invalid value type: {other}')
 
 
+class Rect(np.ndarray):
+    def __new__(
+        cls,
+        x: number | np.number,
+        y: number | np.number,
+        width: number | np.number,
+        height: number | np.number,
+    ):
+        return np.array([x, y, width, height]).view(cls)
+
+    x = Vector1Proxy(0)
+    y = Vector1Proxy(1)
+    width = Vector1Proxy(2)
+    height = Vector1Proxy(3)
+
+    point = Vector2Proxy((0, 1))
+    size = Vector2Proxy((2, 3))
+
+    @staticmethod
+    def from_point_and_size(bottom_left: Vector2, size: Vector2) -> 'Rect':
+        return Rect(bottom_left.x, bottom_left.y, size.x, size.y)
+
+
 __all__ = [
     'Vector2',
     'Vector3',
     'Vector4',
     'Quaternion',
     'Matrix44',
+    'Rect',
 ]
