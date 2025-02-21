@@ -189,7 +189,6 @@ class CncPreview3DView(CncCanvas, CncView):
         self._orientation_cube = OrientationCube(
             self.ctx,
             self._camera,
-            size=1.5,
             position=s.SETTINGS.get('preview/orientation_cube_position'),
         )
         self._orientation_cube.eventFilter.orientation_selected.connect(self._on_orientation_selected)
@@ -197,8 +196,8 @@ class CncPreview3DView(CncCanvas, CncView):
         self.installEventFilter(self._orientation_cube.eventFilter)
 
         self.objects = [
-            self._orientation_cube,
             GridXY(self.ctx),
+            self._orientation_cube,
             # Line3D(
             #     self.ctx,
             #     points=[

@@ -1,6 +1,6 @@
 import enum
 from itertools import chain
-import moderngl
+import moderngl as mgl
 import numpy as np
 from PIL import Image
 from PySide6 import QtCore
@@ -113,6 +113,7 @@ class Orientation(enum.Enum):
 
 class OrientationCube(Renderable):
     OFFSET = Vector2(50, 50)
+    SIZE = Vector2(100, 100)
 
     class EventFilter(QtCore.QObject):
         orientation_selected = QtCore.Signal(Orientation)
@@ -122,13 +123,23 @@ class OrientationCube(Renderable):
             self._size = size
             self._camera = camera
             self.matrix = Matrix44.identity()
+            self.rect = (0, 0, 0, 0)
 
         def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
-            if event.type() == QtCore.QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+            if (event.type() == QtCore.QEvent.MouseButtonPress and
+                    event.button() == Qt.LeftButton and
+                    event.modifiers() == Qt.NoModifier):
                 p = Vector2(
                     event.position().x() / widget.width() * 2.0 - 1.0,
                     1.0 - event.position().y() / widget.height() * 2.0,
                 )
+
+                r = self.rect
+                if (p.x < r[0] or p.x >= r[0] + r[2] or
+                        p.y < r[1] or p.y >= r[1] + r[3]):
+                    return False
+
+                p = (p - Vector2(r[0], r[1])) / Vector2(r[2], r[3]) * 2.0 - Vector2(1, 1)
 
                 def pick_quad(points: list[Vector3] | np.ndarray, normal: Vector3) -> bool:
                     ndc_normal = self.matrix * Vector4.from_vector3(normal, 0.0)
@@ -190,6 +201,37 @@ class OrientationCube(Renderable):
                 #version 410 core
 
                 in vec2 v_texcoord;
+                layout(location = 0) out vec4 color;
+
+                uniform sampler2D tex;
+
+                void main() {
+                    color = texture(tex, v_texcoord);
+                }
+            ''',
+        )
+
+        self._quad_program = self.context.program(
+            vertex_shader='''
+                #version 410 core
+
+                in vec2 position;
+                in vec2 texcoord;
+
+                uniform vec2 center;
+                uniform vec2 size;
+
+                out vec2 v_texcoord;
+
+                void main() {
+                    gl_Position = vec4(center + position * size, 0, 1);
+                    v_texcoord = texcoord;
+                }
+            ''',
+            fragment_shader='''
+                #version 410 core
+
+                in vec2 v_texcoord;
                 out vec4 fragColor;
 
                 uniform sampler2D tex;
@@ -226,6 +268,24 @@ class OrientationCube(Renderable):
             (self._vertex_buffer, '3f', 'position'),
             (self._uv_buffer, '2f', 'texcoord'),
         ])
+
+        quad_buffer = self.context.buffer(np.array([
+            ( 0.5, -0.5, 1., 0.),
+            ( 0.5,  0.5, 1., 1.),
+            (-0.5, -0.5, 0., 0.),
+            (-0.5,  0.5, 0., 1.),
+        ], dtype='f4').tobytes())
+        self._quad_vao = self.context.vertex_array(
+            self._quad_program,
+            [(quad_buffer, '2f 2f', 'position', 'texcoord')]
+        )
+
+        self._rendered_texture = self.context.texture((512, 512), 4)
+        self._framebuffer = self.context.framebuffer(
+            color_attachments=[self._rendered_texture],
+            depth_attachment=self.context.depth_renderbuffer((512, 512)),
+        )
+        self._quad_program['tex'] = 0
 
         self.eventFilter = self.EventFilter(self, self._size, self._camera)
 
@@ -264,20 +324,38 @@ class OrientationCube(Renderable):
         p = state.camera.screen_to_ndc_point(screen_position)
 
         self._matrix = (
-            # move into screen position
-            Matrix44.from_translation(Vector3(p[0], p[1], 0)) *
-            # project
             self._camera.projection_matrix *
             # move away from camera
-            Matrix44.from_translation(Vector3(0, 0, -20)) *
+            Matrix44.from_translation(Vector3(0, 0, -2.5)) *
             # rotate as camera
             Matrix44.from_quaternion(self._camera.rotation.conjugate)
         )
 
         self._program['mvp'].write(self._matrix.tobytes())
 
-        with self.context.scope(enable=moderngl.DEPTH_TEST, front_face='ccw'):
+        with self.context.scope(
+            framebuffer=self._framebuffer,
+            flags=mgl.DEPTH_TEST,
+        ):
+            self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
             self._texture.use(0)
-            self._vao.render(moderngl.TRIANGLES)
+            self._vao.render(mgl.TRIANGLES)
+
+        size = (
+            Vector2(self.SIZE.x * state.camera.aspect, self.SIZE.y) *
+            2.0 / state.camera.pixel_size
+        )
+        self._quad_program['center'] = p.xy
+        self._quad_program['size'] = size
+
+        with self.context.scope(framebuffer=self.context.fbo, flags=mgl.BLEND):
+            self._rendered_texture.use(0)
+            self._quad_vao.render(mgl.TRIANGLE_STRIP)
 
         self.eventFilter.matrix = self._matrix
+        self.eventFilter.rect = (
+            p.x - size.x * 0.5,
+            p.y - size.y * 0.5,
+            size.x,
+            size.y,
+        )
