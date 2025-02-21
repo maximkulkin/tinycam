@@ -86,7 +86,7 @@ class CncProjectItemView(Composite):
         if not self._model.visible:
             return
 
-        with self.context.scope(wireframe=self._model.debug):
+        with self.context.scope(wireframe=self._model.debug, depth_func='<='):
             super().render(state)
 
 
