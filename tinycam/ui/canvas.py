@@ -98,6 +98,12 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     def paintGL(self):
         super().paintGL()
 
+        fbo = self.ctx.detect_framebuffer()
+        fbo.use()
+
+        self._render()
+
+    def _render(self):
         state = RenderState()
         state.camera = self._camera
 

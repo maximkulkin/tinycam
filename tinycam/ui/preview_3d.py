@@ -328,14 +328,7 @@ class CncPreview3DView(CncCanvas, CncView):
     def _on_project_item_updated(self, index: int):
         self.update()
 
-    def paintGL(self):
-        super().paintGL()
-
+    def _render(self):
         self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
-        self.makeCurrent()
 
-        state = RenderState()
-        state.camera = self._camera
-
-        for obj in self.objects:
-            obj.render(state)
+        super()._render()
