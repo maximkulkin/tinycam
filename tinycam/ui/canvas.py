@@ -5,46 +5,95 @@ from tinycam.ui.camera import Camera, PerspectiveCamera
 
 
 class Scope:
-    def __init__(self, context: 'Context', enable=0, disable=0, **kwargs):
+    def __init__(
+        self,
+        context: 'Context',
+        flags: int = 0,
+        enable: int = 0,
+        disable: int = 0,
+        framebuffer: moderngl.Framebuffer | None = None,
+        depth_func: str | None = None,
+        depth_clamp_range: tuple[float, float] | None = None,
+        blend_func: tuple[int, int] | None = None,
+        blend_equation: int | None = None,
+        multisample: bool | None = None,
+        viewport: tuple[int, int, int, int] | None = None,
+        scissor: tuple[int, int, int, int] | None = None,
+        front_face: str | None = None,
+        cull_face: str | None = None,
+        wireframe: bool | None = None,
+    ):
         self._context = context
+
+        self._flags = flags
         self._enable = enable
         self._disable = disable
-        self._attrs = kwargs
+
+        attrs = {
+            'depth_func': depth_func,
+            'depth_clamp_range': depth_clamp_range,
+            'blend_func': blend_func,
+            'blend_equation': blend_equation,
+            'multisample': multisample,
+            'viewport': viewport,
+            'scissor': scissor,
+            'front_face': front_face,
+            'cull_face': cull_face,
+            'wireframe': wireframe,
+        }
+        self._attrs = {k: v for k, v in attrs.items() if v is not None}
+        self._framebuffer = framebuffer
+
         self._old_flags = None
         self._old_values = {}
+        self._old_framebuffer = None
 
     def __enter__(self):
+        flags = self._flags or (self._context.flags & ~(self._disable) | self._enable)
+
         self._old_flags = self._context.flags
-        self._context.enable_only(
-            self._context.flags & ~(self._disable) | self._enable
-        )
+        self._context.enable_only(flags)
+
+        if self._framebuffer is not None:
+            self._old_framebuffer = self._context.fbo
+            self._framebuffer.use()
 
         self._old_values = {k: getattr(self._context, k) for k in self._attrs.keys()}
         for k, v in self._attrs.items():
             setattr(self._context, k, v)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._context.enable_only(self._old_flags)
+        if self._old_framebuffer is not None:
+            self._old_framebuffer.use()
+            self._old_framebuffer = None
+
         for k, v in self._old_values.items():
             setattr(self._context, k, v)
+
+        self._context.enable_only(self._old_flags)
 
 
 class Context:
     def __init__(self, context: moderngl.Context):
-        self._context = context
-        self._flags = 0
+        self.__dict__['_context'] = context
+        self.__dict__['_flags'] = 0
 
     @property
     def flags(self) -> int:
         return self._flags
 
+    @flags.setter
+    def flags(self, value: int):
+        self._flags = value
+        self._context.enable_only(value)
+
     def enable(self, flags: int):
-        self._context.enable(flags)
         self._flags |= flags
+        self._context.enable(flags)
 
     def disable(self, flags: int):
-        self._context.disable(flags)
         self._flags &= ~flags
+        self._context.disable(flags)
 
     def enable_only(self, flags: int):
         self._context.enable_only(flags)
@@ -52,6 +101,9 @@ class Context:
 
     def __getattr__(self, name: str) -> object:
         return getattr(self._context, name)
+
+    def __setattr__(self, name: str, value: object):
+        setattr(self._context, name, value)
 
     def scope(self, **kwargs):
         return Scope(self, **kwargs)
