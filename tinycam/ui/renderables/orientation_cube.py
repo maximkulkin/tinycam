@@ -118,9 +118,8 @@ class OrientationCube(Renderable):
     class EventFilter(QtCore.QObject):
         orientation_selected = QtCore.Signal(Orientation)
 
-        def __init__(self, cube: 'OrientationCube', size: float, camera: Camera):
+        def __init__(self, cube: 'OrientationCube', camera: Camera):
             super().__init__()
-            self._size = size
             self._camera = camera
             self.matrix = Matrix44.identity()
             self.rect = (0, 0, 0, 0)
@@ -151,18 +150,20 @@ class OrientationCube(Renderable):
                         return p / p.w
 
                     points = [
-                        to_ndc(point * self._size * 0.5).xy
+                        to_ndc(point * 0.5).xy
                         for point in points
                     ]
 
                     return point_inside_polygon(p, points)
 
-                for side, points, normal in [(Orientation.FRONT, Cube.FRONT, Cube.FRONT_NORMAL),
-                                             (Orientation.BACK, Cube.BACK, Cube.BACK_NORMAL),
-                                             (Orientation.TOP, Cube.TOP, Cube.TOP_NORMAL),
-                                             (Orientation.BOTTOM, Cube.BOTTOM, Cube.BOTTOM_NORMAL),
-                                             (Orientation.LEFT, Cube.LEFT, Cube.LEFT_NORMAL),
-                                             (Orientation.RIGHT, Cube.RIGHT, Cube.RIGHT_NORMAL)]:
+                for side, points, normal in [
+                    (Orientation.FRONT, Cube.FRONT, Cube.FRONT_NORMAL),
+                    (Orientation.BACK, Cube.BACK, Cube.BACK_NORMAL),
+                    (Orientation.TOP, Cube.TOP, Cube.TOP_NORMAL),
+                    (Orientation.BOTTOM, Cube.BOTTOM, Cube.BOTTOM_NORMAL),
+                    (Orientation.LEFT, Cube.LEFT, Cube.LEFT_NORMAL),
+                    (Orientation.RIGHT, Cube.RIGHT, Cube.RIGHT_NORMAL)
+                ]:
                     if pick_quad(points, normal):
                         self.orientation_selected.emit(side)
                         return True
@@ -287,15 +288,15 @@ class OrientationCube(Renderable):
         )
         self._quad_program['tex'] = 0
 
-        self.eventFilter = self.EventFilter(self, self._size, self._camera)
+        self.eventFilter = self.EventFilter(self, self._camera)
 
     @property
-    def position(self) -> OrientationCubePosition:
-        return self._position
+    def orientation_cube_position(self) -> OrientationCubePosition:
+        return self._orientation_cube_position
 
-    @position.setter
-    def position(self, value: OrientationCubePosition):
-        self._position = value
+    @orientation_cube_position.setter
+    def orientation_cube_position(self, value: OrientationCubePosition):
+        self._orientation_cube_position = value
 
     def render(self, state: RenderState):
         screen_position = None

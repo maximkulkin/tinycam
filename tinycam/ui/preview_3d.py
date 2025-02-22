@@ -232,7 +232,7 @@ class CncPreview3DView(CncCanvas, CncView):
         pass
 
     def _on_orienation_cube_position_changed(self, value: OrientationCubePosition):
-        self._orientation_cube.position = value
+        self._orientation_cube.orientation_cube_position = value
         self.update()
 
     def _on_orientation_selected(self, orientation: Orientation):
