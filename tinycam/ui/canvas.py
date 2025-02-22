@@ -134,6 +134,8 @@ class Renderable:
 class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ctx = None
+
         self._camera = PerspectiveCamera()
         self._camera.position += Vector3(0, 0, 5)
         self._camera.look_at(Vector3())
@@ -158,11 +160,8 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         fbo = self.ctx.detect_framebuffer()
         fbo.use()
 
-        self._render()
+        state = RenderState(camera=self._camera)
+        self._render(state)
 
-    def _render(self):
-        state = RenderState()
-        state.camera = self._camera
-
-        for obj in self.objects:
-            obj.render(state)
+    def _render(self, state: RenderState):
+        pass
