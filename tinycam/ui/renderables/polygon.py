@@ -92,5 +92,4 @@ class Polygon(Renderable):
             (state.camera.projection_matrix * state.camera.view_matrix * self._model_matrix).astype('f4').tobytes()
         )
 
-        with self.context.scope(flags=mgl.DEPTH_TEST):
-            self._vao.render(mgl.TRIANGLES)
+        self._vao.render(mgl.TRIANGLES)

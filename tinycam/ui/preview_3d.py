@@ -1,6 +1,7 @@
 from PySide6 import QtCore, QtGui
 import shapely
 import math
+import moderngl as mgl
 from tinycam.globals import GLOBALS
 from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.types import Vector3, Vector4
@@ -86,7 +87,7 @@ class CncProjectItemView(Composite):
         if not self._model.visible:
             return
 
-        with self.context.scope(wireframe=self._model.debug, depth_func='<='):
+        with self.context.scope(disable=mgl.DEPTH_TEST, wireframe=self._model.debug, depth_func='<='):
             super().render(state)
 
 
