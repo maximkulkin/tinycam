@@ -1,5 +1,5 @@
 import math
-import moderngl
+import moderngl as mgl
 import numpy as np
 from tinycam.types import Vector3
 from tinycam.ui.canvas import Context, Renderable, RenderState
@@ -137,5 +137,5 @@ class GridXY(Renderable):
         self._program['subscale'] = 1.0 - scale_fraction
         self._program['screen_size'] = state.camera.pixel_size
 
-        with self.context.scope(flags=moderngl.DEPTH_TEST | moderngl.BLEND):
-            self._vao.render(moderngl.TRIANGLE_STRIP)
+        with self.context.scope(flags=mgl.DEPTH_TEST | mgl.BLEND):
+            self._vao.render(mgl.TRIANGLE_STRIP)
