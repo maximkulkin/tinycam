@@ -46,12 +46,12 @@ class GridXY(Renderable):
                 uniform vec2 screen_size;
 
                 const float axes_width = 1.0;
-                const vec4 x_axis_color = vec4(0.5, 0.0, 0.0, 0.5);
-                const vec4 y_axis_color = vec4(0.0, 0.5, 0.0, 0.5);
+                const vec4 x_axis_color = vec4(1.0, 0.0, 0.0, 0.5);
+                const vec4 y_axis_color = vec4(0.0, 1.0, 0.0, 0.5);
                 const float grid_major_width = 1.0;
                 const float grid_minor_width = 1.0;
-                const vec4 grid_major_color = vec4(0.2, 0.2, 0.2, 0.5);
-                const vec4 grid_minor_color = vec4(0.1, 0.1, 0.1, 0.5);
+                const vec4 grid_major_color = vec4(0.2, 0.2, 0.2, 1.0);
+                const vec4 grid_minor_color = vec4(0.1, 0.1, 0.1, 1.0);
 
                 vec4 normalize(vec4 v) {
                     return v / max(v.w, 1e-6);
