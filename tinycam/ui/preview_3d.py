@@ -177,8 +177,9 @@ class CncPreview3DView(CncCanvas, CncView):
         self._tool.activate()
 
         self._camera_orbit_controller = OrbitController(self._camera)
+        self._pan_and_zoom_controller = PanAndZoomController(self._camera)
         self._controllers = [
-            PanAndZoomController(self._camera),
+            self._pan_and_zoom_controller,
             self._camera_orbit_controller,
         ]
         for controller in self._controllers:
