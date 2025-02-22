@@ -213,6 +213,7 @@ class CncPreview3DView(CncCanvas, CncView):
     def _zoom(self, amount: float, point: Optional[QtCore.QPoint] = None):
         p0 = self.screen_to_canvas_point(point)
 
+        # TODO: replace dolly with fov zoom
         self._camera.position *= Vector3(1.0, 1.0, 1.0 / amount)
 
         p1 = self.screen_to_canvas_point(point)
