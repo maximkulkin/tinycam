@@ -79,7 +79,8 @@ class GridXY(Renderable):
 
                     vec3 fragPos = near_point + t * (far_point - near_point);
 
-                    gl_FragDepth = fragPos.z;
+                    vec4 fragPosNDC = normalize(mvp_matrix * vec4(fragPos, 1.0));
+                    gl_FragDepth = fragPosNDC.z * 0.5 + 0.5;
 
                     fragColor = vec4(0);
 
@@ -132,5 +133,5 @@ class GridXY(Renderable):
         self._program['subscale'] = 1.0 - scale_fraction
         self._program['screen_size'] = state.camera.pixel_size
 
-        with self.context.scope(enable=moderngl.DEPTH_TEST | moderngl.BLEND, disable=moderngl.CULL_FACE):
+        with self.context.scope(flags=moderngl.DEPTH_TEST | moderngl.BLEND):
             self._vao.render(moderngl.TRIANGLE_STRIP)
