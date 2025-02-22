@@ -73,10 +73,32 @@ class Scope:
         self._context.enable_only(self._old_flags)
 
 
+class ContextProxy:
+    def __set_name__(self, owner: object, name: str):
+        self._name = name
+
+    def __get__(self, obj: object, cls) -> object:
+        return getattr(object._context, self._name)
+
+    def __set__(self, obj: object, value: object):
+        setattr(obj._context, self._name, value)
+
+
 class Context:
     def __init__(self, context: moderngl.Context):
-        self.__dict__['_context'] = context
-        self.__dict__['_flags'] = 0
+        self._context = context
+        self._flags = 0
+
+    # Context properties
+    depth_clamp_range = ContextProxy()
+    blend_func = ContextProxy()
+    blend_equation = ContextProxy()
+    multisample = ContextProxy()
+    viewport = ContextProxy()
+    scissor = ContextProxy()
+    front_face = ContextProxy()
+    cull_face = ContextProxy()
+    wireframe = ContextProxy()
 
     @property
     def flags(self) -> int:
