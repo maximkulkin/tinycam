@@ -19,7 +19,7 @@ from tinycam.ui.renderables.composite import Composite
 from tinycam.types import Matrix44
 from typing import Optional
 from tinycam.ui.utils import project, unproject
-from tinycam.ui.tools import PanTool
+from tinycam.ui.tools import SelectTool
 
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
@@ -173,7 +173,7 @@ class CncPreview3DView(CncCanvas, CncView):
         self.project.items.changed.connect(self._on_project_item_changed)
         self.project.items.updated.connect(self._on_project_item_updated)
 
-        self._tool = PanTool(self.project, self)
+        self._tool = SelectTool(self.project, self)
         self._tool.activate()
 
         self._camera_orbit_controller = OrbitController(self._camera)
