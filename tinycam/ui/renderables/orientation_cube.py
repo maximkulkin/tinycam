@@ -4,8 +4,7 @@ import moderngl as mgl
 import numpy as np
 from PIL import Image
 from PySide6 import QtCore
-from PySide6.QtCore import Qt
-from tinycam.types import Vector2, Vector3, Vector4, Matrix44
+from tinycam.types import Vector2, Vector3, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.canvas import Context, Renderable, RenderState
 
@@ -111,64 +110,11 @@ class Orientation(enum.Enum):
     TOP = enum.auto()
 
 
-class OrientationCube(Renderable):
+class OrientationCube(Renderable, QtCore.QObject):
     OFFSET = Vector2(50, 50)
     SIZE = Vector2(100, 100)
 
-    class EventFilter(QtCore.QObject):
-        orientation_selected = QtCore.Signal(Orientation)
-
-        def __init__(self, cube: 'OrientationCube', camera: Camera):
-            super().__init__()
-            self._camera = camera
-            self.matrix = Matrix44.identity()
-            self.rect = (0, 0, 0, 0)
-
-        def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
-            if (event.type() == QtCore.QEvent.MouseButtonPress and
-                    event.button() == Qt.LeftButton and
-                    event.modifiers() == Qt.NoModifier):
-                p = Vector2(
-                    event.position().x() / widget.width() * 2.0 - 1.0,
-                    1.0 - event.position().y() / widget.height() * 2.0,
-                )
-
-                r = self.rect
-                if (p.x < r[0] or p.x >= r[0] + r[2] or
-                        p.y < r[1] or p.y >= r[1] + r[3]):
-                    return False
-
-                p = (p - Vector2(r[0], r[1])) / Vector2(r[2], r[3]) * 2.0 - Vector2(1, 1)
-
-                def pick_quad(points: list[Vector3] | np.ndarray, normal: Vector3) -> bool:
-                    ndc_normal = self.matrix * Vector4.from_vector3(normal, 0.0)
-                    if ndc_normal.z >= 0.0:
-                        return False
-
-                    def to_ndc(point: Vector3) -> Vector4:
-                        p = self.matrix * Vector4.from_vector3(point, 1.0)
-                        return p / p.w
-
-                    points = [
-                        to_ndc(point * 0.5).xy
-                        for point in points
-                    ]
-
-                    return point_inside_polygon(p, points)
-
-                for side, points, normal in [
-                    (Orientation.FRONT, Cube.FRONT, Cube.FRONT_NORMAL),
-                    (Orientation.BACK, Cube.BACK, Cube.BACK_NORMAL),
-                    (Orientation.TOP, Cube.TOP, Cube.TOP_NORMAL),
-                    (Orientation.BOTTOM, Cube.BOTTOM, Cube.BOTTOM_NORMAL),
-                    (Orientation.LEFT, Cube.LEFT, Cube.LEFT_NORMAL),
-                    (Orientation.RIGHT, Cube.RIGHT, Cube.RIGHT_NORMAL)
-                ]:
-                    if pick_quad(points, normal):
-                        self.orientation_selected.emit(side)
-                        return True
-
-            return False
+    orientation_selected = QtCore.Signal(Orientation)
 
     def __init__(
         self,
@@ -211,6 +157,39 @@ class OrientationCube(Renderable):
                 }
             ''',
         )
+
+        self._select_program = self.context.program(
+            vertex_shader='''
+                #version 410 core
+
+                in vec3 position;
+                in int face_id;
+
+                flat out int v_face_id;
+
+                uniform mat4 mvp;
+
+                void main() {
+                    gl_Position = mvp * vec4(position, 1);
+                    v_face_id = face_id;
+                }
+            ''',
+            fragment_shader='''
+                #version 410 core
+
+                flat in int v_face_id;
+                out vec4 fragColor;
+
+                uniform sampler2D tex;
+
+                void main() {
+                    float tex_coord = (v_face_id + 0.5) / 6.0;
+                    fragColor = texture(tex, vec2(tex_coord, 0.0));
+                }
+            ''',
+        )
+        self._face_select_texture = self.context.texture((6, 1), 4, dtype='u1')
+        self._face_select_texture.filter = (mgl.NEAREST, mgl.NEAREST)
 
         self._quad_program = self.context.program(
             vertex_shader='''
@@ -270,6 +249,22 @@ class OrientationCube(Renderable):
             (self._uv_buffer, '2f', 'texcoord'),
         ])
 
+        self._face_id_buffer = self.context.buffer(
+            np.array([
+                0, 0, 0, 0, 0, 0,
+                1, 1, 1, 1, 1, 1,
+                2, 2, 2, 2, 2, 2,
+                3, 3, 3, 3, 3, 3,
+                4, 4, 4, 4, 4, 4,
+                5, 5, 5, 5, 5, 5,
+            ], dtype='i4').tobytes()
+        )
+        self._select_vao = self.context.vertex_array(self._select_program, [
+            (self._vertex_buffer, '3f', 'position'),
+            (self._face_id_buffer, 'i', 'face_id'),
+        ])
+        self._select_program['tex'] = 0
+
         quad_buffer = self.context.buffer(np.array([
             ( 0.5, -0.5, 1., 0.),
             ( 0.5,  0.5, 1., 1.),
@@ -287,8 +282,6 @@ class OrientationCube(Renderable):
             depth_attachment=self.context.depth_renderbuffer((512, 512)),
         )
         self._quad_program['tex'] = 0
-
-        self.eventFilter = self.EventFilter(self, self._camera)
 
     @property
     def orientation_cube_position(self) -> OrientationCubePosition:
@@ -332,15 +325,34 @@ class OrientationCube(Renderable):
             Matrix44.from_quaternion(self._camera.rotation.conjugate)
         )
 
-        self._program['mvp'].write(self._matrix.tobytes())
+        if state.selecting:
+            data = np.array([
+                state.register_selectable(self, Orientation.LEFT),
+                state.register_selectable(self, Orientation.RIGHT),
+                state.register_selectable(self, Orientation.FRONT),
+                state.register_selectable(self, Orientation.BACK),
+                state.register_selectable(self, Orientation.BOTTOM),
+                state.register_selectable(self, Orientation.TOP),
+            ], dtype='u1')
+            self._face_select_texture.write(data.tobytes())
+            self._select_program['mvp'].write(self._matrix.tobytes())
+            with self.context.scope(
+                framebuffer=self._framebuffer,
+                flags=mgl.DEPTH_TEST,
+            ):
+                self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
+                self._face_select_texture.use(0)
+                self._select_vao.render(mgl.TRIANGLES)
+        else:
+            self._program['mvp'].write(self._matrix.tobytes())
 
-        with self.context.scope(
-            framebuffer=self._framebuffer,
-            flags=mgl.DEPTH_TEST,
-        ):
-            self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
-            self._texture.use(0)
-            self._vao.render(mgl.TRIANGLES)
+            with self.context.scope(
+                framebuffer=self._framebuffer,
+                flags=mgl.DEPTH_TEST,
+            ):
+                self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
+                self._texture.use(0)
+                self._vao.render(mgl.TRIANGLES)
 
         size = (
             Vector2(self.SIZE.x * state.camera.aspect, self.SIZE.y) *
@@ -353,10 +365,5 @@ class OrientationCube(Renderable):
             self._rendered_texture.use(0)
             self._quad_vao.render(mgl.TRIANGLE_STRIP)
 
-        self.eventFilter.matrix = self._matrix
-        self.eventFilter.rect = (
-            p.x - size.x * 0.5,
-            p.y - size.y * 0.5,
-            size.x,
-            size.y,
-        )
+    def on_select(self, tag):
+        self.orientation_selected.emit(tag)
