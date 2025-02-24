@@ -1,4 +1,4 @@
-import moderngl
+import moderngl as mgl
 from PySide6 import QtOpenGLWidgets
 from tinycam.types import Vector2, Vector3
 from tinycam.ui.camera import Camera, PerspectiveCamera
@@ -11,7 +11,7 @@ class Scope:
         flags: int = 0,
         enable: int = 0,
         disable: int = 0,
-        framebuffer: moderngl.Framebuffer | None = None,
+        framebuffer: mgl.Framebuffer | None = None,
         depth_func: str | None = None,
         depth_clamp_range: tuple[float, float] | None = None,
         blend_func: tuple[int, int] | None = None,
@@ -85,7 +85,7 @@ class ContextProxy:
 
 
 class Context:
-    def __init__(self, context: moderngl.Context):
+    def __init__(self, context: mgl.Context):
         self._context = context
         self._flags = 0
 
@@ -170,7 +170,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
 
     def initializeGL(self):
         super().initializeGL()
-        self.ctx = Context(moderngl.create_context(required=410))
+        self.ctx = Context(mgl.create_context(required=410))
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)
