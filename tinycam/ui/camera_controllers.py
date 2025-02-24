@@ -173,7 +173,10 @@ class PanAndZoomController(QtCore.QObject):
         self._widget = None
 
         self._camera = camera
+        self._start_position = None
         self._last_position = None
+
+        self._panning = False
 
         SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
         self._on_control_type_changed(SETTINGS.get('general/control_type'))
@@ -193,21 +196,39 @@ class PanAndZoomController(QtCore.QObject):
             self._widget = widget
 
         if (event.type() == QtCore.QEvent.MouseButtonPress
-                and event.button() == self._pan_button):
-            self._last_position = event.position()
-            widget.setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
-            return True
+                and event.button() == self._pan_button
+                and event.modifiers() == Qt.NoModifier):
+            self._start_position = event.position()
+            return False
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == self._pan_button
-                and self._last_position is not None):
+                and self._panning):
+            self._start_position = None
             self._last_position = None
+            self._panning = False
             widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
-        elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
-            position = self._widget.mapFromGlobal(QtGui.QCursor.pos())
+        elif (event.type() == QtCore.QEvent.MouseMove
+              and (self._panning or self._start_position is not None)):
+            # position = self._widget.mapFromGlobal(QtGui.QCursor.pos())
+            position = event.position()
+            if not self._panning:
+                if (self._start_position - position).manhattanLength() > 20:
+                    self._panning = True
+                    self._last_position = self._start_position
+                    return True
+
+                return False
+
+            if event.buttons() != self._pan_button:
+                self._panning = False
+                return False
+
             p0 = self._unproject(self._last_position)
             p1 = self._unproject(position)
             d = p0 - p1
+
+            widget.setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
 
             self._camera.position += Vector3(d.x, d.y, 0)
             self._last_position = position
