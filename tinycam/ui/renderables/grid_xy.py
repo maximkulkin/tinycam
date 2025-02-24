@@ -126,6 +126,9 @@ class GridXY(Renderable):
         self._program['scale'] = 1.0
 
     def render(self, state: RenderState):
+        if state.selecting:
+            return
+
         mvp = state.camera.projection_matrix * state.camera.view_matrix
 
         self._program['mvp_matrix'].write(mvp.astype('f4').tobytes())
