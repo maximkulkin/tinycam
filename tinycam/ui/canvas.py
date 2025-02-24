@@ -126,11 +126,12 @@ class Context:
     def depth_func(self) -> str:
         return self._context.mglo.depth_func
 
+    @depth_func.setter
+    def depth_func(self, value: str):
+        self._context.depth_func = value
+
     def __getattr__(self, name: str) -> object:
         return getattr(self._context, name)
-
-    def __setattr__(self, name: str, value: object):
-        setattr(self._context, name, value)
 
     def scope(self, **kwargs):
         return Scope(self, **kwargs)
