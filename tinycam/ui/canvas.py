@@ -1,7 +1,22 @@
 import moderngl as mgl
-from PySide6 import QtOpenGLWidgets
+import numpy as np
+from PySide6 import QtCore, QtOpenGLWidgets
+from PySide6.QtCore import Qt
 from tinycam.types import Vector2, Vector3
 from tinycam.ui.camera import Camera, PerspectiveCamera
+
+
+def selectable_id_to_color(object_id: int) -> np.ndarray:
+    return np.array((
+        object_id // 65536 & 0xff,
+        object_id // 256 & 0xff,
+        int(object_id & 0xff),
+        255,
+    ), dtype='u1')
+
+
+def color_to_selectable_id(color: np.ndarray) -> int:
+    return (color[0] << 16) | (color[1] << 8) | color[2]
 
 
 class Scope:
@@ -140,6 +155,20 @@ class Context:
 class RenderState:
     camera: Camera
 
+    def __init__(self, camera: Camera):
+        self.camera = camera
+        self._next_selectable_id = 1
+        self._selectable_by_id = {}
+
+    def register_selectable(self, item: 'Renderable', tag: object | None = None):
+        selectable_id = self._next_selectable_id
+        self._next_selectable_id += 1
+        self._selectable_by_id[selectable_id] = (item, tag)
+        return selectable_id_to_color(selectable_id)
+
+    def get_selectable_by_color(self, color: np.ndarray) -> 'tuple[Renderable, object] | None':
+        return self._selectable_by_id.get(color_to_selectable_id(color))
+
 
 class Renderable:
     def __init__(self, context: Context):
@@ -153,6 +182,9 @@ class Renderable:
     def render(self, state: RenderState):
         raise NotImplementedError()
 
+    def on_select(self, tag):
+        pass
+
 
 class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, *args, **kwargs):
@@ -165,9 +197,38 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         self._camera.position += Vector3(0, 0, 5)
         self._camera.look_at(Vector3())
 
+        self._select_texture = None
+        self._select_framebuffer = None
+
     @property
     def camera(self) -> Camera:
         return self._camera
+
+    def select_item(self, screen_point: Vector2) -> tuple[Renderable, object] | None:
+        w, h = int(self._camera.pixel_width), int(self._camera.pixel_height)
+        if self._select_texture is None:
+            self._select_texture = self.ctx.texture((w, h), 4)
+        if self._select_framebuffer is None:
+            self._select_framebuffer = self.ctx.framebuffer(
+                color_attachments=[self._select_texture],
+                depth_attachment=self.ctx.depth_renderbuffer((w, h)),
+            )
+
+        state = RenderState(camera=self._camera)
+        state.selecting = True
+
+        with self.ctx.scope(framebuffer=self._select_framebuffer, flags=mgl.DEPTH_TEST):
+            self.ctx.clear(color=(0., 0., 0., 1.), depth=1.0)
+            self._render(state)
+
+        raw_data = self._select_texture.read()
+        img = np.frombuffer(raw_data, dtype='u1')
+        img = img.reshape(h, w, 4)
+        img = np.flip(img, axis=0)
+
+        color = img[int(screen_point.y), int(screen_point.x)]
+
+        return state.get_selectable_by_color(color)
 
     def initializeGL(self):
         super().initializeGL()
@@ -178,6 +239,8 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
 
         self.ctx.viewport = (0, 0, width, height)
         self._camera.pixel_size = Vector2(width, height)
+        self._select_framebuffer = None
+        self._select_texture = None
 
     def paintGL(self):
         super().paintGL()
@@ -187,6 +250,20 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
 
         state = RenderState(camera=self._camera)
         self._render(state)
+
+    def event(self, event: QtCore.QEvent):
+        if (event.type() == QtCore.QEvent.MouseButtonRelease and
+                event.button() == Qt.LeftButton and
+                event.modifiers() == Qt.NoModifier):
+
+            p = event.position()
+            selected = self.select_item(Vector2(p.x(), p.y()))
+            if selected is not None:
+                selectable, tag = selected
+                selectable.on_select(tag)
+                return True
+
+        return super().event(event)
 
     def _render(self, state: RenderState):
         pass
