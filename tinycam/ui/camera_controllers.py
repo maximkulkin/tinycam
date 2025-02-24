@@ -89,6 +89,7 @@ class OrbitController(QtCore.QObject):
         sens = mouse_sensitivity
         self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
 
+        self._orbit_point = Vector3(0, 0, 0)
         self._last_position = None
         self._animation = None
 
@@ -114,12 +115,14 @@ class OrbitController(QtCore.QObject):
         self._yaw = (yaw + two_pi) % (two_pi * 2.0) - two_pi
 
         v = self._camera.rotation.conjugate * Camera.FORWARD
-        orbit_point = self._camera.position + v * (self._camera.position.z / (v | Vector3(0, 0, -1)))
+        d = v | Vector3(0, 0, -1)
+        if d != 0.0:
+            self._orbit_point = self._camera.position + v * (self._camera.position.z / d)
 
-        distance = (self._camera.position - orbit_point).length
+        distance = (self._camera.position - self._orbit_point).length
 
         self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
-        self._camera.position = orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
+        self._camera.position = self._orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
         self._widget.update()
 
     def _on_animation_finished(self):
