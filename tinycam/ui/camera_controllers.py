@@ -140,16 +140,12 @@ class OrbitController(QtCore.QObject):
                 and event.button() == self._orbit_button
                 and event.modifiers() & Qt.AltModifier):
             self._last_position = event.position()
-            widget.grabKeyboard()
-            widget.grabMouse()
             widget.setCursor(QtGui.QCursor(Qt.SizeAllCursor))
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == self._orbit_button
                 and self._last_position is not None):
             self._last_position = None
-            widget.releaseKeyboard()
-            widget.releaseMouse()
             widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
@@ -196,16 +192,12 @@ class PanAndZoomController(QtCore.QObject):
         if (event.type() == QtCore.QEvent.MouseButtonPress
                 and event.button() == self._pan_button):
             self._last_position = event.position()
-            widget.grabKeyboard()
-            widget.grabMouse()
             widget.setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == self._pan_button
                 and self._last_position is not None):
             self._last_position = None
-            widget.releaseKeyboard()
-            widget.releaseMouse()
             widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
@@ -410,15 +402,11 @@ class FreeMoveController(QtCore.QObject):
         elif (event.type() == QtCore.QEvent.MouseButtonPress
                 and event.button() == Qt.LeftButton):
             self._last_position = event.position()
-            widget.grabKeyboard()
-            widget.grabMouse()
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
                 and event.button() == Qt.LeftButton
                 and self._last_position is not None):
             self._last_position = None
-            widget.releaseKeyboard()
-            widget.releaseMouse()
             self._directions = 0
             self._update_movement()
             return True

@@ -158,6 +158,8 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         super().__init__(*args, **kwargs)
         self.ctx = None
 
+        self.setMouseTracking(True)
+
         self._camera = PerspectiveCamera()
         self._camera.position += Vector3(0, 0, 5)
         self._camera.look_at(Vector3())
