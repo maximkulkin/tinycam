@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector3, Quaternion, Matrix44
 from tinycam.ui.camera import Camera
-from tinycam.ui.utils import quaternion_to_eulers, unproject
+from tinycam.ui.utils import unproject
 from typing import Callable, Tuple, Union
 
 
@@ -84,7 +84,7 @@ class OrbitController(QtCore.QObject):
         self._on_control_type_changed(SETTINGS.get('general/control_type'))
 
         self._camera = camera
-        _, self._pitch, self._yaw = quaternion_to_eulers(self._camera.rotation)
+        _, self._pitch, self._yaw = self._camera.rotation.to_eulers()
 
         sens = mouse_sensitivity
         self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
@@ -342,7 +342,7 @@ class FreeMoveController(QtCore.QObject):
         _, r, _ = (
             Matrix44.look_at(self.position, target, up).decompose()
         )
-        eulers = quaternion_to_eulers(r)
+        eulers = r.to_eulers()
         match self._pitch_axis:
             case Axis.X:
                 self._pitch = eulers.x

@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from numbers import Number as number
 import pyrr
@@ -190,6 +191,35 @@ class Quaternion(pyrr.Quaternion):
     def __repr__(self) -> str:
         return str(self)
 
+    @property
+    def conjugate(self) -> 'Quaternion':
+        return super().conjugate.view(Quaternion)
+
+    @classmethod
+    def from_x_rotation(cls, angle: number | np.number):
+        return pyrr.Quaternion.from_x_rotation(angle).view(cls)
+
+    @classmethod
+    def from_y_rotation(cls, angle: number | np.number):
+        return pyrr.Quaternion.from_y_rotation(angle).view(cls)
+
+    @classmethod
+    def from_z_rotation(cls, angle: number | np.number):
+        return pyrr.Quaternion.from_z_rotation(angle).view(cls)
+
+    def to_eulers(self) -> Vector3:
+        t0 = 2.0 * (self.w * self.x + self.y * self.z)
+        t1 = 1.0 - 2.0 * (self.x * self.x + self.y * self.y)
+        roll = math.atan2(t0, t1)
+
+        pitch = max(-1.0, min(1.0, 2.0 * (self.w * self.y - self.z * self.x)))
+
+        t3 = 2.0 * (self.w * self.z + self.x * self.y)
+        t4 = 1.0 - 2.0 * (self.y * self.y + self.z * self.z)
+        yaw = math.atan2(t3, t4)
+
+        return roll, pitch, yaw
+
 
 class Matrix44(pyrr.Matrix44):
     def __new__(cls, value: 'Matrix44 | np.ndarray | list[number | np.number] | None') -> 'Matrix44':
@@ -254,6 +284,10 @@ class Matrix44(pyrr.Matrix44):
             return super().__mul__(other).view(Vector4)
         else:
             raise ValueError(f'Invalid value type: {other}')
+
+    def decompose(self) -> tuple[Vector3, Quaternion, Vector3]:
+        scale, rotation, translation = pyrr.matrix44.decompose(self)
+        return scale.view(Vector3), rotation.view(Quaternion), translation.view(Vector3)
 
 
 class Rect(np.ndarray):
