@@ -182,7 +182,6 @@ class CncPreview3DView(CncCanvas, CncView):
             self._pan_and_zoom_controller,
             self._camera_orbit_controller,
         ]
-        self._items = []
         for controller in self._controllers:
             self.installEventFilter(controller)
 
@@ -283,20 +282,20 @@ class CncPreview3DView(CncCanvas, CncView):
         if view is None:
             return
 
-        for existing_view in self._items:
+        for existing_view in self.items:
             if hasattr(existing_view, 'index') and existing_view.index >= index:
                 existing_view.index += 1
-        self._items.insert(index, view)
+        self.add_item(view)
         self.update()
 
     def _on_project_item_removed(self, index: int):
-        for view in self._items:
+        for view in self.items:
             if hasattr(view, 'index') and view.index == index:
-                self._items.remove(view)
+                self.remove_item(view)
                 self.update()
                 break
 
-        for view in self._items:
+        for view in self.items:
             if hasattr(view, 'index') and view.index > index:
                 view.index -= 1
 
@@ -310,6 +309,6 @@ class CncPreview3DView(CncCanvas, CncView):
         self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
 
         self._grid.render(state)
-        for item in self._items:
+        for item in self.items:
             item.render(state)
         self._orientation_cube.render(state)

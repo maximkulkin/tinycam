@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import moderngl as mgl
 import numpy as np
 from PySide6 import QtCore, QtOpenGLWidgets
@@ -194,6 +195,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
 
         self.setMouseTracking(True)
 
+        self._items = []
         self._camera = PerspectiveCamera()
         self._camera.position += Vector3(0, 0, 5)
         self._camera.look_at(Vector3())
@@ -204,6 +206,16 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     @property
     def camera(self) -> Camera:
         return self._camera
+
+    @property
+    def items(self) -> Sequence[ViewItem]:
+        return self._items
+
+    def add_item(self, item: ViewItem):
+        self._items.append(item)
+
+    def remove_item(self, item: ViewItem):
+        self._items.remove(item)
 
     def select_item(self, screen_point: Vector2) -> tuple[ViewItem, object] | None:
         w, h = int(self._camera.pixel_width), int(self._camera.pixel_height)
@@ -267,4 +279,5 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         return super().event(event)
 
     def _render(self, state: RenderState):
-        pass
+        for item in self.items:
+            item.render(state)
