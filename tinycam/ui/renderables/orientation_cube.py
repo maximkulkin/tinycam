@@ -76,17 +76,6 @@ class Cube:
     TOP_NORMAL = Vector3(0, 0, 1)
 
 
-def point_inside_polygon(p: Vector2, polygon: list[Vector2]) -> bool:
-    count = 0
-    for (p1, p2) in zip(polygon, chain(polygon[1:], [polygon[0]])):
-        if (p.y < p1.y) == (p.y < p2.y):
-            continue
-
-        if ((p1.y == p2.y) or p.x < p1.x + (p.y - p1.y) / (p2.y - p1.y) * (p2.x - p1.x)):
-            count += 1
-    return count % 2 == 1
-
-
 class OrientationCubePosition(enum.Enum):
     TOP_LEFT = enum.auto()
     TOP_RIGHT = enum.auto()

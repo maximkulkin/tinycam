@@ -25,6 +25,17 @@ def unproject(point: Tuple[float, float], camera: Camera) -> Vector3:
     return r
 
 
+def point_inside_polygon(p: Vector2, polygon: list[Vector2]) -> bool:
+    count = 0
+    for (p1, p2) in zip(polygon, chain(polygon[1:], [polygon[0]])):
+        if (p.y < p1.y) == (p.y < p2.y):
+            continue
+
+        if ((p1.y == p2.y) or p.x < p1.x + (p.y - p1.y) / (p2.y - p1.y) * (p2.x - p1.x)):
+            count += 1
+    return count % 2 == 1
+
+
 def clear_layout(layout):
     while layout.count() > 0:
         item = layout.takeAt(0)
