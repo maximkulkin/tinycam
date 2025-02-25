@@ -97,6 +97,8 @@ class OrientationCube(ViewItem, QtCore.QObject):
     OFFSET = Vector2(50, 50)
     SIZE = Vector2(100, 100)
 
+    priority = 200
+
     orientation_selected = QtCore.Signal(Orientation)
 
     def __init__(

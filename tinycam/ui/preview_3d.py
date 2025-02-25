@@ -33,6 +33,8 @@ PATH_COLORS = {
 
 
 class CncProjectItemView(Composite):
+    priority = 100
+
     def __init__(self, context: Context, index: int, model: CncProjectItem):
         super().__init__(
             context,
@@ -198,6 +200,8 @@ class CncPreview3DView(CncCanvas, CncView):
     def initializeGL(self):
         super().initializeGL()
 
+        self.add_item(GridXY(self.ctx))
+
         self._orientation_cube = OrientationCube(
             self.ctx,
             self._camera,
@@ -206,7 +210,7 @@ class CncPreview3DView(CncCanvas, CncView):
         self._orientation_cube.orientation_selected.connect(self._on_orientation_selected)
         s.SETTINGS['preview/orientation_cube_position'].changed.connect(self._on_orienation_cube_position_changed)
 
-        self._grid = GridXY(self.ctx)
+        self.add_item(self._orientation_cube)
 
         for i, _ in enumerate(self.project.items):
             self._on_project_item_added(i)
@@ -314,11 +318,3 @@ class CncPreview3DView(CncCanvas, CncView):
 
     def _on_project_item_updated(self, index: int):
         self.update()
-
-    def _render(self, state: RenderState):
-        self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
-
-        self._grid.render(state)
-        for item in self.items:
-            item.render(state)
-        self._orientation_cube.render(state)

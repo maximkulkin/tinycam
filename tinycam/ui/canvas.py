@@ -173,6 +173,8 @@ class RenderState:
 
 
 class ViewItem:
+    priority: int = 1
+
     def __init__(self, context: Context):
         super().__init__()
         self._context = context
@@ -213,6 +215,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
 
     def add_item(self, item: ViewItem):
         self._items.append(item)
+        self._items.sort(key=lambda x: x.priority)
 
     def remove_item(self, item: ViewItem):
         self._items.remove(item)
@@ -279,5 +282,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
         return super().event(event)
 
     def _render(self, state: RenderState):
+        self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
+
         for item in self.items:
             item.render(state)

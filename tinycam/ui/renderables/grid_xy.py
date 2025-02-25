@@ -6,6 +6,8 @@ from tinycam.ui.canvas import Context, ViewItem, RenderState
 
 
 class GridXY(ViewItem):
+    priority = 1
+
     def __init__(self, context: Context):
         super().__init__(context)
 
