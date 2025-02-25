@@ -6,7 +6,7 @@ from PIL import Image
 from PySide6 import QtCore
 from tinycam.types import Vector2, Vector3, Matrix44
 from tinycam.ui.camera import Camera
-from tinycam.ui.canvas import Context, Renderable, RenderState
+from tinycam.ui.canvas import Context, ViewItem, RenderState
 
 
 Point2d = Vector2 | np.ndarray | tuple[float, float]
@@ -110,7 +110,7 @@ class Orientation(enum.Enum):
     TOP = enum.auto()
 
 
-class OrientationCube(Renderable, QtCore.QObject):
+class OrientationCube(ViewItem, QtCore.QObject):
     OFFSET = Vector2(50, 50)
     SIZE = Vector2(100, 100)
 

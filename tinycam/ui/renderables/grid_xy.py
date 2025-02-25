@@ -2,10 +2,10 @@ import math
 import moderngl as mgl
 import numpy as np
 from tinycam.types import Vector3
-from tinycam.ui.canvas import Context, Renderable, RenderState
+from tinycam.ui.canvas import Context, ViewItem, RenderState
 
 
-class GridXY(Renderable):
+class GridXY(ViewItem):
     def __init__(self, context: Context):
         super().__init__(context)
 

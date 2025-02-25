@@ -2,14 +2,14 @@ import moderngl
 import numpy as np
 from typing import Optional
 from tinycam.types import Vector4
-from tinycam.ui.canvas import Context, Renderable, RenderState
+from tinycam.ui.canvas import Context, ViewItem, RenderState
 
 
 type Vector2 = np.ndarray
 type Point2 = Vector2
 
 
-class Line2D(Renderable):
+class Line2D(ViewItem):
     def __init__(
         self,
         context: Context,

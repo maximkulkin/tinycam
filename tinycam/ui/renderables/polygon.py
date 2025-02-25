@@ -3,11 +3,11 @@ import numpy as np
 import shapely
 import shapely.geometry as sg
 from tinycam.types import Vector4, Matrix44
-from tinycam.ui.canvas import Context, Renderable, RenderState
+from tinycam.ui.canvas import Context, ViewItem, RenderState
 from typing import Union, Optional
 
 
-class Polygon(Renderable):
+class Polygon(ViewItem):
     def __init__(
         self,
         context: Context,

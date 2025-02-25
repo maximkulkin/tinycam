@@ -160,17 +160,17 @@ class RenderState:
         self._next_selectable_id = 1
         self._selectable_by_id = {}
 
-    def register_selectable(self, item: 'Renderable', tag: object | None = None):
+    def register_selectable(self, item: 'ViewItem', tag: object | None = None):
         selectable_id = self._next_selectable_id
         self._next_selectable_id += 1
         self._selectable_by_id[selectable_id] = (item, tag)
         return selectable_id_to_color(selectable_id)
 
-    def get_selectable_by_color(self, color: np.ndarray) -> 'tuple[Renderable, object] | None':
+    def get_selectable_by_color(self, color: np.ndarray) -> 'tuple[ViewItem, object] | None':
         return self._selectable_by_id.get(color_to_selectable_id(color))
 
 
-class Renderable:
+class ViewItem:
     def __init__(self, context: Context):
         super().__init__()
         self._context = context
@@ -204,7 +204,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
     def camera(self) -> Camera:
         return self._camera
 
-    def select_item(self, screen_point: Vector2) -> tuple[Renderable, object] | None:
+    def select_item(self, screen_point: Vector2) -> tuple[ViewItem, object] | None:
         w, h = int(self._camera.pixel_width), int(self._camera.pixel_height)
         if self._select_texture is None:
             self._select_texture = self.ctx.texture((w, h), 4)

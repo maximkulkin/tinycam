@@ -1,9 +1,9 @@
 import moderngl
 import numpy as np
-from tinycam.ui.canvas import Context, Renderable, RenderState
+from tinycam.ui.canvas import Context, ViewItem, RenderState
 
 
-class Quad(Renderable):
+class Quad(ViewItem):
     def __init__(self, context: Context):
         super().__init__(context)
 
