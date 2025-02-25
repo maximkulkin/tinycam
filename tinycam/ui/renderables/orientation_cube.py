@@ -33,7 +33,6 @@ class Cube:
         Vector3(-1, -1,  1),
         Vector3(-1, -1, -1),
     ])
-    LEFT_NORMAL = Vector3(-1, 0, 0)
 
     RIGHT = np.array([
         Vector3( 1, -1, -1),
@@ -41,7 +40,6 @@ class Cube:
         Vector3( 1,  1,  1),
         Vector3( 1,  1, -1),
     ])
-    RIGHT_NORMAL = Vector3(1, 0, 0)
 
     FRONT = np.array([
         Vector3(-1, -1, -1),
@@ -49,7 +47,6 @@ class Cube:
         Vector3( 1, -1,  1),
         Vector3( 1, -1, -1),
     ])
-    FRONT_NORMAL = Vector3(0, -1, 0)
 
     BACK = np.array([
         Vector3( 1,  1, -1),
@@ -57,7 +54,6 @@ class Cube:
         Vector3(-1,  1,  1),
         Vector3(-1,  1, -1),
     ])
-    BACK_NORMAL = Vector3(0, 1, 0)
 
     BOTTOM = np.array([
         Vector3(-1,  1, -1),
@@ -65,7 +61,6 @@ class Cube:
         Vector3( 1, -1, -1),
         Vector3( 1,  1, -1),
     ])
-    BOTTOM_NORMAL = Vector3(0, 0, -1)
 
     TOP = np.array([
         Vector3(-1, -1,  1),
@@ -73,7 +68,6 @@ class Cube:
         Vector3( 1,  1,  1),
         Vector3( 1, -1,  1),
     ])
-    TOP_NORMAL = Vector3(0, 0, 1)
 
 
 class OrientationCubePosition(enum.Enum):
