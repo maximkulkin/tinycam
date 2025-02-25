@@ -184,7 +184,7 @@ class ViewItem:
     def render(self, state: RenderState):
         raise NotImplementedError()
 
-    def on_select(self, tag):
+    def on_click(self, tag):
         pass
 
 
@@ -273,7 +273,7 @@ class CncCanvas(QtOpenGLWidgets.QOpenGLWidget):
             selected = self.select_item(Vector2(p.x(), p.y()))
             if selected is not None:
                 selectable, tag = selected
-                selectable.on_select(tag)
+                selectable.on_click(tag)
                 return True
 
         return super().event(event)

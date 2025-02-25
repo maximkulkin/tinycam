@@ -348,5 +348,5 @@ class OrientationCube(ViewItem, QtCore.QObject):
             self._rendered_texture.use(0)
             self._quad_vao.render(mgl.TRIANGLE_STRIP)
 
-    def on_select(self, tag):
+    def on_click(self, tag):
         self.orientation_selected.emit(tag)
