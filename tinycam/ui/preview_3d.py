@@ -75,20 +75,30 @@ class CncProjectItemView(Composite):
     def _on_model_changed(self):
         self._update_geometry()
 
-        color = self._model.color
-        if self._model.selected:
-            color = color.lighter(150)
-
         for item in self.items:
-            item.color = qcolor_to_vec4(color)
             item.model_matrix = self._model_matrix()
 
     def render(self, state: RenderState):
         if not self._model.visible:
             return
 
+        if state.selecting:
+            color = state.register_selectable(self)
+            color = Vector4(float(color[0]) / 255.0, float(color[1]) / 255.0, float(color[2]) / 255.0, float(color[3]) / 255.0)
+        else:
+            color = self._model.color
+            if self._model.selected:
+                color = color.lighter(150)
+            color = qcolor_to_vec4(color)
+
+        for item in self.items:
+            item.color = color
+
         with self.context.scope(disable=mgl.DEPTH_TEST, wireframe=self._model.debug, depth_func='<='):
             super().render(state)
+
+    def on_click(self, tag: object):
+        GLOBALS.APP.project.selectedItems = [self._model]
 
 
 class CncPathView(Line3D):
