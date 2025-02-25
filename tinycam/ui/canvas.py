@@ -154,6 +154,7 @@ class Context:
 
 class RenderState:
     camera: Camera
+    selecting: bool = False
 
     def __init__(self, camera: Camera):
         self.camera = camera
