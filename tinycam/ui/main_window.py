@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
-from tinycam.ui.view import CncView
 # from tinycam.ui.visualization import CncVisualization
 from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.preview_3d import CncPreview3DView
@@ -61,7 +60,6 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_file)
-        self.toolbar.addAction('Zoom To Fit', self._zoom_to_fit)
 
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -83,30 +81,14 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+3',
         )
 
-        self.view_menu.addSeparator()
-        self.view_menu.addAction('Zoom In', self._zoom_in, shortcut='Ctrl++')
-        self.view_menu.addAction('Zoom Out', self._zoom_out, shortcut='Ctrl+-')
-        self.view_menu.addAction('Zoom To Fit', self._zoom_to_fit,
-                                 shortcut='Ctrl+=')
+        # self.view_menu.addSeparator()
+        # self.view_menu.addAction('Zoom In', self._zoom_in, shortcut='Ctrl++')
+        # self.view_menu.addAction('Zoom Out', self._zoom_out, shortcut='Ctrl+-')
+        # self.view_menu.addAction('Zoom To Fit', self._zoom_to_fit,
+        #                          shortcut='Ctrl+=')
         self.view_menu.addSeparator()
 
         self._load_settings()
-
-    @property
-    def _active_view(self) -> CncView:
-        match self.tabs.currentIndex():
-            # case 0: return self.project_view
-            case 0: return self.preview_view
-            case _: raise ValueError('Unexpected selected tab')
-
-    def _zoom_in(self):
-        self._active_view.zoom_in()
-
-    def _zoom_out(self):
-        self._active_view.zoom_out()
-
-    def _zoom_to_fit(self):
-        self._active_view.zoom_to_fit()
 
     def _import_file(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -185,8 +167,6 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         for window in self._windows:
             self._windows_menu[window].setChecked(window.isVisible())
-
-        self._zoom_to_fit()
 
     def closeEvent(self, event):
         self._save_settings()
