@@ -210,7 +210,7 @@ class PanAndZoomController(QtCore.QObject):
             return True
         elif (event.type() == QtCore.QEvent.MouseMove
               and (self._panning or self._start_position is not None)):
-            # position = self._widget.mapFromGlobal(QtGui.QCursor.pos())
+
             position = event.position()
             if not self._panning:
                 if (self._start_position - position).manhattanLength() > 20:
@@ -222,6 +222,7 @@ class PanAndZoomController(QtCore.QObject):
 
             if event.buttons() != self._pan_button:
                 self._panning = False
+                self._start_position = None
                 return False
 
             p0 = self._unproject(self._last_position)
@@ -235,7 +236,7 @@ class PanAndZoomController(QtCore.QObject):
             widget.update()
             return True
         elif event.type() == QtCore.QEvent.Wheel:
-            screen_point = self._widget.mapFromGlobal(QtGui.QCursor.pos())
+            screen_point = event.position()
             p0 = self._unproject(screen_point)
 
             scale = 0.9 ** (event.angleDelta().y() / 120.0)
