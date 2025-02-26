@@ -42,6 +42,8 @@ class CncSetting(QtCore.QObject):
 
     @property
     def value(self) -> object:
+        if self._value is None:
+            return self.default
         return self._value
 
     @value.setter
