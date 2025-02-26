@@ -1,7 +1,12 @@
+from PySide6 import QtGui
 from itertools import chain
 from tinycam.types import Vector2, Vector3, Vector4
 from tinycam.ui.camera import Camera
 from typing import Tuple
+
+
+def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
+    return Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
 
 
 def project(point: Vector3, camera: Camera) -> Vector2:

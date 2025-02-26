@@ -4,14 +4,12 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
-# from tinycam.ui.visualization import CncVisualization
 from tinycam.ui.commands import ImportFileCommand
-from tinycam.ui.preview_3d import CncPreview3DView
+from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
 from tinycam.ui.cnc_controller import CncControllerWindow
 from tinycam.ui.settings import CncSettingsDialog
-from tinycam.tasks import run_task
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -21,13 +19,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.resize(600, 400)
 
         self.project = GLOBALS.APP.project
-        # self.project_view = CncVisualization(self.project, self)
 
-        self.preview_view = CncPreview3DView(self.project, self)
+        self.preview_3d = CncPreview3D(project=self.project, parent=self)
 
         self.tabs = QtWidgets.QTabWidget()
-        # self.tabs.addTab(self.project_view, 'Project')
-        self.tabs.addTab(self.preview_view, 'Preview')
+        self.tabs.addTab(self.preview_3d, '3D')
         self.tabs.setCurrentIndex(0)
 
         self.setCentralWidget(self.tabs)
