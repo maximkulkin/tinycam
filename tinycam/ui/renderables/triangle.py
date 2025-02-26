@@ -1,7 +1,7 @@
 import moderngl
 import numpy as np
 from tinycam.types import Vector3, Vector4, Quaternion, Matrix44
-from tinycam.ui.canvas import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, ViewItem, RenderState
 
 
 class Triangle(ViewItem):

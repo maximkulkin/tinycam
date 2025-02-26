@@ -3,7 +3,7 @@ import numpy as np
 import shapely
 import shapely.geometry as sg
 from tinycam.types import Vector4, Matrix44
-from tinycam.ui.canvas import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, ViewItem, RenderState
 from typing import Union, Optional
 
 

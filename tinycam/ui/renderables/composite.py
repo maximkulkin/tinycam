@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from tinycam.ui.canvas import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, ViewItem
 
 
 class Composite(ViewItem):

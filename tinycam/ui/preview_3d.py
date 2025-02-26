@@ -7,7 +7,7 @@ from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.types import Vector3, Vector4
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 import tinycam.settings as s
-from tinycam.ui.canvas import Context, CncCanvas, RenderState
+from tinycam.ui.view import Context, CncView, RenderState
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.renderables.grid_xy import GridXY
 from tinycam.ui.renderables.line2d import Line2D
@@ -174,7 +174,7 @@ s.SETTINGS.register('preview/orientation_cube_position',
                     default=OrientationCubePosition.TOP_RIGHT)
 
 
-class CncPreview3DView(CncCanvas):
+class CncPreview3DView(CncView):
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
