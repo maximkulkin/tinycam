@@ -116,38 +116,17 @@ class CncMainWindow(QtWidgets.QMainWindow):
         if filename == '':
             return
 
-        def critical_error(text):
-            QtWidgets.QMessageBox.critical(self, 'Import Drawing', text)
-
         item = None
         if filename.endswith('.gbr'):
-            try:
-                item = GerberItem.from_file(filename)
-            except gerber.GerberError as e:
-                critical_error(f'Error parsing Gerber file: {e}')
-                return
-
+            item = self._import_gerber(filename)
         elif filename.endswith('.drl'):
-            try:
-                item = ExcellonItem.from_file(filename)
-            except excellon.ExcellonError as e:
-                QtWidgets.QMessageBox.critical(
-                    self, 'Import Drawing',
-                    f'Error parsing Excellon file: {e}',
-                )
-                return
+            item = self._import_excellon(filename)
         else:
             if item is None:
-                try:
-                    item = GerberItem.from_file(filename)
-                except gerber.GerberError:
-                    pass
+                item = self._import_gerber(filename, silent=True)
 
             if item is None:
-                try:
-                    item = ExcellonItem.from_file(filename)
-                except excellon.ExcellonError:
-                    pass
+                item = self._import_excellon(filename, silent=True)
 
         if item is None:
             QtWidgets.QMessageBox.critical(
@@ -157,6 +136,27 @@ class CncMainWindow(QtWidgets.QMainWindow):
             return
 
         GLOBALS.APP.undo_stack.push(ImportFileCommand(filename, item))
+
+    def _import_gerber(self, filename: str, silent: bool = False) -> GerberItem | None:
+        try:
+            return GerberItem.from_file(filename)
+        except gerber.GerberError as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(
+                    self, 'Import Drawing', f'Error parsing Gerber file: {e}',
+                )
+            return None
+
+    def _import_excellon(self, filename: str, silent: bool = False) -> ExcellonItem | None:
+        try:
+            return ExcellonItem.from_file(filename)
+        except excellon.ExcellonError as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(
+                    self, 'Import Drawing',
+                    f'Error parsing Excellon file: {e}',
+                )
+            return None
 
     def _edit_settings(self):
         settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)
