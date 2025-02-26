@@ -5,6 +5,7 @@ from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
 from tinycam.ui.commands import ImportFileCommand
+from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
@@ -20,9 +21,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.project = GLOBALS.APP.project
 
+        self.canvas_2d = CncCanvas2D(project=self.project, parent=self)
         self.preview_3d = CncPreview3D(project=self.project, parent=self)
 
         self.tabs = QtWidgets.QTabWidget()
+        self.tabs.addTab(self.canvas_2d, '2D')
         self.tabs.addTab(self.preview_3d, '3D')
         self.tabs.setCurrentIndex(0)
 
