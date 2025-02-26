@@ -20,10 +20,6 @@ class CncPreview3D(CncView):
         super().__init__(*args, **kwargs)
 
         self.project = project
-        self.project.items.added.connect(self._on_project_item_added)
-        self.project.items.removed.connect(self._on_project_item_removed)
-        self.project.items.changed.connect(self._on_project_item_changed)
-        self.project.items.updated.connect(self._on_project_item_updated)
 
         self._tool = SelectTool(self.project, self)
         self._tool.activate()
@@ -52,6 +48,10 @@ class CncPreview3D(CncView):
 
         self.add_item(self._orientation_cube)
 
+        self.project.items.added.connect(self._on_project_item_added)
+        self.project.items.removed.connect(self._on_project_item_removed)
+        self.project.items.changed.connect(self._on_project_item_changed)
+        self.project.items.updated.connect(self._on_project_item_updated)
         for i, _ in enumerate(self.project.items):
             self._on_project_item_added(i)
 
@@ -99,14 +99,13 @@ class CncPreview3D(CncView):
     def _on_project_item_added(self, index: int):
         item = self.project.items[index]
 
-        view = None
-        if isinstance(item, CncIsolateJob):
-            view = CncIsolateJobView(self.ctx, index, item)
-        elif isinstance(item, (GerberItem, ExcellonItem, CncJob)):
-            view = CncProjectItemView(self.ctx, index, item)
-
-        if view is None:
-            return
+        match item:
+            case CncIsolateJob():
+                view = CncIsolateJobView(self.ctx, index, item)
+            case GerberItem() | ExcellonItem() | CncJob():
+                view = CncProjectItemView(self.ctx, index, item)
+            case _:
+                return
 
         for existing_view in self.items:
             if hasattr(existing_view, 'index') and existing_view.index >= index:
