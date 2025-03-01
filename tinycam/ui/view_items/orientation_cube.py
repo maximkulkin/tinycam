@@ -142,7 +142,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
             ''',
         )
 
-        self._select_program = self.context.program(
+        self._pick_program = self.context.program(
             vertex_shader='''
                 #version 410 core
 
@@ -172,8 +172,8 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 }
             ''',
         )
-        self._face_select_texture = self.context.texture((6, 1), 4, dtype='u1')
-        self._face_select_texture.filter = (mgl.NEAREST, mgl.NEAREST)
+        self._face_pick_texture = self.context.texture((6, 1), 4, dtype='u1')
+        self._face_pick_texture.filter = (mgl.NEAREST, mgl.NEAREST)
 
         self._quad_program = self.context.program(
             vertex_shader='''
@@ -243,11 +243,11 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 5, 5, 5, 5, 5, 5,
             ], dtype='i4').tobytes()
         )
-        self._select_vao = self.context.vertex_array(self._select_program, [
+        self._pick_vao = self.context.vertex_array(self._pick_program, [
             (self._vertex_buffer, '3f', 'position'),
             (self._face_id_buffer, 'i', 'face_id'),
         ])
-        self._select_program['tex'] = 0
+        self._pick_program['tex'] = 0
 
         quad_buffer = self.context.buffer(np.array([
             ( 0.5, -0.5, 1., 0.),
@@ -309,24 +309,24 @@ class OrientationCube(ViewItem, QtCore.QObject):
             Matrix44.from_quaternion(self._camera.rotation.conjugate)
         )
 
-        if state.selecting:
+        if state.picking:
             data = np.array([
-                state.register_selectable(self, Orientation.LEFT),
-                state.register_selectable(self, Orientation.RIGHT),
-                state.register_selectable(self, Orientation.FRONT),
-                state.register_selectable(self, Orientation.BACK),
-                state.register_selectable(self, Orientation.BOTTOM),
-                state.register_selectable(self, Orientation.TOP),
+                state.register_pickable(self, Orientation.LEFT),
+                state.register_pickable(self, Orientation.RIGHT),
+                state.register_pickable(self, Orientation.FRONT),
+                state.register_pickable(self, Orientation.BACK),
+                state.register_pickable(self, Orientation.BOTTOM),
+                state.register_pickable(self, Orientation.TOP),
             ], dtype='u1')
-            self._face_select_texture.write(data.tobytes())
-            self._select_program['mvp'].write(self._matrix.tobytes())
+            self._face_pick_texture.write(data.tobytes())
+            self._pick_program['mvp'].write(self._matrix.tobytes())
             with self.context.scope(
                 framebuffer=self._framebuffer,
                 flags=mgl.DEPTH_TEST,
             ):
                 self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
-                self._face_select_texture.use(0)
-                self._select_vao.render(mgl.TRIANGLES)
+                self._face_pick_texture.use(0)
+                self._pick_vao.render(mgl.TRIANGLES)
         else:
             self._program['mvp'].write(self._matrix.tobytes())
 

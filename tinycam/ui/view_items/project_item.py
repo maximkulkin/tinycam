@@ -61,8 +61,8 @@ class CncProjectItemView(Composite):
         if not self._model.visible:
             return
 
-        if state.selecting:
-            color = state.register_selectable(self)
+        if state.picking:
+            color = state.register_pickable(self)
             color = Vector4(float(color[0]) / 255.0, float(color[1]) / 255.0, float(color[2]) / 255.0, float(color[3]) / 255.0)
         else:
             color = self._model.color
