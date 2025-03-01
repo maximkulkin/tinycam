@@ -32,6 +32,9 @@ class CncCanvas2D(CncView):
         for i, _ in enumerate(self.project.items):
             self._on_project_item_added(i)
 
+        self._tool = SelectTool(self.project, self)
+        self._tool.activate()
+
     @property
     def project(self) -> CncProject:
         return self._project
