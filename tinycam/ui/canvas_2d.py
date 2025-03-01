@@ -1,13 +1,19 @@
 from tinycam.project import CncProject, GerberItem, ExcellonItem, CncJob
+from tinycam.ui.camera import OrthographicCamera
 from tinycam.ui.camera_controllers import PanAndZoomController
 from tinycam.ui.view import CncView
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
+from tinycam.ui.tools import MarkerTool, SelectTool
+from tinycam.types import Vector3
 
 
 class CncCanvas2D(CncView):
     def __init__(self, project: CncProject, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        camera = OrthographicCamera()
+        camera.position = Vector3(0, 0, 5)
+
+        super().__init__(camera=camera, *args, **kwargs)
 
         self._project = project
 

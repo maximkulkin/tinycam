@@ -191,17 +191,20 @@ class ViewItem:
 
 
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ctx = None
 
         self.setMouseTracking(True)
 
         self._items = []
-        self._camera = PerspectiveCamera()
+        if camera is None:
+            camera = PerspectiveCamera()
+            camera.position += Vector3(0, 0, 5)
+            camera.look_at(Vector3())
+
+        self._camera = camera
         self._camera.pixel_size = Vector2(self.width(), self.height())
-        self._camera.position += Vector3(0, 0, 5)
-        self._camera.look_at(Vector3())
 
         self._pick_texture = None
         self._pick_framebuffer = None
