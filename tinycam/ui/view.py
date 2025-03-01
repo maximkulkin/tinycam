@@ -186,9 +186,6 @@ class ViewItem:
     def render(self, state: RenderState):
         raise NotImplementedError()
 
-    def on_click(self, tag):
-        pass
-
 
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
