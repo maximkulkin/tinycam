@@ -1,6 +1,5 @@
 import moderngl as mgl
 import shapely
-from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector4, Matrix44
 from tinycam.ui.view import Context, RenderState
@@ -75,6 +74,3 @@ class CncProjectItemView(Composite):
 
         with self.context.scope(disable=mgl.DEPTH_TEST, wireframe=self._model.debug, depth_func='<='):
             super().render(state)
-
-    def on_click(self, tag: object):
-        GLOBALS.APP.project.selectedItems = [self._model]
