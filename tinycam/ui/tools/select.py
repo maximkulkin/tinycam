@@ -1,8 +1,10 @@
-import moderngl
+import enum
 import numpy as np
-from tinycam.types import Vector2
+from tinycam.globals import GLOBALS
+from tinycam.types import Vector2, Vector4
 from tinycam.ui.tools import CncTool
-from tinycam.ui.view import ViewItem, RenderState
+from tinycam.ui.view_items.canvas import Rectangle
+from tinycam.ui.view_items.project_item import CncProjectItemView
 from PySide6 import QtCore
 from PySide6.QtCore import Qt
 
@@ -11,61 +13,10 @@ def vector2(point: QtCore.QPoint | QtCore.QPointF) -> Vector2:
     return Vector2(point.x(), point.y())
 
 
-class SelectionBox(ViewItem):
-    def __init__(
-        self,
-        context,
-        point1: Vector2 | None = None,
-        point2: Vector2 | None = None,
-    ):
-        super().__init__(context)
-
-        self.point1 = point1 or Vector2()
-        self.point2 = point2 or Vector2()
-
-        self._program = self.context.program(
-            vertex_shader='''
-                #version 410 core
-
-                in vec2 position;
-
-                uniform vec2 position1;
-                uniform vec2 position2;
-                uniform vec2 screen_size;
-
-                void main() {
-                    gl_Position = vec4(position, 0, 1);
-                }
-            ''',
-            fragment_shader='''
-                #version 410 core
-
-                out vec4 color;
-
-                void main() {
-                    color = vec4(1, 1, 1, 1);
-                }
-            ''',
-        )
-
-        vertices = np.array([
-            (-0.5,  0.5, 0.0),
-            ( 0.5,  0.5, 0.0),
-            (-0.5, -0.5, 0.0),
-            ( 0.5, -0.5, 0.0),
-        ], dtype='f4')
-
-        self._vbo = self.context.buffer(vertices.tobytes())
-        self._vao = self.context.vertex_array(self._program, [
-            (self._vbo, '3f', 'position'),
-        ])
-
-    def render(self, state: RenderState):
-        self._program['position1'] = self.position1
-        self._program['position2'] = self.position2
-
-        with self.context.scope(enable_only=[moderngl.DEPTH_TEST]):
-            self._vao.render(moderngl.TRIANGLE_STRIP)
+class SelectionModifier(enum.Flag):
+    NONE = 0
+    ADDITIVE = enum.auto()
+    TOGGLE = enum.auto()
 
 
 class SelectTool(CncTool):
@@ -83,38 +34,44 @@ class SelectTool(CncTool):
             self._box = None
         self._p1 = None
         self._p2 = None
+        self._selecting = False
 
     def deactivate(self):
         self.cancel()
+        super().deactivate()
 
     def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
         if (event.type() == QtCore.QEvent.MouseButtonPress and
-                event.button() & Qt.LeftMouseButton):
+                event.button() & Qt.LeftButton):
             self._p1 = vector2(event.position())
             self._p2 = self._p1
+            self._selecting = True
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease and
-                event.button() & Qt.LeftMouseButton):
+                event.button() & Qt.LeftButton):
+
+            modifiers = self._make_selection_modifiers(event.modifiers())
             if self._box:
-                # TODO: do box select
+                self._select_items_in_box(self._p1, self._p2, modifiers)
+
                 self.view.remove_item(self._box)
                 self._box = None
             else:
-                # TODO: do single select
-                # selected = self.view.select_item(event.position())
-                # if selected is not None:
-                pass
+                self._select_item_at_point(vector2(event.position()), modifiers)
+
+            self._selecting = False
             return True
-        elif event.type() == QtCore.QEvent.MouseMove:
+        elif self._selecting and event.type() == QtCore.QEvent.MouseMove:
             self._p2 = vector2(event.position())
 
             if self._box is None and (self._p1 - self._p2).length > 10:
-                self._box = SelectionBox(self.view.context, point1=self._p1, point2=self._p2)
+                self._box = self._make_box()
                 self.view.add_item(self._box)
             elif self._box is not None:
-                self._box.position2 = self._p2
+                self._box.center = (self._p1 + self._p2) * 0.5
+                self._box.size = np.abs(self._p1 - self._p2)
 
-            event.widget().update()
+            widget.update()
             return True
         elif event.type() == QtCore.QEvent.KeyPress:
             if event.code() == Qt.Key_Escape:
@@ -122,3 +79,59 @@ class SelectTool(CncTool):
                 return True
 
         return False
+
+    def _make_box(self) -> Rectangle:
+        return Rectangle(
+            context=self.view.ctx,
+            center=(self._p1 + self._p2) * 0.5,
+            size=np.abs(self._p1 - self._p2),
+            fill_color=Vector4(1, 1, 0, 0.1),
+            edge_color=Vector4(1, 1, 0, 0.4),
+            edge_width=2,
+        )
+
+    def _select_item_at_point(self, point: QtCore.QPointF, modifiers: SelectionModifier):
+        project = GLOBALS.APP.project
+
+        picked = self.view.pick_item(point)
+        if picked is not None:
+            obj, tag = picked
+            if isinstance(obj, CncProjectItemView):
+                obj_index = obj.index
+            else:
+                obj_index = None
+        else:
+            obj_index = None
+
+        if obj_index is not None:
+            match modifiers:
+                case SelectionModifier.ADDITIVE:
+                    project.selection.add(obj_index)
+                case SelectionModifier.TOGGLE:
+                    if obj_index in project.selection:
+                        project.selection.remove(obj_index)
+                    else:
+                        project.selection.add(obj_index)
+                case _:
+                    project.selection.set([obj_index])
+        else:
+            match modifiers:
+                case SelectionModifier.ADDITIVE | SelectionModifier.TOGGLE:
+                    pass
+                case _:
+                    project.selection.clear()
+
+    def _select_items_in_box(self, p1: Vector2, p2: Vector2, modifiers: SelectionModifier):
+        # TODO: implement box selection
+        pass
+
+    def _make_selection_modifiers(
+        self,
+        keyboard_modifiers: Qt.KeyboardModifier,
+    ) -> SelectionModifier:
+        modifiers = SelectionModifier.NONE
+        if keyboard_modifiers & Qt.ShiftModifier:
+            modifiers |= SelectionModifier.ADDITIVE
+        if keyboard_modifiers & Qt.AltModifier:
+            modifiers |= SelectionModifier.TOGGLE
+        return modifiers
