@@ -168,7 +168,7 @@ class CncProject(QtCore.QObject):
                 self._signal_changed()
 
         def clear(self):
-            if not self._items:
+            if not self._indexes:
                 return
 
             for index in self._indexes:
