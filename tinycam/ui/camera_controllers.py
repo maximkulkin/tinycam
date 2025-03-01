@@ -175,6 +175,8 @@ class PanAndZoomController(QtCore.QObject):
         self._camera = camera
         self._start_position = None
         self._last_position = None
+        self._pan_button = Qt.MiddleButton
+        self._pan_modifiers = Qt.NoModifier
 
         self._panning = False
 
@@ -185,8 +187,10 @@ class PanAndZoomController(QtCore.QObject):
         match value:
             case ControlType.MOUSE:
                 self._pan_button = Qt.MiddleButton
+                self._pan_modifiers = Qt.NoModifier
             case ControlType.TOUCHPAD:
-                self._pan_button = Qt.LeftButton
+                self._pan_button = Qt.RightButton
+                self._pan_modifiers = Qt.MetaModifier
 
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
         return unproject((p.x(), p.y()), self._camera)
@@ -197,7 +201,7 @@ class PanAndZoomController(QtCore.QObject):
 
         if (event.type() == QtCore.QEvent.MouseButtonPress
                 and event.button() == self._pan_button
-                and event.modifiers() == Qt.NoModifier):
+                and event.modifiers() == self._pan_modifiers):
             self._start_position = event.position()
             return False
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
@@ -220,7 +224,7 @@ class PanAndZoomController(QtCore.QObject):
 
                 return False
 
-            if event.buttons() != self._pan_button:
+            if event.buttons() != self._pan_button or event.modifiers() != self._pan_modifiers:
                 self._panning = False
                 self._start_position = None
                 return False
