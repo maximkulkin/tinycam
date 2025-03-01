@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import moderngl as mgl
 import numpy as np
 from PySide6 import QtCore, QtOpenGLWidgets
@@ -215,11 +215,20 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         return self._items
 
     def add_item(self, item: ViewItem):
-        self._items.append(item)
+        self.add_items([item])
+
+    def add_items(self, items: Sequence[ViewItem]):
+        self._items.extend(items)
         self._items.sort(key=lambda x: x.priority)
+        self.update()
 
     def remove_item(self, item: ViewItem):
         self._items.remove(item)
+        self.update()
+
+    def remove_items(self, predicate: Callable[[ViewItem], bool]):
+        self._items = self._items.filter(lambda item: not predicate(item))
+        self.update()
 
     def pick_item(
         self,
