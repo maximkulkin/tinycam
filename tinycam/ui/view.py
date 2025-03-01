@@ -262,6 +262,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
 
         self.ctx.viewport = (0, 0, width, height)
         self._camera.pixel_size = Vector2(width, height)
+        self._camera.device_pixel_ratio = self.window().devicePixelRatio()
         self._pick_framebuffer = None
         self._pick_texture = None
 

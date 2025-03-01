@@ -25,6 +25,7 @@ class Camera:
         self._view_matrix = None
         self._projection_matrix = None
         self._pixel_size = Vector2()
+        self._device_pixel_ratio = 1.0
 
     @property
     def position(self) -> Vector3:
@@ -59,6 +60,14 @@ class Camera:
     @property
     def pixel_height(self) -> float:
         return self.pixel_size.y
+
+    @property
+    def device_pixel_ratio(self) -> float:
+        return self._device_pixel_ratio
+
+    @device_pixel_ratio.setter
+    def device_pixel_ratio(self, value: float):
+        self._device_pixel_ratio = value
 
     @property
     def near(self) -> float:
