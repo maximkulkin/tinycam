@@ -170,6 +170,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         self._save_settings()
         super().closeEvent(event)
+        QtWidgets.QApplication.quit()
 
     def _save_settings(self):
         settings = QtCore.QSettings()
