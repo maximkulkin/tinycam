@@ -5,8 +5,10 @@ from tinycam.globals import GLOBALS
 
 
 class CncProjectItem(QtCore.QObject):
+    changed: QtCore.Signal
+    updated: QtCore.Signal
 
-    def __init__(self, name, color: QtGui.QColor = Qt.black):
+    def __init__(self, name, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__()
         self._name = name
         self._color = color

@@ -112,9 +112,9 @@ class CncProject(QtCore.QObject):
             self.changed.emit()
 
         def set(self, indexes: Sequence[int]):
-            indexes = set(indexes)
+            idxs = set(indexes)
 
-            for index in (self._indexes - indexes):
+            for index in (self._indexes - idxs):
                 self.remove(index)
 
             self.add_all(indexes)
@@ -196,7 +196,7 @@ class CncProject(QtCore.QObject):
         self._selection = self.Selection(self)
 
     @property
-    def items(self) -> Sequence[CncProjectItem]:
+    def items(self) -> 'CncProject.ItemCollection':
         return self._items
 
     @property

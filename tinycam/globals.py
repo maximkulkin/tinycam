@@ -1,6 +1,9 @@
 from tinycam.cnc_controller import CncController
 from tinycam.geometry import Geometry
 from tinycam.settings import SETTINGS, CncSettings
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from tinycam.application import CncApplication
 
 __all__ = [
     'CncGlobals',
@@ -10,7 +13,7 @@ __all__ = [
 
 class CncGlobals:
     GEOMETRY: Geometry = Geometry()
-    APP = None
+    APP: 'CncApplication'
     SETTINGS: CncSettings = SETTINGS
     CNC_CONTROLLER: CncController = CncController()
 
