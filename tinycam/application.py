@@ -1,7 +1,9 @@
 from PySide6 import QtCore, QtWidgets, QtGui
+from typing import cast
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProject
+from tinycam.settings import CncSettings
 from tinycam.tasks import TaskManager
 
 
@@ -9,10 +11,10 @@ class CncApplication(QtWidgets.QApplication):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.project = CncProject()
-        self.settings = GLOBALS.SETTINGS
-        self.undo_stack = QtGui.QUndoStack()
-        self.task_manager = TaskManager()
+        self.project: CncProject = CncProject()
+        self.settings: CncSettings = GLOBALS.SETTINGS
+        self.undo_stack: QtGui.QUndoStack = QtGui.QUndoStack()
+        self.task_manager: TaskManager = TaskManager()
 
         self._load_settings()
         self.aboutToQuit.connect(self._save_settings)
@@ -34,7 +36,7 @@ class CncApplication(QtWidgets.QApplication):
             data = settings.value(setting.path, None)
             if data is not None:
                 try:
-                    setting.load(data)
+                    setting.load(cast(str, data))
                 except Exception:
                     continue
 
