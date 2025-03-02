@@ -1,6 +1,6 @@
 import collections
 import enum
-from typing import Any, Type, override
+from typing import Any, override
 from tinycam.types import Vector2
 from PySide6 import QtCore
 
@@ -12,7 +12,7 @@ def humanize(s: str) -> str:
 
 
 class CncSetting(QtCore.QObject):
-    changed = QtCore.Signal(object)
+    changed: QtCore.Signal = QtCore.Signal(object)
 
     def __init__(
         self,
@@ -22,11 +22,11 @@ class CncSetting(QtCore.QObject):
         default: object | None = None,
     ):
         super().__init__()
-        self._path = path
-        self._value = None
-        self._label = label
-        self._description = description
-        self._default = default
+        self._path: str = path
+        self._value: object = None
+        self._label: str | None = label
+        self._description: str | None = description
+        self._default: object = default
 
     @property
     def path(self) -> str:
@@ -67,7 +67,7 @@ class CncSetting(QtCore.QObject):
     def save(self) -> str:
         return str(self.value)
 
-    def load(self, _data: str):
+    def load(self, _data: str) -> None:
         raise NotImplementedError()
 
     def validate(self, _data: object) -> str | None:
@@ -77,7 +77,7 @@ class CncSetting(QtCore.QObject):
 class CncStringSetting(CncSetting):
     @override
     def load(self, value: str):
-        self._value = value
+        self._value: object = value
 
     @override
     def validate(self, data: object) -> str | None:
@@ -210,11 +210,11 @@ class CncBooleanSetting(CncSetting):
 class CncVector2Setting(CncSetting):
     @override
     def save(self) -> str:
-        return f'{self.value[0]},{self.value[1]}'
+        return f'{self.value[0]},{self.value[1]}'  # pyright: ignore
 
     @override
     def load(self, data: str) -> object:
-        self._value = Vector2((float(x) for x in data.split(',', 1)))
+        self._value = Vector2((float(x) for x in data.split(',', 1)))  # pyright: ignore
 
     @override
     def validate(self, data: object) -> str | None:
@@ -226,19 +226,19 @@ class CncVector2Setting(CncSetting):
 
 
 class CncEnumSetting(CncSetting):
-    def __init__(self, *args, enum_type: Type[enum.Enum] | None = None, **kwargs):
+    def __init__(self, *args, enum_type: type[enum.Enum] | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         if enum_type is None:
             raise ValueError('Enum type is not specified')
         self._enum_type = enum_type
 
     @property
-    def enum_type(self) -> Type[enum.Enum]:
+    def enum_type(self) -> type[enum.Enum]:
         return self._enum_type
 
     @override
     def save(self) -> str:
-        return str(self.value.value)
+        return str(self.value.value)  # pyright: ignore
 
     @override
     def load(self, data: str) -> object:
@@ -261,11 +261,11 @@ class CncListSetting[T](CncSetting):
     __match_args__ = ('item_type',)
 
     @override
-    def serialize(self, data: object) -> str:
+    def load(self, data: str) -> object:
         raise NotImplementedError()
 
     @override
-    def deserialize(self, data: str) -> object:
+    def save(self, data: object) -> str:
         raise NotImplementedError()
 
     @override
@@ -300,10 +300,10 @@ class CncInvalidSettingPathError(CncSettingError):
 
 
 class CncInvalidSettingValueError(CncSettingError):
-    def __init__(self, path: str, error: Exception):
+    def __init__(self, path: str, error: str):
         super().__init__(f'Value for {path} is invalid: {error}')
         self.path: str = path
-        self.error: Exception = error
+        self.error: str = error
 
 
 class CncSectionSettings:
@@ -322,7 +322,7 @@ class CncSectionSettings:
     def _make_path(self, path: str) -> str:
         return f'{self._path}/{path}'
 
-    def register(self, path: str, type: Type[CncSetting], *args, **kwargs):
+    def register(self, path: str, type: type[CncSetting], *args, **kwargs):
         return self._settings.register(self._make_path(path), type, *args, **kwargs)
 
     def __getitem__(self, path: str) -> CncSetting:
@@ -349,12 +349,12 @@ class CncSectionSettings:
     def is_default(self, path: str | CncSetting) -> bool:
         if isinstance(path, str):
             path = self._make_path(path)
-        return self._settings.is_default(self._make_path(path))
+        return self._settings.is_default(path)
 
     def validate(self, path: str | CncSetting, value: Any):
         if isinstance(path, str):
             path = self._make_path(path)
-        self._settings.validate(self._make_path(path), value)
+        self._settings.validate(path, value)
 
     def __iter__(self):
         prefix = f'{self._path}/'
@@ -377,7 +377,7 @@ class CncSettings(QtCore.QObject):
     def register(
         self,
         path: str,
-        setting_type: Type[CncSetting],
+        setting_type: type[CncSetting],
         *args,
         label: str | None = None,
         description: str | None = None,
