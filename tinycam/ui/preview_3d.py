@@ -7,7 +7,6 @@ from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
-from tinycam.ui.tools import SelectTool
 
 
 s.SETTINGS.register('3D/orientation_cube_position',
@@ -20,9 +19,6 @@ class CncPreview3D(CncView):
         super().__init__(*args, **kwargs)
 
         self.project = project
-
-        self._tool = SelectTool(self.project, self)
-        self._tool.activate()
 
         self._camera_orbit_controller = OrbitController(self._camera)
         self._pan_and_zoom_controller = PanAndZoomController(self._camera)
