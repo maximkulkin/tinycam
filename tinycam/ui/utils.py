@@ -21,7 +21,7 @@ def unproject(point: Tuple[float, float], camera: Camera) -> Vector3:
     ndc = camera.screen_to_ndc_point(Vector2(point))
 
     p = Vector4(*ndc, 1)
-    v = ivp * p
+    v: Vector4 = ivp * p
     if v.w != 0.0:
         v /= v.w
 
