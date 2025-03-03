@@ -1,10 +1,10 @@
-from PySide6 import QtGui
 from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.globals import GLOBALS
 from tinycam.types import Vector3, Vector4, Matrix44
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.line3d import Line3D
 from tinycam.ui.view_items.project_item import CncProjectItemView
+from tinycam.ui.utils import qcolor_to_vec4
 
 
 PATH_COLORS = {
