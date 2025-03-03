@@ -103,6 +103,50 @@ class ContextProxy:
         setattr(obj._context, self._name, value)
 
 
+class Uniform:
+    def __init__(self, uniform: mgl.Uniform):
+        self._uniform = uniform
+
+    @property
+    def value(self) -> Any:
+        return self._uniform.value
+
+    @value.setter
+    def value(self, value: float | np.ndarray | QtGui.QColor):
+        if isinstance(value, QtGui.QColor):
+            c = cast(QtGui.QColor, value)
+            data = Vector4(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+        elif isinstance(value, float):
+            data = np.array([value], dtype='f4')
+        elif isinstance(value, int):
+            data = np.array([value], dtype='i4')
+        else:
+            data = value
+
+        self.write(data)
+
+    def read(self) -> bytes:
+        return self._uniform.read()
+
+    def write(self, data: Any):
+        self._uniform.write(data)
+
+
+class Program:
+    def __init__(self, program: mgl.Program):
+        self._program = program
+
+    def __getitem__(self, name: str) -> Uniform:
+        inner = self._program[name]
+        if not isinstance(inner, mgl.Uniform):
+            raise ValueError(f'Unknown uniform: {name}')
+
+        return Uniform(inner)
+
+    def __setitem__(self, name: str, value: Any):
+        self[name].value = value
+
+
 class Context:
     def __init__(self, context: mgl.Context):
         self._context = context
@@ -166,9 +210,10 @@ class Context:
     def scope(self, **kwargs):
         return Scope(self, **kwargs)
 
-    def program(self, vertex_shader: str, fragment_shader: str) -> mgl.Program:
-        return self._context.program(vertex_shader=vertex_shader,
-                                     fragment_shader=fragment_shader)
+    def program(self, vertex_shader: str, fragment_shader: str) -> Program:
+        return Program(
+            self._context.program(vertex_shader=vertex_shader,
+                                  fragment_shader=fragment_shader)
         )
 
     def buffer(self, data: bytes | np.ndarray) -> mgl.Buffer:
@@ -176,7 +221,7 @@ class Context:
 
     def vertex_array(
         self,
-        program: mgl.Program,
+        program: Program,
         content: list[tuple[mgl.Buffer, str, str]],
         index_buffer: mgl.Buffer | None = None,
         index_element_size: int = 4,
