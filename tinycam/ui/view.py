@@ -4,7 +4,7 @@ from numbers import Number as number
 import numpy as np
 from typing import Any, cast
 from PIL.Image import Image
-from PySide6 import QtCore, QtOpenGLWidgets
+from PySide6 import QtCore, QtGui, QtOpenGLWidgets
 from PySide6.QtCore import Qt
 from tinycam.types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.camera import Camera, PerspectiveCamera
@@ -154,10 +154,12 @@ class Context:
 
     def clear(
         self,
-        color: Vector4 | tuple[number, number, number, number] | np.ndarray = Vector4(),
+        color: Vector4 | tuple[number, number, number, number] | np.ndarray | QtGui.QColor = Vector4(),
         depth: float = 1.0,
         viewport: tuple[int, int, int, int] | Rect | None = None,
     ):
+        if isinstance(color, QtGui.QColor):
+            color = Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
         # Viewport is (x, y, width, height)
         self._context.clear(color=color, depth=depth, viewport=viewport)
 
