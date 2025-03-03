@@ -1,9 +1,12 @@
 from collections.abc import Callable, Sequence
 import moderngl as mgl
+from numbers import Number as number
 import numpy as np
+from typing import Any, cast
+from PIL.Image import Image
 from PySide6 import QtCore, QtOpenGLWidgets
 from PySide6.QtCore import Qt
-from tinycam.types import Vector2, Vector3
+from tinycam.types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.camera import Camera, PerspectiveCamera
 
 
@@ -149,8 +152,71 @@ class Context:
     def __getattr__(self, name: str) -> object:
         return getattr(self._context, name)
 
+    def clear(
+        self,
+        color: Vector4 | tuple[number, number, number, number] | np.ndarray = Vector4(),
+        depth: float = 1.0,
+        viewport: tuple[int, int, int, int] | Rect | None = None,
+    ):
+        # Viewport is (x, y, width, height)
+        self._context.clear(color=color, depth=depth, viewport=viewport)
+
     def scope(self, **kwargs):
         return Scope(self, **kwargs)
+
+    def program(self, vertex_shader: str, fragment_shader: str) -> mgl.Program:
+        return self._context.program(vertex_shader=vertex_shader,
+                                     fragment_shader=fragment_shader)
+        )
+
+    def buffer(self, data: bytes | np.ndarray) -> mgl.Buffer:
+        return self._context.buffer(data)
+
+    def vertex_array(
+        self,
+        program: mgl.Program,
+        content: list[tuple[mgl.Buffer, str, str]],
+        index_buffer: mgl.Buffer | None = None,
+        index_element_size: int = 4,
+        mode: int = mgl.TRIANGLES,
+    ) -> mgl.VertexArray:
+        return self._context.vertex_array(
+            program=program._program,
+            content=content,
+            index_buffer=index_buffer,
+            index_element_size=index_element_size,
+            mode=mode,
+        )
+
+    def texture(
+        self,
+        size: tuple[int, int],
+        components: int,
+        data: bytes | np.ndarray | Image | None = None,
+        samples: int = 0,
+        alignment: int = 1,
+        dtype: str = 'f1',
+    ) -> mgl.Texture:
+        if isinstance(data, (np.ndarray, Image)):
+            data = data.tobytes()
+        return self._context.texture(
+            size=size,
+            components=components,
+            data=data,
+            samples=samples,
+            alignment=alignment,
+            dtype=dtype,
+        )
+
+    def framebuffer(
+        self,
+        color_attachments: list[mgl.Texture],
+        depth_attachment: mgl.Texture | None = None,
+    ) -> mgl.Framebuffer:
+        return self._context.framebuffer(
+            color_attachments=color_attachments,
+            depth_attachment=depth_attachment,
+        )
 
 
 class RenderState:
