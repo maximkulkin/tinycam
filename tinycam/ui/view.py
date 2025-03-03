@@ -331,6 +331,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def initializeGL(self):
         super().initializeGL()
         self.ctx = Context(mgl.create_context(required=410))
+        self.context = self.ctx
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)
