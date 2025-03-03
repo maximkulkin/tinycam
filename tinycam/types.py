@@ -233,19 +233,19 @@ class Matrix44(pyrr.Matrix44):
 
     @classmethod
     def from_translation(cls, translation: Vector3) -> 'Matrix44':
-        return pyrr.matrix44.create_from_translation(translation).view(cls)
+        return pyrr.matrix44.create_from_translation(translation, dtype='f4').view(cls)
 
     @classmethod
     def from_rotation(cls, rotation: Quaternion) -> 'Matrix44':
-        return pyrr.matrix44.create_from_quaternion(rotation).view(cls)
+        return pyrr.matrix44.create_from_quaternion(rotation, dtype='f4').view(cls)
 
     @classmethod
     def from_scale(cls, scale: Vector3) -> 'Matrix44':
-        return pyrr.matrix44.create_from_scale(scale).view(cls)
+        return pyrr.matrix44.create_from_scale(scale, dtype='f4').view(cls)
 
     @classmethod
     def look_at(cls, eye: Vector3, target: Vector3, up: Vector3) -> 'Matrix44':
-        return pyrr.matrix44.create_look_at(eye, target, up).view(cls)
+        return pyrr.matrix44.create_look_at(eye, target, up, dtype='f4').view(cls)
 
     @classmethod
     def orthogonal_projection(
@@ -258,9 +258,10 @@ class Matrix44(pyrr.Matrix44):
         far: number | np.number,
     ) -> 'Matrix44':
         return pyrr.matrix44.create_orthogonal_projection(
-            float(left), float(right),
-            float(bottom), float(top),
-            float(near), float(far),
+            left=float(left), right=float(right),
+            bottom=float(bottom), top=float(top),
+            near=float(near), far=float(far),
+            dtype='f4',
         ).view(cls)
 
     @classmethod
@@ -272,8 +273,8 @@ class Matrix44(pyrr.Matrix44):
         far: number | np.number,
     ) -> 'Matrix44':
         return pyrr.matrix44.create_perspective_projection(
-            float(fov), float(aspect),
-            float(near), float(far),
+            fovy=float(fov), aspect=float(aspect),
+            near=float(near), far=float(far),
             dtype='f4',
         ).view(cls)
 
@@ -284,6 +285,10 @@ class Matrix44(pyrr.Matrix44):
             return super().__mul__(other).view(Vector4)
         else:
             raise ValueError(f'Invalid value type: {other}')
+
+    @property
+    def inverse(self) -> 'Matrix44':
+        return super().inverse.view(Matrix44)
 
     def decompose(self) -> tuple[Vector3, Quaternion, Vector3]:
         scale, rotation, translation = pyrr.matrix44.decompose(self)
