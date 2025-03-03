@@ -46,11 +46,11 @@ class Triangle(ViewItem):
             ( 0.0, -0.5, 0.0),
         ], dtype='f4')
 
-        self._vbo = self.context.buffer(vertices.tobytes())
+        self._vbo = self.context.buffer(vertices)
         self._vao = self.context.vertex_array(self._program, [
             (self._vbo, '3f', 'position'),
         ])
-        self._program['color'].write(color.tobytes())
+        self._program['color'] = color
 
     def render(self, state: RenderState):
         model_matrix = (
@@ -59,8 +59,8 @@ class Triangle(ViewItem):
         )
 
         camera = state.camera
-        self._program['mvp'].write(
-            (camera.projection_matrix * camera.view_matrix * model_matrix).tobytes()
+        self._program['mvp'] = (
+            (camera.projection_matrix * camera.view_matrix * model_matrix)
         )
 
         with self.context.scope(enable=moderngl.DEPTH_TEST):

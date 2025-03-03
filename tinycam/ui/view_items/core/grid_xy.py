@@ -121,10 +121,12 @@ class GridXY(ViewItem):
             (1,  -1), (-1,  -1), (1, 1), (-1, 1),
         ], dtype='f4')
 
-        self._vbo = self.context.buffer(vertices.tobytes())
-        self._vao = self.context.vertex_array(self._program, [
-            (self._vbo, '2f', 'position'),
-        ])
+        self._vbo = self.context.buffer(vertices)
+        self._vao = self.context.vertex_array(
+            self._program,
+            [(self._vbo, '2f', 'position')],
+            mode=mgl.TRIANGLE_STRIP,
+        )
         self._program['scale'] = 1.0
 
     def render(self, state: RenderState):
@@ -133,7 +135,7 @@ class GridXY(ViewItem):
 
         mvp = state.camera.projection_matrix * state.camera.view_matrix
 
-        self._program['mvp_matrix'].write(mvp.astype('f4').tobytes())
+        self._program['mvp_matrix'].write(mvp)
         d = Vector3.dot(state.camera.rotation * state.camera.FORWARD, Vector3(0, 0, 1))
         if d != 0:
             d = state.camera.position.z / d
@@ -143,4 +145,4 @@ class GridXY(ViewItem):
         self._program['screen_size'] = state.camera.pixel_size
 
         with self.context.scope(flags=mgl.DEPTH_TEST | mgl.BLEND):
-            self._vao.render(mgl.TRIANGLE_STRIP)
+            self._vao.render()

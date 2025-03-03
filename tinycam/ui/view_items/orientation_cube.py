@@ -3,7 +3,7 @@ import moderngl as mgl
 import numpy as np
 from PIL import Image
 from PySide6 import QtCore
-from tinycam.types import Vector2, Vector3, Matrix44
+from tinycam.types import Vector2, Vector3, Vector4, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.view import Context, ViewItem, RenderState
 
@@ -223,15 +223,19 @@ class OrientationCube(ViewItem, QtCore.QObject):
         ], dtype='f4') * 0.333
 
         image = Image.open('textures/orientation_cube.png').transpose(Image.FLIP_TOP_BOTTOM)
-        self._texture = self.context.texture(image.size, 3, image.tobytes())
+        self._texture = self.context.texture(image.size, 3, image)
         self._program['tex'] = 0
 
-        self._vertex_buffer = self.context.buffer(vertices.tobytes())
-        self._uv_buffer = self.context.buffer(uvs.tobytes())
-        self._vao = self.context.vertex_array(self._program, [
-            (self._vertex_buffer, '3f', 'position'),
-            (self._uv_buffer, '2f', 'texcoord'),
-        ])
+        self._vertex_buffer = self.context.buffer(vertices)
+        self._uv_buffer = self.context.buffer(uvs)
+        self._vao = self.context.vertex_array(
+            self._program,
+            [
+                (self._vertex_buffer, '3f', 'position'),
+                (self._uv_buffer, '2f', 'texcoord'),
+            ],
+            mode=mgl.TRIANGLES,
+        )
 
         self._face_id_buffer = self.context.buffer(
             np.array([
@@ -241,7 +245,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 3, 3, 3, 3, 3, 3,
                 4, 4, 4, 4, 4, 4,
                 5, 5, 5, 5, 5, 5,
-            ], dtype='i4').tobytes()
+            ], dtype='i4')
         )
         self._pick_vao = self.context.vertex_array(self._pick_program, [
             (self._vertex_buffer, '3f', 'position'),
@@ -254,10 +258,11 @@ class OrientationCube(ViewItem, QtCore.QObject):
             ( 0.5,  0.5, 1., 1.),
             (-0.5, -0.5, 0., 0.),
             (-0.5,  0.5, 0., 1.),
-        ], dtype='f4').tobytes())
+        ], dtype='f4'))
         self._quad_vao = self.context.vertex_array(
             self._quad_program,
-            [(quad_buffer, '2f 2f', 'position', 'texcoord')]
+            [(quad_buffer, '2f 2f', 'position', 'texcoord')],
+            mode=mgl.TRIANGLE_STRIP,
         )
 
         self._rendered_texture = self.context.texture((512, 512), 4)
@@ -318,8 +323,8 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 state.register_pickable(self, Orientation.BOTTOM),
                 state.register_pickable(self, Orientation.TOP),
             ], dtype='u1')
-            self._face_pick_texture.write(data.tobytes())
-            self._pick_program['mvp'].write(self._matrix.tobytes())
+            self._face_pick_texture.write(data)
+            self._pick_program['mvp'].write(self._matrix)
             with self.context.scope(
                 framebuffer=self._framebuffer,
                 flags=mgl.DEPTH_TEST,
@@ -328,15 +333,15 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 self._face_pick_texture.use(0)
                 self._pick_vao.render(mgl.TRIANGLES)
         else:
-            self._program['mvp'].write(self._matrix.tobytes())
+            self._program['mvp'].write(self._matrix)
 
             with self.context.scope(
                 framebuffer=self._framebuffer,
                 flags=mgl.DEPTH_TEST,
             ):
-                self.context.clear(color=(0.0, 0.0, 0.0, 0.0), depth=1.0)
+                self.context.clear(color=Vector4(0.0, 0.0, 0.0, 0.0), depth=1.0)
                 self._texture.use(0)
-                self._vao.render(mgl.TRIANGLES)
+                self._vao.render()
 
         size = (
             Vector2(self.SIZE.x * state.camera.aspect, self.SIZE.y) *
@@ -347,7 +352,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
 
         with self.context.scope(framebuffer=self.context.fbo, flags=mgl.BLEND):
             self._rendered_texture.use(0)
-            self._quad_vao.render(mgl.TRIANGLE_STRIP)
+            self._quad_vao.render()
 
     def on_click(self, tag):
         self.orientation_selected.emit(tag)

@@ -1,4 +1,4 @@
-import moderngl
+import moderngl as mgl
 import numpy as np
 from typing import Optional
 from tinycam.types import Vector4
@@ -103,10 +103,12 @@ class Line2D(ViewItem):
         else:
             vertices = points
 
-        self._vbo = self.context.buffer(vertices.tobytes())
-        self._vao = self.context.vertex_array(self._program, [
-            (self._vbo, '2f', 'position'),
-        ])
+        self._vbo = self.context.buffer(vertices)
+        self._vao = self.context.vertex_array(
+            self._program,
+            [(self._vbo, '2f', 'position')],
+            mode=mgl.LINE_STRIP if self._width is None else mgl.TRIANGLE_STRIP,
+        )
 
     @property
     def color(self) -> Vector4:
@@ -122,7 +124,4 @@ class Line2D(ViewItem):
             (state.camera.projection_matrix * state.camera.view_matrix).astype('f4').tobytes()
         )
 
-        if self._width is None:
-            self._vao.render(moderngl.LINE_STRIP)
-        else:
-            self._vao.render(moderngl.TRIANGLE_STRIP)
+        self._vao.render()

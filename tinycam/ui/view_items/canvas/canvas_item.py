@@ -59,7 +59,7 @@ class CanvasItem(ViewItem):
         self.size = size
 
         self._ibo = self.context.buffer(np.array([0, 1, 2, 3], dtype='i4'))
-        self._vao = self.context.vertex_array(self._program, [], index_buffer=self._ibo)
+        self._vao = self.context.vertex_array(self._program, [], index_buffer=self._ibo, mode=mgl.TRIANGLE_STRIP)
 
     @property
     def center(self) -> Vector2:
@@ -83,4 +83,4 @@ class CanvasItem(ViewItem):
         self._program['center'] = Vector2(self._center.x, state.camera.pixel_height - self._center.y)
 
         with self.context.scope(flags=mgl.BLEND):
-            self._vao.render(mgl.TRIANGLE_STRIP)
+            self._vao.render()

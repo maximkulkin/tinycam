@@ -42,7 +42,7 @@ class Polygon(ViewItem):
 
         self._model_matrix = model_matrix if model_matrix is not None else Matrix44.identity()
         self._color = color
-        self._program['color'].write(color.astype('f4').tobytes())
+        self._program['color'].value = color
 
         polygons = []
         if isinstance(polygon, sg.Polygon):
@@ -65,10 +65,10 @@ class Polygon(ViewItem):
         for polygon in polygons:
             shapely.destroy_prepared(polygon)
 
-        self._vbo = self.context.buffer(vertices.tobytes())
+        self._vbo = self.context.buffer(vertices)
         self._vao = self.context.vertex_array(self._program, [
             (self._vbo, '2f', 'position'),
-        ])
+        ], mode=mgl.TRIANGLES)
 
     @property
     def color(self) -> Vector4:
@@ -77,7 +77,7 @@ class Polygon(ViewItem):
     @color.setter
     def color(self, value: Vector4):
         self._color = value
-        self._program['color'].write(self._color.astype('f4').tobytes())
+        self._program['color'].value = self._color
 
     @property
     def model_matrix(self) -> Matrix44:
@@ -89,7 +89,7 @@ class Polygon(ViewItem):
 
     def render(self, state: RenderState):
         self._program['mvp'].write(
-            (state.camera.projection_matrix * state.camera.view_matrix * self._model_matrix).astype('f4').tobytes()
+            (state.camera.projection_matrix * state.camera.view_matrix * self._model_matrix)
         )
 
-        self._vao.render(mgl.TRIANGLES)
+        self._vao.render()
