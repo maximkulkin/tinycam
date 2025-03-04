@@ -1,17 +1,19 @@
 import math
 import numpy as np
-from numbers import Number as number
 import pyrr
+
+
+type number = int | float | np.number
 
 
 class Vector1Proxy:
     def __init__(self, index: int):
         self._index = index
 
-    def __get__(self, obj: object, cls) -> np.float32:
+    def __get__(self, obj: np.ndarray, cls) -> np.float32:
         return obj[self._index]
 
-    def __set__(self, obj: object, value: number | np.number):
+    def __set__(self, obj: np.ndarray, value: number):
         obj[self._index] = value
 
 
@@ -19,10 +21,10 @@ class Vector2Proxy:
     def __init__(self, index: tuple[int, int]):
         self._index = index
 
-    def __get__(self, obj: object, cls) -> 'Vector2':
+    def __get__(self, obj: np.ndarray, cls) -> 'Vector2':
         return Vector2(obj[self._index,])
 
-    def __set__(self, obj: object, value: 'Vector2 | np.ndarray | list[number | np.number]'):
+    def __set__(self, obj: np.ndarray, value: 'Vector2 | np.ndarray | tuple[number, number]'):
         obj[self._index,] = value
 
 
@@ -30,20 +32,20 @@ class Vector3Proxy:
     def __init__(self, index: tuple[int, int, int]):
         self._index = index
 
-    def __get__(self, obj: object, cls) -> 'Vector3':
+    def __get__(self, obj: np.ndarray, cls) -> 'Vector3':
         return Vector3(obj[self._index,])
 
-    def __set__(self, obj: object, value: 'Vector3 | np.ndarray | list[number | np.number]'):
+    def __set__(self, obj: np.ndarray, value: 'Vector3 | np.ndarray | tuple[number, number, number]'):
         obj[self._index,] = value
 
 
 class Vector2(np.ndarray):
     def __new__(
         cls,
-        x_or_data: number = 0.0,
+        x_or_data: number | tuple[number, number] | np.ndarray = 0.0,
         y: number = 0.0,
     ):
-        if isinstance(x_or_data, (number, np.number)):
+        if isinstance(x_or_data, (int, float, np.number)):
             return np.array([np.float32(x_or_data), np.float32(y)], dtype='f4').view(cls)
         return np.array(x_or_data, dtype='f4').view(cls)
 
@@ -71,7 +73,7 @@ class Vector2(np.ndarray):
 
     @staticmethod
     def lerp(v1: 'Vector2', v2: 'Vector2', delta: float) -> 'Vector2':
-        return v1 * delta + v2 * (1.0 - delta)
+        return Vector2(v1 * delta + v2 * (1.0 - delta))
 
     def __str__(self) -> str:
         return f'Vector2({self.x}, {self.y})'
@@ -83,11 +85,11 @@ class Vector2(np.ndarray):
 class Vector3(pyrr.Vector3):
     def __new__(
         cls,
-        x_or_data: number | np.ndarray = 0.0,
+        x_or_data: number | tuple[number, number, number] |  np.ndarray = 0.0,
         y: number = 0.0,
         z: number = 0.0
     ):
-        if isinstance(x_or_data, (number, np.number)):
+        if isinstance(x_or_data, (int, float, np.number)):
             return np.array([np.float32(x_or_data), np.float32(y), np.float32(z)], dtype='f4').view(cls)
         return np.array(x_or_data, dtype='f4').view(cls)
 
@@ -143,12 +145,12 @@ class Vector3(pyrr.Vector3):
 class Vector4(pyrr.Vector4):
     def __new__(
         cls,
-        x_or_data: number | np.ndarray | list | tuple = 0.0,
+        x_or_data: number | np.ndarray | tuple[number, number, number, number] = 0.0,
         y: number = 0.0,
         z: number = 0.0,
         w: number = 0.0,
     ):
-        if isinstance(x_or_data, (number, np.number)):
+        if isinstance(x_or_data, (int, float, np.number)):
             return np.array([
                 np.float32(x_or_data), np.float32(y), np.float32(z), np.float32(w),
             ], dtype='f4').view(cls)
@@ -196,15 +198,15 @@ class Quaternion(pyrr.Quaternion):
         return super().conjugate.view(Quaternion)
 
     @classmethod
-    def from_x_rotation(cls, angle: number | np.number):
+    def from_x_rotation(cls, angle: float | np.number):
         return pyrr.Quaternion.from_x_rotation(angle).view(cls)
 
     @classmethod
-    def from_y_rotation(cls, angle: number | np.number):
+    def from_y_rotation(cls, angle: float | np.number):
         return pyrr.Quaternion.from_y_rotation(angle).view(cls)
 
     @classmethod
-    def from_z_rotation(cls, angle: number | np.number):
+    def from_z_rotation(cls, angle: float | np.number):
         return pyrr.Quaternion.from_z_rotation(angle).view(cls)
 
     def to_eulers(self) -> Vector3:
@@ -218,11 +220,11 @@ class Quaternion(pyrr.Quaternion):
         t4 = 1.0 - 2.0 * (self.y * self.y + self.z * self.z)
         yaw = math.atan2(t3, t4)
 
-        return roll, pitch, yaw
+        return Vector3(roll, pitch, yaw)
 
 
 class Matrix44(pyrr.Matrix44):
-    def __new__(cls, value: 'Matrix44 | np.ndarray | list[number | np.number] | None') -> 'Matrix44':
+    def __new__(cls, value: 'Matrix44 | np.ndarray | list[number] | None') -> 'Matrix44':
         if value is None:
             return np.zeros((4, 4), dtype='f4').view(cls)
         return np.array(value, dtype='f4').view(cls)
@@ -250,12 +252,12 @@ class Matrix44(pyrr.Matrix44):
     @classmethod
     def orthogonal_projection(
         cls,
-        left: number | np.number,
-        right: number | np.number,
-        bottom: number | np.number,
-        top: number | np.number,
-        near: number | np.number,
-        far: number | np.number,
+        left: number,
+        right: number,
+        bottom: number,
+        top: number,
+        near: number,
+        far: number,
     ) -> 'Matrix44':
         return pyrr.matrix44.create_orthogonal_projection(
             left=float(left), right=float(right),
@@ -267,10 +269,10 @@ class Matrix44(pyrr.Matrix44):
     @classmethod
     def perspective_projection(
         cls,
-        fov: number | np.number,
-        aspect: number | np.number,
-        near: number | np.number,
-        far: number | np.number,
+        fov: number,
+        aspect: number,
+        near: number,
+        far: number,
     ) -> 'Matrix44':
         return pyrr.matrix44.create_perspective_projection(
             fovy=float(fov), aspect=float(aspect),
@@ -298,10 +300,10 @@ class Matrix44(pyrr.Matrix44):
 class Rect(np.ndarray):
     def __new__(
         cls,
-        x: number | np.number,
-        y: number | np.number,
-        width: number | np.number,
-        height: number | np.number,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
     ):
         return np.array([x, y, width, height]).view(cls)
 
