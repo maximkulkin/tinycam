@@ -112,6 +112,10 @@ class Vector3(pyrr.Vector3):
     xz = Vector2Proxy((0, 2))
     yz = Vector2Proxy((1, 2))
 
+    @classmethod
+    def from_vector2(cls, v: Vector2, z: number = 0.0) -> 'Vector3':
+        return Vector3(v[0], v[1], z)
+
     @property
     def length(self) -> np.float32:
         return pyrr.vector.length(self)
@@ -163,7 +167,7 @@ class Vector4(pyrr.Vector4):
         x_or_data: number | np.ndarray | tuple[number, number, number, number] = 0.0,
         y: number = 0.0,
         z: number = 0.0,
-        w: number = 0.0,
+        w: number = 1.0,
     ):
         if isinstance(x_or_data, (int, float, np.number)):
             return np.array([
@@ -175,6 +179,14 @@ class Vector4(pyrr.Vector4):
     xz = Vector2Proxy((0, 2))
     yz = Vector2Proxy((1, 2))
     xyz = Vector3Proxy((0, 1, 2))
+
+    @classmethod
+    def from_vector2(cls, v: Vector2, z: number = 0.0, w: number = 1.0) -> 'Vector4':
+        return Vector4(v[0], v[1], z, w)
+
+    @classmethod
+    def from_vector3(cls, v: Vector3, w: number = 1.0) -> 'Vector4':
+        return Vector4(v[0], v[1], v[2], w)
 
     def __add__(self, other) -> 'Vector4':
         return super().__add__(other).view(Vector4)
