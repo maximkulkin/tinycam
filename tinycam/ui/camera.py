@@ -1,3 +1,5 @@
+from typing import cast
+
 from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
 
 
@@ -55,11 +57,11 @@ class Camera:
 
     @property
     def pixel_width(self) -> float:
-        return self.pixel_size.x
+        return float(self.pixel_size.x)
 
     @property
     def pixel_height(self) -> float:
-        return self.pixel_size.y
+        return float(self.pixel_size.y)
 
     @property
     def device_pixel_ratio(self) -> float:
@@ -104,7 +106,7 @@ class Camera:
                 Matrix44.from_translation(self.position) *
                 Matrix44.from_quaternion(self.rotation)
             )
-        return self._world_matrix
+        return cast(Matrix44, self._world_matrix)
 
     @property
     def view_matrix(self) -> Matrix44:
@@ -168,8 +170,8 @@ class PerspectiveCamera(Camera):
 
     @pixel_size.setter
     def pixel_size(self, value: Vector2):
-        Camera.pixel_size.fset(self, value)
-        self.aspect = value.x / value.y if value.x > 0 else 1
+        Camera.pixel_size.fset(self, value)  # pyright: ignore
+        self.aspect = float(value.x / value.y if value.x > 0 else 1.0)
 
     def look_at(
         self,
