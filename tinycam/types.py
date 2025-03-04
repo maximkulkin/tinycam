@@ -75,6 +75,21 @@ class Vector2(np.ndarray):
     def lerp(v1: 'Vector2', v2: 'Vector2', delta: float) -> 'Vector2':
         return Vector2(v1 * delta + v2 * (1.0 - delta))
 
+    def __add__(self, other) -> 'Vector2':
+        return super().__add__(other).view(Vector2)
+
+    def __sub__(self, other) -> 'Vector2':
+        return super().__sub__(other).view(Vector2)
+
+    def __mul__(self, other) -> 'Vector2':
+        return super().__mul__(other).view(Vector2)
+
+    def __div__(self, other) -> 'Vector2':
+        return super().__div__(other).view(Vector2)
+
+    def __truediv__(self, other) -> 'Vector2':
+        return super().__truediv__(other).view(Vector2)
+
     def __str__(self) -> str:
         return f'Vector2({self.x}, {self.y})'
 
