@@ -1,12 +1,14 @@
 import enum
 import math
-from PySide6 import QtCore, QtGui
+from typing import cast, Callable, Union
+
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
+
 from tinycam.settings import SETTINGS, ControlType
-from tinycam.types import Vector3, Quaternion, Matrix44
+from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.utils import unproject
-from typing import Callable, Tuple, Union
 
 
 class Axis(enum.Enum):
@@ -19,8 +21,6 @@ class Axis(enum.Enum):
             case Axis.X: return Quaternion.from_x_rotation
             case Axis.Y: return Quaternion.from_y_rotation
             case Axis.Z: return Quaternion.from_z_rotation
-
-        raise ValueError('Invalid axis')
 
 
 class CameraOrbitAnimation(QtCore.QObject):
@@ -75,10 +75,10 @@ class OrbitController(QtCore.QObject):
     def __init__(
         self,
         camera: Camera,
-        mouse_sensitivity: Union[float, Tuple[float, float]] = 0.01,
+        mouse_sensitivity: Union[float, tuple[float, float]] = 0.01,
     ):
         super().__init__()
-        self._widget = None
+        self._widget: QtWidgets.QWidget | None = None
 
         SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
         self._on_control_type_changed(SETTINGS.get('general/control_type'))
@@ -87,7 +87,9 @@ class OrbitController(QtCore.QObject):
         _, self._pitch, self._yaw = self._camera.rotation.to_eulers()
 
         sens = mouse_sensitivity
-        self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
+        self._mouse_sensitivity: Vector2 = (
+            Vector2(sens, sens) if isinstance(sens, float) else Vector2(sens)
+        )
 
         self._orbit_point = Vector3(0, 0, 0)
         self._last_position = None
@@ -123,7 +125,8 @@ class OrbitController(QtCore.QObject):
 
         self._camera.rotation = Quaternion.from_x_rotation(self._pitch) * Quaternion.from_z_rotation(self._yaw)
         self._camera.position = self._orbit_point - self._camera.rotation.conjugate * Camera.FORWARD * distance
-        self._widget.update()
+        if self._widget is not None:
+            self._widget.update()
 
     def _on_animation_finished(self):
         self._animation = None
@@ -135,26 +138,28 @@ class OrbitController(QtCore.QObject):
             case ControlType.TOUCHPAD:
                 self._orbit_button = Qt.LeftButton
 
-    def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
+        e = cast(QtGui.QMouseEvent, event)
+
         if (event.type() == QtCore.QEvent.MouseButtonPress
-                and event.button() == self._orbit_button
-                and event.modifiers() & Qt.AltModifier):
-            self._last_position = event.position()
+                and e.button() == self._orbit_button
+                and e.modifiers() & Qt.AltModifier):
+            self._last_position = e.position()
             widget.setCursor(QtGui.QCursor(Qt.SizeAllCursor))
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and event.button() == self._orbit_button
+                and e.button() == self._orbit_button
                 and self._last_position is not None):
             self._last_position = None
             widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
-            delta = event.position() - self._last_position
+            delta = e.position() - self._last_position
 
-            self._last_position = event.position()
+            self._last_position = e.position()
 
             self.rotate(
                 yaw=self._yaw + delta.x() * self._mouse_sensitivity[1],
@@ -170,7 +175,7 @@ class PanAndZoomController(QtCore.QObject):
         camera: Camera,
     ):
         super().__init__()
-        self._widget = None
+        self._widget: QtWidgets.QWidget | None = None
 
         self._camera = camera
         self._start_position = None
@@ -195,28 +200,32 @@ class PanAndZoomController(QtCore.QObject):
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
         return unproject((p.x(), p.y()), self._camera)
 
-    def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
-        if (event.type() == QtCore.QEvent.MouseButtonPress
-                and event.button() == self._pan_button
-                and event.modifiers() == self._pan_modifiers):
-            self._start_position = event.position()
-            return False
-        elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and event.button() == self._pan_button
-                and self._panning):
-            self._start_position = None
-            self._last_position = None
-            self._panning = False
-            widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
-            return True
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            mouse_event = cast(QtGui.QMouseEvent, event)
+            if (mouse_event.button() == self._pan_button and
+                    mouse_event.modifiers() == self._pan_modifiers):
+                self._start_position = mouse_event.position()
+                return False
+        elif (event.type() == QtCore.QEvent.MouseButtonRelease):
+            mouse_event = cast(QtGui.QMouseEvent, event)
+            if (mouse_event.button() == self._pan_button and self._panning):
+                self._start_position = None
+                self._last_position = None
+                self._panning = False
+                widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
+                return True
         elif (event.type() == QtCore.QEvent.MouseMove
               and (self._panning or self._start_position is not None)):
 
-            position = event.position()
+            mouse_event = cast(QtGui.QMouseEvent, event)
+
+            position = mouse_event.position()
             if not self._panning:
+                assert(self._start_position is not None)
                 if (self._start_position - position).manhattanLength() > 20:
                     self._panning = True
                     self._last_position = self._start_position
@@ -224,7 +233,8 @@ class PanAndZoomController(QtCore.QObject):
 
                 return False
 
-            if event.buttons() != self._pan_button or event.modifiers() != self._pan_modifiers:
+            if (mouse_event.buttons() != self._pan_button or
+                    mouse_event.modifiers() != self._pan_modifiers):
                 self._panning = False
                 self._start_position = None
                 return False
@@ -240,10 +250,12 @@ class PanAndZoomController(QtCore.QObject):
             widget.update()
             return True
         elif event.type() == QtCore.QEvent.Wheel:
-            screen_point = event.position()
+            wheel_event = cast(QtGui.QWheelEvent, event)
+
+            screen_point = wheel_event.position()
             p0 = self._unproject(screen_point)
 
-            scale = 0.9 ** (event.angleDelta().y() / 120.0)
+            scale = 0.9 ** (wheel_event.angleDelta().y() / 120.0)
             self._camera.position *= Vector3(1, 1, scale)
 
             p1 = self._unproject(screen_point)
@@ -268,7 +280,7 @@ class FreeMoveController(QtCore.QObject):
         self,
         camera: Camera,
         move_speed: float = 10,
-        mouse_sensitivity: Union[float, Tuple[float, float]] = 0.01,
+        mouse_sensitivity: Union[float, tuple[float, float]] = 0.01,
         pitch_axis: Axis = Axis.X,
         yaw_axis: Axis = Axis.Z,
     ):
@@ -283,7 +295,10 @@ class FreeMoveController(QtCore.QObject):
         self._turbo = False
 
         sens = mouse_sensitivity
-        self._mouse_sensitivity = (sens, sens) if isinstance(sens, float) else sens
+        self._mouse_sensitivity: Vector2 = (
+            Vector2(sens, sens) if isinstance(sens, float)
+                else Vector2(cast(tuple[float, float], sens))
+        )
 
         self._pitch = 0.0
         self._yaw = 0.0
@@ -345,7 +360,7 @@ class FreeMoveController(QtCore.QObject):
         up: Vector3 = Vector3(0, 1, 0),
     ) -> None:
         _, r, _ = (
-            Matrix44.look_at(self.position, target, up).decompose()
+            Matrix44.look_at(self._camera.position, target, up).decompose()
         )
         eulers = r.to_eulers()
         match self._pitch_axis:
@@ -364,12 +379,13 @@ class FreeMoveController(QtCore.QObject):
             case Axis.Z:
                 self._yaw = eulers.z
 
-    def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
+
         if event.type() == QtCore.QEvent.KeyPress:
-            match event.key():
+            match cast(QtGui.QKeyEvent, event).key():
                 case Qt.Key_W:
                     self._directions |= self.Direction.FORWARD
                     self._update_movement()
@@ -399,7 +415,7 @@ class FreeMoveController(QtCore.QObject):
                     self._update_movement()
                     return True
         elif event.type() == QtCore.QEvent.KeyRelease:
-            match event.key():
+            match cast(QtGui.QKeyEvent, event).key():
                 case Qt.Key_W:
                     self._directions &= ~self.Direction.FORWARD
                     self._update_movement()
@@ -429,23 +445,24 @@ class FreeMoveController(QtCore.QObject):
                     self._update_movement()
                     return True
         elif (event.type() == QtCore.QEvent.MouseButtonPress
-                and event.button() == Qt.LeftButton):
-            self._last_position = event.position()
+                and cast(QtGui.QMouseEvent, event).button() == Qt.LeftButton):
+            self._last_position = cast(QtGui.QMouseEvent, event).position()
             return True
         elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and event.button() == Qt.LeftButton
+                and cast(QtGui.QMouseEvent, event).button() == Qt.LeftButton
                 and self._last_position is not None):
             self._last_position = None
             self._directions = 0
             self._update_movement()
             return True
         elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
-            dx = event.x() - self._last_position.x()
-            dy = event.y() - self._last_position.y()
+            position = cast(QtGui.QMouseEvent, event).position()
+            dx = position.x() - self._last_position.x()
+            dy = position.y() - self._last_position.y()
             self._pitch += dy * self._mouse_sensitivity[1]
             self._yaw += dx * self._mouse_sensitivity[0]
             self._camera.rotation = self._make_rotation()
-            self._last_position = event.pos()
+            self._last_position = position
             if not self._move_timer.isActive():
                 widget.update()
             return True
