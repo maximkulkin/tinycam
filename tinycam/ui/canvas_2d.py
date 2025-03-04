@@ -4,7 +4,7 @@ from tinycam.ui.camera_controllers import PanAndZoomController
 from tinycam.ui.view import CncView
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
-from tinycam.ui.tools import MarkerTool, SelectTool
+from tinycam.ui.tools import CncTool, SelectTool
 from tinycam.types import Vector3
 
 
