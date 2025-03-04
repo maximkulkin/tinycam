@@ -55,6 +55,9 @@ class CncCanvas2D(CncView):
         return self._project
 
     def _on_project_item_added(self, index: int):
+        if self.ctx is None:
+            return
+
         item = self.project.items[index]
 
         match item:
@@ -81,8 +84,8 @@ class CncCanvas2D(CncView):
             if hasattr(view, 'index') and view.index > index:
                 view.index -= 1
 
-    def _on_project_item_changed(self, index: int):
+    def _on_project_item_changed(self, _index: int):
         self.update()
 
-    def _on_project_item_updated(self, index: int):
+    def _on_project_item_updated(self, _index: int):
         self.update()
