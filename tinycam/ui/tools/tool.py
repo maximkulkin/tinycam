@@ -10,10 +10,10 @@ class CncTool(QtCore.QObject):
         self.view = view
 
     def activate(self):
-        self.view.installEventFilter(self)
+        pass
 
     def deactivate(self):
-        self.view.removeEventFilter(self)
+        pass
 
     def eventFilter(self, widget: QtCore.QObject, event: QtCore.QEvent) -> bool:
         return False

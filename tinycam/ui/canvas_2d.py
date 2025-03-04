@@ -36,6 +36,21 @@ class CncCanvas2D(CncView):
         self._tool.activate()
 
     @property
+    def tool(self) -> CncTool:
+        return self._tool
+
+    def event(self, event: QtCore.QEvent) -> bool:
+        super().event(event)
+
+        if event.isAccepted():
+            return True
+
+        if self.tool.eventFilter(self, event):
+            return True
+
+        return False
+
+    @property
     def project(self) -> CncProject:
         return self._project
 
