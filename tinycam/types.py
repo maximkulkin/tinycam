@@ -351,7 +351,7 @@ class Rect(np.ndarray):
     height = Vector1Proxy(3)
 
     point = Vector2Proxy((0, 1))
-    size = Vector2Proxy((2, 3))
+    rect_size = Vector2Proxy((2, 3))
 
     @staticmethod
     def from_point_and_size(bottom_left: Vector2, size: Vector2) -> 'Rect':
