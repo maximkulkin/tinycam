@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pyrr
+from typing import overload
 
 
 type number = int | float | np.number
@@ -211,6 +212,11 @@ class Vector4(pyrr.Vector4):
 
 
 class Quaternion(pyrr.Quaternion):
+    @overload
+    def __mul__(self, other: Vector4) -> Vector4: ...
+    @overload
+    def __mul__(self, other: 'Quaternion') -> 'Quaternion': ...
+
     def __mul__(self, other):
         return super().__mul__(other).view(other.__class__)
 
@@ -307,7 +313,12 @@ class Matrix44(pyrr.Matrix44):
             dtype='f4',
         ).view(cls)
 
-    def __mul__(self, other: 'Vector4 | Matrix44') -> 'Vector4 | Matrix44':
+    @overload
+    def __mul__(self, other: 'Matrix44') -> 'Matrix44': ...
+    @overload
+    def __mul__(self, other: Vector4) -> Vector4: ...
+
+    def __mul__(self, other):
         if isinstance(other, Matrix44):
             return super().__mul__(other).view(Matrix44)
         elif isinstance(other, Vector4):
