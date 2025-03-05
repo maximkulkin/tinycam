@@ -75,19 +75,19 @@ class Vector2(np.ndarray):
     def lerp(v1: 'Vector2', v2: 'Vector2', delta: float) -> 'Vector2':
         return Vector2(v1 * delta + v2 * (1.0 - delta))
 
-    def __add__(self, other) -> 'Vector2':
+    def __add__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__add__(other).view(Vector2)
 
-    def __sub__(self, other) -> 'Vector2':
+    def __sub__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__sub__(other).view(Vector2)
 
-    def __mul__(self, other) -> 'Vector2':
+    def __mul__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__mul__(other).view(Vector2)
 
-    def __div__(self, other) -> 'Vector2':
+    def __div__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__div__(other).view(Vector2)
 
-    def __truediv__(self, other) -> 'Vector2':
+    def __truediv__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__truediv__(other).view(Vector2)
 
     def __str__(self) -> str:
@@ -139,19 +139,19 @@ class Vector3(pyrr.Vector3):
     def lerp(cls, v1: 'Vector3', v2: 'Vector3', delta: float) -> 'Vector3':
         return pyrr.vector.interpolate(v1, v2, delta).view(cls)
 
-    def __add__(self, other) -> 'Vector3':
+    def __add__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__add__(other).view(Vector3)
 
-    def __sub__(self, other) -> 'Vector3':
+    def __sub__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__sub__(other).view(Vector3)
 
-    def __mul__(self, other) -> 'Vector3':
+    def __mul__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__mul__(other).view(Vector3)
 
-    def __div__(self, other) -> 'Vector3':
+    def __div__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__div__(other).view(Vector3)
 
-    def __truediv__(self, other) -> 'Vector3':
+    def __truediv__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__truediv__(other).view(Vector3)
 
     def __str__(self) -> str:
@@ -188,19 +188,19 @@ class Vector4(pyrr.Vector4):
     def from_vector3(cls, v: Vector3, w: number = 1.0) -> 'Vector4':
         return Vector4(v[0], v[1], v[2], w)
 
-    def __add__(self, other) -> 'Vector4':
+    def __add__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__add__(other).view(Vector4)
 
-    def __sub__(self, other) -> 'Vector4':
+    def __sub__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__sub__(other).view(Vector4)
 
-    def __mul__(self, other) -> 'Vector4':
+    def __mul__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__mul__(other).view(Vector4)
 
-    def __div__(self, other) -> 'Vector4':
+    def __div__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__div__(other).view(Vector4)
 
-    def __truediv__(self, other) -> 'Vector4':
+    def __truediv__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__truediv__(other).view(Vector4)
 
     def __str__(self) -> str:
