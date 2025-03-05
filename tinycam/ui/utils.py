@@ -15,13 +15,13 @@ def project(point: Vector3, camera: Camera) -> Vector2:
 
 
 def unproject(point: tuple[float, float], camera: Camera) -> Vector3:
-    vp = cast(Matrix44, camera.projection_matrix * camera.view_matrix)
+    vp = camera.projection_matrix * camera.view_matrix
     ivp = vp.inverse
 
     ndc = camera.screen_to_ndc_point(Vector2(point))
 
     p = Vector4(ndc[0], ndc[1], ndc[2], 1)
-    v: Vector4 = cast(Vector4, ivp * p)
+    v = ivp * p
     if v.w != 0.0:
         v /= v.w
 
