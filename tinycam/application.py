@@ -37,7 +37,8 @@ class CncApplication(QtWidgets.QApplication):
             if data is not None:
                 try:
                     setting.load(cast(str, data))
-                except Exception:
+                except Exception as e:
+                    print(f'Failed to laod setting {setting.path}: {e}')
                     continue
 
         settings.endGroup()
