@@ -1,3 +1,4 @@
+from PySide6 import QtCore
 from tinycam.project import CncProject, GerberItem, ExcellonItem, CncJob
 from tinycam.ui.camera import OrthographicCamera
 from tinycam.ui.camera_controllers import PanAndZoomController
