@@ -53,13 +53,9 @@ class SdfShape(CanvasItem):
             **kwargs
         )
 
-        self._fill_color = fill_color if fill_color is not None else Vector4()
-        self._edge_color = edge_color if edge_color is not None else self.fill_color
-        self._edge_width = edge_width
-
-        self._program['fillColor'] = self._fill_color
-        self._program['edgeColor'] = self._edge_color
-        self._program['edgeWidth'] = self._edge_width
+        self.fill_color = fill_color if fill_color is not None else Vector4()
+        self.edge_color = edge_color if edge_color is not None else self.fill_color
+        self.edge_width = edge_width
 
     @property
     def fill_color(self) -> Vector4:
@@ -68,7 +64,7 @@ class SdfShape(CanvasItem):
     @fill_color.setter
     def fill_color(self, value: Vector4):
         self._fill_color = value
-        self._program['fillColor'] = self._fill_color
+        self._program['fillColor'].value = self._fill_color
 
     @property
     def edge_color(self) -> Vector4:
@@ -77,7 +73,7 @@ class SdfShape(CanvasItem):
     @edge_color.setter
     def edge_color(self, value: Vector4):
         self._edge_color = value
-        self._program['edgeColor'] = self._edge_color
+        self._program['edgeColor'].value = self._edge_color
 
     @property
     def edge_width(self) -> float:
@@ -86,7 +82,7 @@ class SdfShape(CanvasItem):
     @edge_width.setter
     def edge_width(self, value: float):
         self._edge_width = value
-        self._program['edgeWidth'] = self._edge_width
+        self._program['edgeWidth'].value = self._edge_width
 
     def render(self, state: RenderState):
         self._program['screen_pixel_ratio'] = state.camera.device_pixel_ratio
