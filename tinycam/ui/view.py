@@ -113,17 +113,13 @@ class Uniform:
 
     @value.setter
     def value(self, value: float | np.ndarray | QtGui.QColor):
-        if isinstance(value, QtGui.QColor):
+        if isinstance(value, (int, float)):
+            self._uniform.value = value
+        elif isinstance(value, QtGui.QColor):
             c = cast(QtGui.QColor, value)
-            data = Vector4(c.redF(), c.greenF(), c.blueF(), c.alphaF())
-        elif isinstance(value, float):
-            data = np.array([value], dtype='f4')
-        elif isinstance(value, int):
-            data = np.array([value], dtype='i4')
+            self.write(Vector4(c.redF(), c.greenF(), c.blueF(), c.alphaF()))
         else:
-            data = value
-
-        self.write(data)
+            self.write(value)
 
     def read(self) -> bytes:
         return self._uniform.read()
