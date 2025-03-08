@@ -6,6 +6,7 @@ from typing import Any, cast
 from PIL.Image import Image
 from PySide6 import QtCore, QtGui, QtOpenGLWidgets
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
 from tinycam.types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.camera import Camera, PerspectiveCamera
 
@@ -65,7 +66,7 @@ class Scope:
 
         self._old_flags = None
         self._old_values = {}
-        self._old_framebuffer = None
+        self._old_framebuffer: mgl.Framebuffer | None = None
 
     def __enter__(self):
         flags = self._flags or (self._context.flags & ~(self._disable) | self._enable)
@@ -74,7 +75,7 @@ class Scope:
         self._context.enable_only(flags)
 
         if self._framebuffer is not None:
-            self._old_framebuffer = self._context.fbo
+            self._old_framebuffer = cast(mgl.Framebuffer, self._context.fbo)
             self._framebuffer.use()
 
         self._old_values = {k: getattr(self._context, k) for k in self._attrs.keys()}
@@ -106,6 +107,10 @@ class ContextProxy:
 class Uniform:
     def __init__(self, uniform: mgl.Uniform):
         self._uniform = uniform
+
+    @property
+    def name(self):
+        return self._uniform.name
 
     @property
     def value(self) -> Any:
@@ -261,6 +266,14 @@ class Context:
             depth_attachment=depth_attachment,
         )
 
+    def renderbuffer(self, size: tuple[int, int], components: int = 4, samples: int = 0, dtype: str = 'f1') -> mgl.Renderbuffer:
+        return self._context.renderbuffer(
+            size=size, components=components, samples=samples, dtype=dtype,
+        )
+
+    def depth_renderbuffer(self, size: tuple[int, int], samples: int = 0) -> mgl.Renderbuffer:
+        return self._context.depth_renderbuffer(size=size, samples=samples)
+
 
 class RenderState:
     camera: Camera
@@ -292,18 +305,18 @@ class ViewItem:
     def context(self) -> Context:
         return self._context
 
-    def render(self, state: RenderState):
+    def render(self, _state: RenderState):
         raise NotImplementedError()
 
 
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ctx = None
+        self.ctx: Context | None = None
 
         self.setMouseTracking(True)
 
-        self._items = []
+        self._items: list[ViewItem] = []
         if camera is None:
             camera = PerspectiveCamera()
             camera.position += Vector3(0, 0, 5)
@@ -343,6 +356,9 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         self,
         screen_point: Vector2 | QtCore.QPoint | QtCore.QPointF
     ) -> tuple[ViewItem, object] | None:
+        if self.ctx is None:
+            return None
+
         if isinstance(screen_point, (QtCore.QPoint, QtCore.QPointF)):
             screen_point = Vector2(screen_point.x(), screen_point.y())
 
@@ -359,7 +375,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         state.picking = True
 
         with self.ctx.scope(framebuffer=self._pick_framebuffer, flags=mgl.DEPTH_TEST):
-            self.ctx.clear(color=(0., 0., 0., 1.), depth=1.0)
+            self.ctx.clear(color=Vector4(0., 0., 0., 1.), depth=1.0)
             self._render(state)
 
         raw_data = self._pick_texture.read()
@@ -395,11 +411,13 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         self._render(state)
 
     def event(self, event: QtCore.QEvent):
-        if (event.type() == QtCore.QEvent.MouseButtonRelease and
-                event.button() == Qt.LeftButton and
-                event.modifiers() == Qt.NoModifier):
+        mouse_event = cast(QMouseEvent, event)
 
-            picked = self.pick_item(event.position())
+        if (event.type() == QtCore.QEvent.MouseButtonRelease and
+                mouse_event.button() == Qt.LeftButton and
+                mouse_event.modifiers() == Qt.NoModifier):
+
+            picked = self.pick_item(mouse_event.position())
             if picked is not None:
                 pickable, tag = picked
                 if hasattr(pickable, 'on_click'):
@@ -409,7 +427,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         return super().event(event)
 
     def _render(self, state: RenderState):
-        self.ctx.clear(color=(0.0, 0.0, 0.0, 1.0))
+        self.ctx.clear(color=Vector4(0.0, 0.0, 0.0, 1.0))
 
         for item in self.items:
             item.render(state)
