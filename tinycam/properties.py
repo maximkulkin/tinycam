@@ -1,7 +1,10 @@
 from collections.abc import Callable
+from typing import cast
+
+from tinycam.types import Vector2, Vector3
 
 
-class Property:
+class Property[T]:
     def __init__(self, *,
                  label: str | None = None,
                  on_update: Callable[[object], None] | None = None):
@@ -23,26 +26,26 @@ class Property:
         if self._label is None:
             self._label = name.replace('_', ' ').capitalize()
 
-    def __get__(self, instance: object, objtype: type = None):
+    def __get__(self, instance: object, objtype: type | None = None) -> T:
         if instance is None:
-            return self
-        return instance.__dict__.get(self._variable_name)
+            raise ValueError('Property object is None')
+        return cast(T, instance.__dict__.get(self._variable_name))
 
-    def __set__(self, instance: object, value: object):
+    def __set__(self, instance: object, value: T):
         instance.__dict__[self._variable_name] = value
         if self._on_update is not None:
             self._on_update(instance)
 
 
-class StringProperty(Property):
+class StringProperty(Property[str]):
     pass
 
 
-class BoolProperty(Property):
+class BoolProperty(Property[bool]):
     pass
 
 
-class IntProperty(Property):
+class IntProperty(Property[int]):
     def __init__(self, *,
                  min_value: int | None = None,
                  max_value: int | None = None,
@@ -54,7 +57,7 @@ class IntProperty(Property):
         self.suffix: str | None = suffix
 
 
-class FloatProperty(Property):
+class FloatProperty(Property[float]):
     def __init__(self, *,
                  min_value: float | None = None,
                  max_value: float | None = None,
@@ -66,9 +69,9 @@ class FloatProperty(Property):
         self.suffix: str | None = suffix
 
 
-class Vector2Property(Property):
+class Vector2Property(Property[Vector2]):
     pass
 
 
-class Vector3Property(Property):
+class Vector3Property(Property[Vector3]):
     pass
