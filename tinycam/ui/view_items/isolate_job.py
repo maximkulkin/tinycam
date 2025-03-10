@@ -45,7 +45,7 @@ class CncIsolateJobView(CncProjectItemView):
             for line in G.lines(model.geometry):
                 line_view = Line2D(
                     self.context,
-                    G.points(self._transform_geometry(model, line)),
+                    G.points(line),
                     closed=line.is_closed,
                     color=qcolor_to_vec4(self._model.color),
                     width=model.tool_diameter,

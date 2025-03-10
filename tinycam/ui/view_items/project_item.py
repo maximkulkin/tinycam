@@ -34,15 +34,12 @@ class CncProjectItemView(Composite):
         if self._model.geometry is not None:
             view = Polygon(
                 self.context,
-                self._transform_geometry(self._model, self._model.geometry),
+                self._model.geometry,
                 model_matrix=self._model_matrix(),
                 color=qcolor_to_vec4(self._model.color),
             )
             self._view_geometry = self._model.geometry
             self.add_item(view)
-
-    def _transform_geometry(self, model, geometry):
-        return shapely.transform(geometry, lambda p: p * (1.0, -1.0))
 
     def _model_matrix(self):
         return (
