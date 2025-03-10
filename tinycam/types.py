@@ -5,6 +5,8 @@ from typing import overload
 
 
 type number = int | float | np.number
+type Point2Like = 'Vector2 | tuple[number, number]'
+type Point3Like = 'Vector3 | tuple[number, number, number]'
 
 
 class Vector1Proxy:
