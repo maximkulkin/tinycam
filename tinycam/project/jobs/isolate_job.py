@@ -3,6 +3,7 @@ from PySide6 import QtGui
 from tinycam.commands import CncCommandBuilder
 from tinycam.geometry import Line
 from tinycam.globals import GLOBALS
+from tinycam.project import CncProjectItem
 from tinycam.project.jobs.job import CncJob
 from tinycam.properties import IntProperty, FloatProperty
 import tinycam.settings as s
@@ -21,7 +22,7 @@ with s.SETTINGS.section('jobs/isolate') as S:
 
 class CncIsolateJob(CncJob):
     def __init__(self,
-                 source_item,
+                 source_item: CncProjectItem,
                  color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
                  tool_diameter=0.1,
                  spindle_speed=None,

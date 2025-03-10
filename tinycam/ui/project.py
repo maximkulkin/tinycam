@@ -1,6 +1,8 @@
 from PySide6 import QtCore, QtWidgets, QtGui
-from PySide6.QtCore import Qt
-from typing import Optional
+from PySide6.QtCore import Qt, QEvent, QAbstractItemModel, QModelIndex
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QWidget
+from typing import cast
 
 from tinycam.gcode import GcodeRenderer
 from tinycam.globals import GLOBALS
@@ -9,7 +11,6 @@ from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
     CreateIsolateJobCommand,
     CreateDrillJobCommand,
-    SetItemsColorCommand,
     DeleteItemsCommand,
     UpdateItemsCommand,
 )
@@ -27,7 +28,7 @@ ITEM_COLORS = [
 
 class ProjectItemModel(QtGui.QStandardItemModel):
     def flags(self, index):
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
 
 
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
@@ -39,13 +40,15 @@ class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
     def _load_icon(self, path):
         img = QtGui.QPixmap(path)
         painter = QtGui.QPainter(img)
-        painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceIn)
+        painter.setCompositionMode(
+            QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
+        )
         painter.fillRect(img.rect(), QtGui.QColor('white'))
         painter.end()
         return QtGui.QIcon(img)
 
-    def paint(self, painter, option, index):
-        visible = index.data(Qt.DisplayRole)
+    def paint(self, painter: QtGui.QPainter, option, index):
+        visible = index.data(Qt.ItemDataRole.DisplayRole)
 
         if visible:
             icon = self._visible_icon
@@ -55,20 +58,25 @@ class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
         rect = QtCore.QRect(option.rect)
         rect.adjust(4, 4, -4, -4)
 
-        icon.paint(painter, rect, Qt.AlignCenter)
+        icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter)
 
     def createEditor(self, parent, option, index):
         return None
 
     def editorEvent(self, event, model, option, index):
-        if event.type() == QtCore.QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-            model.setData(index, not index.data(Qt.DisplayRole), Qt.DisplayRole)
+        if (event.type() == QEvent.Type.MouseButtonPress and
+                cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
+            model.setData(
+                index,
+                not index.data(Qt.ItemDataRole.DisplayRole),
+                Qt.ItemDataRole.DisplayRole,
+            )
             model.dataChanged.emit(index, index)
             return True
         return False
 
     def helpEvent(self, event, view, option, index):
-        if event.type() == QtCore.QEvent.ToolTip:
+        if event.type() == QEvent.Type.ToolTip:
             QtWidgets.QToolTip.showText(event.globalPos(), 'Show / Hide', view)
             return True
         return super().helpEvent(event, view, option, index)
@@ -83,33 +91,36 @@ class DebugStyleDelegate(QtWidgets.QStyledItemDelegate):
     def _load_icon(self, path, color=QtGui.QColor('white')):
         img = QtGui.QPixmap(path)
         painter = QtGui.QPainter(img)
-        painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceIn)
+        painter.setCompositionMode(
+            QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
+        )
         painter.fillRect(img.rect(), color)
         painter.end()
         return QtGui.QIcon(img)
 
     def paint(self, painter, option, index):
-        debug = index.data(Qt.DisplayRole)
+        debug = index.data(Qt.ItemDataRole.DisplayRole)
 
         icon = self._debug_enabled_icon if debug else self._debug_disabled_icon
 
         rect = QtCore.QRect(option.rect)
         rect.adjust(4, 4, -4, -4)
 
-        icon.paint(painter, rect, Qt.AlignCenter)
+        icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter)
 
     def createEditor(self, parent, option, index):
         return None
 
     def editorEvent(self, event, model, option, index):
-        if event.type() == QtCore.QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-            model.setData(index, not index.data(Qt.DisplayRole), Qt.DisplayRole)
+        if (event.type() == QEvent.Type.MouseButtonPress and
+                cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
+            model.setData(index, not index.data(Qt.ItemDataRole.DisplayRole), Qt.ItemDataRole.DisplayRole)
             model.dataChanged.emit(index, index)
             return True
         return False
 
     def helpEvent(self, event, view, option, index):
-        if event.type() == QtCore.QEvent.ToolTip:
+        if event.type() == QEvent.Type.ToolTip:
             QtWidgets.QToolTip.showText(event.globalPos(), 'Debug view', view)
             return True
         return super().helpEvent(event, view, option, index)
@@ -117,17 +128,17 @@ class DebugStyleDelegate(QtWidgets.QStyledItemDelegate):
 
 class CheckboxStyleDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, painter, option, index):
-        checked = index.data(Qt.DisplayRole)
+        checked = index.data(Qt.ItemDataRole.DisplayRole)
 
         style = QtWidgets.QApplication.style()
         checkbox_option = QtWidgets.QStyleOptionButton()
-        checkbox_option.state = QtWidgets.QStyle.State_Enabled | (QtWidgets.QStyle.State_On if checked else QtWidgets.QStyle.State_Off)
+        checkbox_option.state = QtWidgets.QStyle.StateFlag.State_Enabled | (QtWidgets.QStyle.StateFlag.State_On if checked else QtWidgets.QStyle.StateFlag.State_Off)
 
-        rect = style.subElementRect(QtWidgets.QStyle.SE_CheckBoxIndicator, option)
+        rect = style.subElementRect(QtWidgets.QStyle.SubElement.SE_CheckBoxIndicator, option)
         rect.moveCenter(option.rect.center())
         checkbox_option.rect = rect
 
-        style.drawControl(QtWidgets.QStyle.CE_CheckBox, checkbox_option, painter)
+        style.drawControl(QtWidgets.QStyle.ControlElement.CE_CheckBox, checkbox_option, painter)
 
     def sizeHint(self, option, index):
         return QtCore.QSize(20, 20)
@@ -135,19 +146,19 @@ class CheckboxStyleDelegate(QtWidgets.QStyledItemDelegate):
 
 class ColorComboBoxDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, painter, option, index):
-        color = index.data(Qt.UserRole)
+        color = index.data(Qt.ItemDataRole.UserRole)
         if color is not None:
             color = QtGui.QColor(color)
             color.setAlphaF(1.0)
             painter.fillRect(option.rect, color)
 
-        if option.state & QtWidgets.QStyle.State_Selected:
+        if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
             style = QtWidgets.QStyleOptionButton(1)
             style.rect = option.rect
-            style.state = QtWidgets.QStyle.State_Enabled | QtWidgets.QStyle.State_On
+            style.state = QtWidgets.QStyle.StateFlag.State_Enabled | QtWidgets.QStyle.StateFlag.State_On
 
             QtWidgets.QApplication.style().drawPrimitive(
-                QtWidgets.QStyle.PE_IndicatorCheckBox,
+                QtWidgets.QStyle.PrimitiveElement.PE_IndicatorCheckBox,
                 style, painter
             )
 
@@ -171,8 +182,8 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
         QtCore.QTimer.singleShot(100, editor.showPopup)
         return editor
 
-    def setEditorData(self, editor, index):
-        color = index.data(Qt.DisplayRole)
+    def setEditorData(self, editor: QWidget, index: QModelIndex):
+        color = index.data(Qt.ItemDataRole.DisplayRole)
         idx = editor.findData(color)
         if idx == -1:
             editor.insertItem(len(ITEM_COLORS), '', color)
@@ -180,10 +191,10 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
         else:
             editor.setCurrentIndex(idx)
 
-    def setModelData(self, editor, model, index):
+    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex):
         color = editor.currentData()
         if color is not None:
-            model.setData(index, color, Qt.DisplayRole)
+            model.setData(index, color, Qt.ItemDataRole.DisplayRole)
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
@@ -191,10 +202,10 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
     def _on_item_changed(self, editor, index):
         if editor.currentIndex() == editor.count() - 1:
             # QtWidgets.QColorDialog.getColor()
-            original_color = index.data(Qt.DisplayRole)
+            original_color = index.data(Qt.ItemDataRole.DisplayRole)
 
             def set_color(color: QtGui.QColor):
-                index.model().setData(index, color, Qt.DisplayRole)
+                index.model().setData(index, color, Qt.ItemDataRole.DisplayRole)
 
             self._custom_color_dialog = QtWidgets.QColorDialog()
             self._custom_color_dialog.setCurrentColor(original_color)
@@ -209,16 +220,16 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
             return
 
         self._table_view.commitData(editor)
-        self._table_view.closeEditor(editor, QtWidgets.QItemDelegate.NoHint)
+        self._table_view.closeEditor(editor, QtWidgets.QItemDelegate.EndEditHint.NoHint)
 
     def helpEvent(self, event, view, option, index):
-        if event.type() == QtCore.QEvent.ToolTip:
+        if event.type() == QEvent.Type.ToolTip:
             QtWidgets.QToolTip.showText(event.globalPos(), 'Item color', view)
             return True
         return super().helpEvent(event, view, option, index)
 
-    def paint(self, painter, option, index):
-        color = index.data(Qt.DisplayRole)
+    def paint(self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QModelIndex):
+        color = index.data(Qt.ItemDataRole.DisplayRole)
         color = QtGui.QColor(color)
         color.setAlphaF(1.0)
         rect = QtCore.QRect(option.rect)
@@ -235,7 +246,7 @@ class CncProjectWindow(CncWindow):
 
         self.setObjectName("project_window")
         self.setWindowTitle("Project")
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context_menu)
 
         self.project.items.added.connect(self._on_item_added)
@@ -257,11 +268,11 @@ class CncProjectWindow(CncWindow):
         self._view.horizontalHeader().setStretchLastSection(True)
         self._view.horizontalHeader().hide()
         self._view.verticalHeader().hide()
-        self._view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self._view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self._view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self._view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self._view.setEditTriggers(
-              QtWidgets.QAbstractItemView.DoubleClicked
-            | QtWidgets.QAbstractItemView.EditKeyPressed
+              QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
+            | QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed
         )
         self._view.selectionModel().selectionChanged.connect(
             self._on_table_view_selection_changed
@@ -278,15 +289,15 @@ class CncProjectWindow(CncWindow):
         for item in self.project.items:
             self._add_item(item)
 
-    def _add_item(self, item: CncProjectItem, index: Optional[int] = None):
+    def _add_item(self, item: CncProjectItem, index: int | None = None):
         visibleItem = QtGui.QStandardItem()
-        visibleItem.setData(item.visible, Qt.DisplayRole)
+        visibleItem.setData(item.visible, Qt.ItemDataRole.DisplayRole)
 
         debugItem = QtGui.QStandardItem()
-        debugItem.setData(item.debug, Qt.DisplayRole)
+        debugItem.setData(item.debug, Qt.ItemDataRole.DisplayRole)
 
         colorItem = QtGui.QStandardItem()
-        colorItem.setData(item.color, Qt.DisplayRole)
+        colorItem.setData(item.color, Qt.ItemDataRole.DisplayRole)
 
         nameItem = QtGui.QStandardItem(item.name)
 
@@ -309,24 +320,24 @@ class CncProjectWindow(CncWindow):
 
         self._model.setData(
             self._model.index(index, 0),
-            item.visible, Qt.DisplayRole
+            item.visible, Qt.ItemDataRole.DisplayRole
         )
         self._model.setData(
             self._model.index(index, 1),
-            item.debug, Qt.DisplayRole
+            item.debug, Qt.ItemDataRole.DisplayRole
         )
         self._model.setData(
             self._model.index(index, 2),
-            item.color, Qt.DisplayRole
+            item.color, Qt.ItemDataRole.DisplayRole
         )
         self._model.setData(
             self._model.index(index, 3),
-            item.name, Qt.DisplayRole
+            item.name, Qt.ItemDataRole.DisplayRole
         )
 
-    def _on_model_data_changed(self, top_left, bottom_right, roles):
+    def _on_model_data_changed(self, top_left, bottom_right, _roles):
         def get_value(row, col):
-            return self._model.data(self._model.index(row, col), Qt.DisplayRole)
+            return self._model.data(self._model.index(row, col), Qt.ItemDataRole.DisplayRole)
 
         for i in range(top_left.row(), bottom_right.row() + 1):
             item = self.project.items[i]
@@ -351,13 +362,17 @@ class CncProjectWindow(CncWindow):
 
         self._updating_selection = True
 
-        def model_index(idx: int) -> int:
+        def model_index(idx: int) -> QModelIndex:
             return self._view.model().createIndex(idx, 0)
 
         selection_model = self._view.selectionModel()
         selection_model.clear()
         for idx in self.project.selection:
-            selection_model.select(model_index(idx), QtCore.QItemSelectionModel.SelectCurrent | QtCore.QItemSelectionModel.Rows)
+            selection_model.select(
+                model_index(idx),
+                QtCore.QItemSelectionModel.SelectionFlag.SelectCurrent
+                    | QtCore.QItemSelectionModel.SelectionFlag.Rows
+            )
 
         self._updating_selection = False
 
@@ -386,7 +401,7 @@ class CncProjectWindow(CncWindow):
         elif isinstance(item, CncJob):
             popup.addAction('Export G-code', self._export_gcode)
 
-        popup.exec(self.mapToGlobal(position))
+        popup.exec(self.mapToGlobal(position).toPoint())
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(self.project.selectedItems))
@@ -397,7 +412,8 @@ class CncProjectWindow(CncWindow):
 
         command = CreateIsolateJobCommand(self.project.selectedItems[0])
         GLOBALS.APP.undo_stack.push(command)
-        GLOBALS.APP.project.selectedItems = [command.result_item]
+        if command.result_item is not None:
+            GLOBALS.APP.project.selectedItems = [command.result_item]
 
     def _drill_job(self):
         if len(self.project.selection) == 0:
@@ -405,7 +421,8 @@ class CncProjectWindow(CncWindow):
 
         command = CreateDrillJobCommand(self.project.selectedItems[0])
         GLOBALS.APP.undo_stack.push(command)
-        GLOBALS.APP.project.selectedItems = [command.result_item]
+        if command.result_item is not None:
+            GLOBALS.APP.project.selectedItems = [command.result_item]
 
     def _export_gcode(self):
         if len(self.project.selection) == 0:

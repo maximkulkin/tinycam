@@ -2,13 +2,12 @@ import enum
 from typing import cast
 
 import numpy as np
-from PySide6 import QtCore
 from PySide6.QtCore import QPoint, QPointF, QEvent, Qt
 from PySide6.QtGui import QMouseEvent, QKeyEvent
 from PySide6.QtWidgets import QWidget
 
 from tinycam.globals import GLOBALS
-from tinycam.types import Vector2, Vector4
+from tinycam.types import Vector2, Vector4, Rect
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.canvas import Rectangle
 from tinycam.ui.view_items.project_item import CncProjectItemView
@@ -48,14 +47,14 @@ class SelectTool(CncTool):
     def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         mouse_event = cast(QMouseEvent, event)
 
-        if (event.type() == QEvent.MouseButtonPress and
-                mouse_event.button() & Qt.LeftButton):
+        if (event.type() == QEvent.Type.MouseButtonPress and
+                mouse_event.button() & Qt.MouseButton.LeftButton):
             self._p1 = vector2(mouse_event.position())
             self._p2 = self._p1
             self._selecting = True
             return True
-        elif (event.type() == QtCore.QEvent.MouseButtonRelease and
-                mouse_event.button() & Qt.LeftButton):
+        elif (event.type() == QEvent.Type.MouseButtonRelease and
+                mouse_event.button() & Qt.MouseButton.LeftButton):
 
             modifiers = self._make_selection_modifiers(mouse_event.modifiers())
             if self._box:
@@ -70,7 +69,7 @@ class SelectTool(CncTool):
 
             self._selecting = False
             return True
-        elif self._selecting and event.type() == QEvent.MouseMove:
+        elif self._selecting and event.type() == QEvent.Type.MouseMove:
             self._p2 = vector2(mouse_event.position())
 
             if self._box is None and (self._p1 - self._p2).length > 10:
@@ -82,9 +81,9 @@ class SelectTool(CncTool):
 
             widget.update()
             return True
-        elif event.type() == QEvent.KeyPress:
+        elif event.type() == QEvent.Type.KeyPress:
             key_event = cast(QKeyEvent, event)
-            if key_event.code() == Qt.Key_Escape:
+            if key_event.key() == Qt.Key.Key_Escape:
                 self.cancel()
                 return True
 
@@ -109,7 +108,7 @@ class SelectTool(CncTool):
 
         picked = self.view.pick_item(point)
         if picked is not None:
-            obj, tag = picked
+            obj, _ = picked
             if isinstance(obj, CncProjectItemView):
                 obj_index = obj.index
             else:
@@ -135,17 +134,31 @@ class SelectTool(CncTool):
                 case _:
                     project.selection.clear()
 
-    def _select_items_in_box(self, p1: Vector2, p2: Vector2, modifiers: SelectionModifier):
-        # TODO: implement box selection
-        pass
+    def _select_items_in_box(self, p1: Vector2, p2: Vector2, _modifiers: SelectionModifier):
+        if not self.project.items:
+            return
+
+        wp1 = self.view.camera.screen_to_world_point(p1)
+        wp2 = self.view.camera.screen_to_world_point(p2)
+
+        rect = Rect.from_coords(wp1.x, wp1.y, wp2.x, wp2.y)
+
+        selection = []
+        for item in self.project.items:
+            bounds = GLOBALS.GEOMETRY.bounds(item.geometry)
+
+            if rect.contains(bounds):
+                selection.append(item)
+
+        self.project.selectedItems = selection
 
     def _make_selection_modifiers(
         self,
         keyboard_modifiers: Qt.KeyboardModifier,
     ) -> SelectionModifier:
         modifiers = SelectionModifier.NONE
-        if keyboard_modifiers & Qt.ShiftModifier:
+        if keyboard_modifiers & Qt.KeyboardModifier.ShiftModifier:
             modifiers |= SelectionModifier.ADDITIVE
-        if keyboard_modifiers & Qt.AltModifier:
+        if keyboard_modifiers & Qt.KeyboardModifier.AltModifier:
             modifiers |= SelectionModifier.TOGGLE
         return modifiers

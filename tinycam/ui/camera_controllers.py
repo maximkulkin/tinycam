@@ -2,8 +2,10 @@ import enum
 import math
 from typing import cast, Callable, Union
 
-from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt
+from PySide6 import QtCore, QtGui
+from PySide6.QtCore import Qt, QEvent
+from PySide6.QtGui import QMouseEvent, QWheelEvent, QKeyEvent
+from PySide6.QtWidgets import QWidget
 
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
@@ -40,7 +42,7 @@ class CameraOrbitAnimation(QtCore.QObject):
 
         self._timer = QtCore.QTimer()
         self._timer.setInterval(20)
-        self._timer.setTimerType(Qt.CoarseTimer)
+        self._timer.setTimerType(Qt.TimerType.CoarseTimer)
         self._timer.timeout.connect(self._on_timeout)
 
     def start(self):
@@ -78,7 +80,7 @@ class OrbitController(QtCore.QObject):
         mouse_sensitivity: Union[float, tuple[float, float]] = 0.01,
     ):
         super().__init__()
-        self._widget: QtWidgets.QWidget | None = None
+        self._widget: QWidget | None = None
 
         SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
         self._on_control_type_changed(SETTINGS.get('general/control_type'))
@@ -134,29 +136,29 @@ class OrbitController(QtCore.QObject):
     def _on_control_type_changed(self, value: ControlType):
         match value:
             case ControlType.MOUSE:
-                self._orbit_button = Qt.MiddleButton
+                self._orbit_button = Qt.MouseButton.MiddleButton
             case ControlType.TOUCHPAD:
-                self._orbit_button = Qt.LeftButton
+                self._orbit_button = Qt.MouseButton.LeftButton
 
-    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
-        e = cast(QtGui.QMouseEvent, event)
+        e = cast(QMouseEvent, event)
 
-        if (event.type() == QtCore.QEvent.MouseButtonPress
+        if (event.type() == QEvent.Type.MouseButtonPress
                 and e.button() == self._orbit_button
-                and e.modifiers() & Qt.AltModifier):
+                and e.modifiers() & Qt.KeyboardModifier.AltModifier):
             self._last_position = e.position()
-            widget.setCursor(QtGui.QCursor(Qt.SizeAllCursor))
+            widget.setCursor(QtGui.QCursor(Qt.CursorShape.SizeAllCursor))
             return True
-        elif (event.type() == QtCore.QEvent.MouseButtonRelease
+        elif (event.type() == QEvent.Type.MouseButtonRelease
                 and e.button() == self._orbit_button
                 and self._last_position is not None):
             self._last_position = None
-            widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
+            widget.setCursor(QtGui.QCursor(Qt.CursorShape.ArrowCursor))
             return True
-        elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
+        elif event.type() == QEvent.Type.MouseMove and self._last_position is not None:
             delta = e.position() - self._last_position
 
             self._last_position = e.position()
@@ -175,13 +177,13 @@ class PanAndZoomController(QtCore.QObject):
         camera: Camera,
     ):
         super().__init__()
-        self._widget: QtWidgets.QWidget | None = None
+        self._widget: QWidget | None = None
 
         self._camera = camera
         self._start_position = None
         self._last_position = None
-        self._pan_button = Qt.MiddleButton
-        self._pan_modifiers = Qt.NoModifier
+        self._pan_button = Qt.MouseButton.MiddleButton
+        self._pan_modifiers = Qt.KeyboardModifier.NoModifier
 
         self._panning = False
 
@@ -191,37 +193,37 @@ class PanAndZoomController(QtCore.QObject):
     def _on_control_type_changed(self, value: ControlType):
         match value:
             case ControlType.MOUSE:
-                self._pan_button = Qt.MiddleButton
-                self._pan_modifiers = Qt.NoModifier
+                self._pan_button = Qt.MouseButton.MiddleButton
+                self._pan_modifiers = Qt.KeyboardModifier.NoModifier
             case ControlType.TOUCHPAD:
-                self._pan_button = Qt.RightButton
-                self._pan_modifiers = Qt.MetaModifier
+                self._pan_button = Qt.MouseButton.RightButton
+                self._pan_modifiers = Qt.KeyboardModifier.MetaModifier
 
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
         return unproject((p.x(), p.y()), self._camera)
 
-    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
-        if event.type() == QtCore.QEvent.MouseButtonPress:
-            mouse_event = cast(QtGui.QMouseEvent, event)
+        if event.type() == QEvent.Type.MouseButtonPress:
+            mouse_event = cast(QMouseEvent, event)
             if (mouse_event.button() == self._pan_button and
                     mouse_event.modifiers() == self._pan_modifiers):
                 self._start_position = mouse_event.position()
                 return False
-        elif (event.type() == QtCore.QEvent.MouseButtonRelease):
-            mouse_event = cast(QtGui.QMouseEvent, event)
+        elif (event.type() == QEvent.Type.MouseButtonRelease):
+            mouse_event = cast(QMouseEvent, event)
             if (mouse_event.button() == self._pan_button and self._panning):
                 self._start_position = None
                 self._last_position = None
                 self._panning = False
-                widget.setCursor(QtGui.QCursor(Qt.ArrowCursor))
+                widget.setCursor(QtGui.QCursor(Qt.CursorShape.ArrowCursor))
                 return True
-        elif (event.type() == QtCore.QEvent.MouseMove
+        elif (event.type() == QEvent.Type.MouseMove
               and (self._panning or self._start_position is not None)):
 
-            mouse_event = cast(QtGui.QMouseEvent, event)
+            mouse_event = cast(QMouseEvent, event)
 
             position = mouse_event.position()
             if not self._panning:
@@ -255,13 +257,13 @@ class PanAndZoomController(QtCore.QObject):
 
                 self._camera.position += Vector3.from_vector2(d)
 
-            widget.setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
+            widget.setCursor(QtGui.QCursor(Qt.CursorShape.ClosedHandCursor))
 
             self._last_position = position
             widget.update()
             return True
-        elif event.type() == QtCore.QEvent.Wheel:
-            wheel_event = cast(QtGui.QWheelEvent, event)
+        elif event.type() == QEvent.Type.Wheel:
+            wheel_event = cast(QWheelEvent, event)
 
             screen_point = wheel_event.position()
             p0 = self._unproject(screen_point)
@@ -336,7 +338,7 @@ class FreeMoveController(QtCore.QObject):
         self._move_timer = QtCore.QTimer(parent=self)
         self._move_timer.setSingleShot(False)
         self._move_timer.setInterval(16)
-        self._move_timer.setTimerType(Qt.PreciseTimer)
+        self._move_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._move_timer.timeout.connect(self._move_timer_timeout)
 
     def _move_timer_timeout(self):
@@ -398,84 +400,84 @@ class FreeMoveController(QtCore.QObject):
             case Axis.Z:
                 self._yaw = eulers.z
 
-    def eventFilter(self, widget: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
+    def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
 
 
-        if event.type() == QtCore.QEvent.KeyPress:
-            match cast(QtGui.QKeyEvent, event).key():
-                case Qt.Key_W:
+        if event.type() == QEvent.Type.KeyPress:
+            match cast(QKeyEvent, event).key():
+                case Qt.Key.Key_W:
                     self._directions |= self.Direction.FORWARD
                     self._update_movement()
                     return True
-                case Qt.Key_S:
+                case Qt.Key.Key_S:
                     self._directions |= self.Direction.BACKWARD
                     self._update_movement()
                     return True
-                case Qt.Key_A:
+                case Qt.Key.Key_A:
                     self._directions |= self.Direction.LEFT
                     self._update_movement()
                     return True
-                case Qt.Key_D:
+                case Qt.Key.Key_D:
                     self._directions |= self.Direction.RIGHT
                     self._update_movement()
                     return True
-                case Qt.Key_Q:
+                case Qt.Key.Key_Q:
                     self._directions |= self.Direction.DOWN
                     self._update_movement()
                     return True
-                case Qt.Key_E:
+                case Qt.Key.Key_E:
                     self._directions |= self.Direction.UP
                     self._update_movement()
                     return True
-                case Qt.Key_Shift:
+                case Qt.Key.Key_Shift:
                     self._turbo = True
                     self._update_movement()
                     return True
-        elif event.type() == QtCore.QEvent.KeyRelease:
+        elif event.type() == QEvent.Type.KeyRelease:
             match cast(QtGui.QKeyEvent, event).key():
-                case Qt.Key_W:
+                case Qt.Key.Key_W:
                     self._directions &= ~self.Direction.FORWARD
                     self._update_movement()
                     return True
-                case Qt.Key_S:
+                case Qt.Key.Key_S:
                     self._directions &= ~self.Direction.BACKWARD
                     self._update_movement()
                     return True
-                case Qt.Key_A:
+                case Qt.Key.Key_A:
                     self._directions &= ~self.Direction.LEFT
                     self._update_movement()
                     return True
-                case Qt.Key_D:
+                case Qt.Key.Key_D:
                     self._directions &= ~self.Direction.RIGHT
                     self._update_movement()
                     return True
-                case Qt.Key_Q:
+                case Qt.Key.Key_Q:
                     self._directions &= ~self.Direction.DOWN
                     self._update_movement()
                     return True
-                case Qt.Key_E:
+                case Qt.Key.Key_E:
                     self._directions &= ~self.Direction.UP
                     self._update_movement()
                     return True
-                case Qt.Key_Shift:
+                case Qt.Key.Key_Shift:
                     self._turbo = False
                     self._update_movement()
                     return True
-        elif (event.type() == QtCore.QEvent.MouseButtonPress
-                and cast(QtGui.QMouseEvent, event).button() == Qt.LeftButton):
-            self._last_position = cast(QtGui.QMouseEvent, event).position()
+        elif (event.type() == QEvent.Type.MouseButtonPress
+                and cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
+            self._last_position = cast(QMouseEvent, event).position()
             return True
-        elif (event.type() == QtCore.QEvent.MouseButtonRelease
-                and cast(QtGui.QMouseEvent, event).button() == Qt.LeftButton
+        elif (event.type() == QEvent.Type.MouseButtonRelease
+                and cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton
                 and self._last_position is not None):
             self._last_position = None
             self._directions = 0
             self._update_movement()
             return True
-        elif event.type() == QtCore.QEvent.MouseMove and self._last_position is not None:
-            position = cast(QtGui.QMouseEvent, event).position()
+        elif event.type() == QEvent.Type.MouseMove and self._last_position is not None:
+            position = cast(QMouseEvent, event).position()
             dx = position.x() - self._last_position.x()
             dy = position.y() - self._last_position.y()
             self._pitch += dy * self._mouse_sensitivity[1]

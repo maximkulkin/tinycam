@@ -1,22 +1,26 @@
+from collections.abc import Sequence
 from functools import reduce
 import math
+from typing import overload
 import shapely
 import shapely.affinity
 from shapely.geometry.base import BaseGeometry as Shape
-from typing import Tuple
+from tinycam.types import Vector2, Vector3, Point2Like, Rect
 
 
-type Number = int | float
-type Vector2 = Tuple[Number, Number]
-type Vector3 = Tuple[Number, Number, Number]
+type number = int | float
+type Vector2 = tuple[number, number]
+type Vector3 = tuple[number, number, number]
 
 type Point = shapely.Point
 type Line = shapely.LineString
+type MultiLineString = shapely.MultiLineString
 type Polygon = shapely.Polygon
+type MultiPolygon = shapely.MultiPolygon
 type Group = shapely.GeometryCollection
 
 type PointLike = Point | Vector2 | Vector3
-type AnyShape = Point | Line | Polygon | Group | shapely.MultiLineString | shapely.MultiPolygon
+type AnyShape = Point | Line | Polygon | Group | MultiLineString | MultiPolygon
 
 
 # class Shape_:
@@ -40,14 +44,48 @@ class Geometry:
         pass
 
     # geometry
+    @overload
+    def line(self, points: Sequence[PointLike]) -> Line: ...
+    @overload
+    def line(self, points: Sequence[PointLike], width: number) -> Polygon: ...
 
-    def line(self, points, width=0.0) -> Line | Polygon:
+    def line(self, points: Sequence[PointLike], width: number=0.0):
         line = shapely.LineString(points)
         if width > 0:
             line = line.buffer(width / 2)
         return line
 
-    def arc(self, center, radius, start_angle, end_angle, angle_step=1.0, width=0.0) -> Line | Polygon:
+    @overload
+    def arc(
+        self,
+        center: PointLike,
+        radius: number,
+        start_angle: number,
+        end_angle: number,
+        *,
+        angle_step: number=1.0,
+    ) -> Line: ...
+    @overload
+    def arc(
+        self,
+        center: PointLike,
+        radius: number,
+        start_angle: number,
+        end_angle: number,
+        *,
+        width: number,
+        angle_step: number=1.0,
+    ) -> Polygon: ...
+
+    def arc(
+        self,
+        center: PointLike,
+        radius: number,
+        start_angle: number,
+        end_angle: number,
+        angle_step: number=1.0,
+        width: number=0.0,
+    ):
         angle = start_angle
         ccw = angle_step < 0
 
@@ -65,59 +103,60 @@ class Geometry:
             arc = arc.buffer(width / 2)
         return arc
 
-    def circle(self, diameter, center=(0, 0)) -> Polygon:
+    def circle(self, diameter: number, center: PointLike = (0, 0)) -> Polygon:
         return shapely.Point(center).buffer(diameter / 2)
 
-    def box(self, pmin, pmax) -> Polygon:
+    def box(self, pmin: PointLike, pmax: PointLike) -> Polygon:
         return shapely.box(pmin[0], pmin[1], pmax[0], pmax[1])
 
-    def polygon(self, points) -> Polygon:
+    def polygon(self, points: Sequence[PointLike]) -> Polygon:
         return shapely.Polygon(points)
 
     # utils
 
-    def points(self, shape) -> list[Point]:
+    def points(self, shape: AnyShape) -> list[Point]:
         return shape.coords
 
-    def bounds(self, *shapes):
-        return shapely.total_bounds(shapes)
+    def bounds(self, *shapes: tuple[AnyShape, ...]) -> Rect:
+        xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
+        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
 
-    def lines(self, shape) -> list[Line]:
-        if isinstance(shape, shapely.LineString):
+    def lines(self, shape: AnyShape) -> list[Line]:
+        if isinstance(shape, LineString):
             return [shape]
-        elif isinstance(shape, shapely.MultiLineString):
+        elif isinstance(shape, MultiLineString):
             return shape.geoms
 
         raise ValueError('Geometry is not a line: %s' % shape.__class__)
 
-    def polygons(self, shape: shapely.Polygon | shapely.MultiPolygon) -> list[Polygon]:
-        if isinstance(shape, shapely.Polygon):
+    def polygons(self, shape: Polygon | MultiPolygon) -> list[Polygon]:
+        if isinstance(shape, Polygon):
             return [shape]
-        elif isinstance(shape, shapely.MultiPolygon):
+        elif isinstance(shape, MultiPolygon):
             return shape.geoms
 
         raise ValueError('Geometry is not a polygon: %s' % shape.__class__)
 
-    def exteriors(self, shape) -> list[Line]:
-        if isinstance(shape, shapely.Polygon):
+    def exteriors(self, shape: AnyShape) -> list[Line]:
+        if isinstance(shape, Polygon):
             return [shape.exterior]
-        elif isinstance(shape, shapely.MultiPolygon):
+        elif isinstance(shape, MultiPolygon):
             return [
                 geom.exterior
                 for geom in shape.geoms
-                if isinstance(geom, shapely.Polygon)
+                if isinstance(geom, Polygon)
             ]
 
         return []
 
-    def interiors(self, shape) -> list[Line]:
-        if isinstance(shape, shapely.Polygon):
+    def interiors(self, shape: AnyShape) -> list[Line]:
+        if isinstance(shape, Polygon):
             return shape.interiors
-        elif isinstance(shape, shapely.MultiPolygon):
+        elif isinstance(shape, MultiPolygon):
             return [
                 interior
                 for geom in shape.geoms
-                if isinstance(geom, shapely.Polygon)
+                if isinstance(geom, Polygon)
                 for interior in geom.interiors
             ]
         return []
@@ -130,10 +169,10 @@ class Geometry:
     def group(self, *shapes: list[AnyShape]) -> Group:
         return shapely.GeometryCollection(shapes)
 
-    def union(self, *shapes: list[AnyShape]):
+    def union(self, *shapes: list[AnyShape]) -> Shape:
         return shapely.union_all([shape for shape in shapes if shape is not None])
 
-    def intersection(self, *shapes: list[AnyShape]):
+    def intersection(self, *shapes: list[AnyShape]) -> Shape:
         return shapely.intersection_all([shape for shape in shapes if shape is not None])
 
     def difference(self, shape_a: AnyShape, *shapes: list[AnyShape]):
@@ -142,16 +181,16 @@ class Geometry:
 
     # transforms
 
-    def translate(self, shape: AnyShape, offset: Vector2 | Vector3):
+    def translate[T: AnyShape](self, shape: T, offset: Vector2 | Vector3) -> T:
         if len(offset) < 3:
             offset = (offset[0], offset[1], 0)
         return shapely.affinity.translate(shape, offset[0], offset[1], offset[2])
 
-    def rotate(self, shape: AnyShape, angle: Number, origin: PointLike = (0, 0)):
+    def rotate[T: AnyShape](self, shape: T, angle: number, origin: PointLike = (0, 0)) -> T:
         """Rotate shape around origin by given angle in degrees counterclockwise."""
         return shapely.affinity.rotate(shape, angle, origin)
 
-    def scale(self, shape: AnyShape, factor: Number | Vector2 | Vector3):
+    def scale[T: AnyShape](self, shape: T, factor: number | Vector2 | Vector3) -> T:
         """Scale shape by given factor."""
         if isinstance(factor, (int, float)):
             factor = (factor, factor, factor)
@@ -159,10 +198,10 @@ class Geometry:
             factor = (factor[0], factor[1], 1)
         return shapely.affinity.scale(shape, factor[0], factor[1], factor[2])
 
-    def buffer(self, shape: AnyShape, offset: Number) -> Polygon:
+    def buffer(self, shape: AnyShape, offset: number) -> Polygon:
         return shape.buffer(offset)
 
-    def simplify(self, shape: AnyShape, tolerance: Number = 0.01) -> AnyShape:
+    def simplify[T: AnyShape](self, shape: T, tolerance: number = 0.01) -> T:
         return shapely.simplify(shape, tolerance)
 
     def nearest(self, from_shape: AnyShape, to_shape: AnyShape) -> Point:
