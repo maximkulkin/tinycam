@@ -354,12 +354,79 @@ class Rect(np.ndarray):
     width = Vector1Proxy(2)
     height = Vector1Proxy(3)
 
+    @property
+    def xmin(self) -> float:
+        return self[0]
+
+    @property
+    def ymin(self) -> float:
+        return self[1]
+
+    @property
+    def xmax(self) -> float:
+        return self[0] + self[2]
+
+    @property
+    def ymax(self) -> float:
+        return self[1] + self[3]
+
+    @property
+    def center(self) -> Vector2:
+        return Vector2(self.x + self.width * 0.5, self.y + self.height * 0.5)
+
     point = Vector2Proxy((0, 1))
     rect_size = Vector2Proxy((2, 3))
+
+    def __str__(self) -> str:
+        return f'Rect(x={self.x}, y={self.y}, width={self.width}, height={self.height})'
+
+    def contains(self, obj: 'Rect | Vector2') -> bool:
+        match obj:
+            case Rect():
+                xmin, ymin, xmax, ymax = obj.xmin, obj.ymin, obj.xmax, obj.ymax
+                return (self.xmin <= xmin and xmax <= self.xmax and
+                        self.ymin <= ymin and ymax <= self.ymax)
+            case Vector2():
+                return (
+                    self.xmin >= obj[0] and self.xmax <= obj[0] and
+                    self.ymin >= obj[1] and self.ymax <= obj[1]
+                )
+
+    def intersect(self, rect: 'Rect') -> 'Rect | None':
+        x1, x2 = max(self.xmin, rect.xmin), min(self.xmax, rect.xmax)
+        if x2 < x1:
+            return None
+
+        y1, y2 = max(self.ymin, rect.ymin), min(self.ymax, rect.ymax)
+        if y2 < y1:
+            return None
+
+        return Rect.from_coords(x1, y1, x2, y2)
+
+    def merge(self, rect: 'Rect') -> 'Rect':
+        return Rect.from_coords(
+            x1=min(self.xmin, rect.xmin),
+            y1=min(self.ymin, rect.ymin),
+            x2=max(self.xmax, rect.xmax),
+            y2=max(self.ymax, rect.ymax),
+        )
 
     @staticmethod
     def from_point_and_size(bottom_left: Vector2, size: Vector2) -> 'Rect':
         return Rect(bottom_left.x, bottom_left.y, size.x, size.y)
+
+    @staticmethod
+    def from_center_and_size(center: Vector2, size: Vector2) -> 'Rect':
+        return Rect(center.x - size.x * 0.5, center.y - size.y * 0.5, size.x, size.y)
+
+    @staticmethod
+    def from_coords(x1: number, y1: number, x2: number, y2: number) -> 'Rect':
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+
+        return Rect(x1, y1, x2 - x1, y2 - y1)
 
 
 __all__ = [
