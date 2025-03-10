@@ -3,10 +3,11 @@ import sys
 from PySide6 import QtGui
 import PySide6.QtAsyncio as QtAsyncio
 
-from tinycam.globals import GLOBALS
 from tinycam.application import CncApplication
+from tinycam.globals import GLOBALS
+from tinycam.project import GerberItem, ExcellonItem
 from tinycam.ui.main_window import CncMainWindow
-# from tinycam.project import GerberItem, ExcellonItem
+
 
 GLOBALS.APP = CncApplication(sys.argv)
 # GLOBALS.APP.project.items.append(GerberItem.from_file('sample.gbr'))
