@@ -1,11 +1,10 @@
 import moderngl as mgl
 import numpy as np
 from typing import Optional
-from tinycam.types import Vector4
+from tinycam.types import Vector2, Vector4
 from tinycam.ui.view import Context, ViewItem, RenderState
 
 
-type Vector2 = np.ndarray
 type Point2 = Vector2
 
 
@@ -13,7 +12,7 @@ class Line2D(ViewItem):
     def __init__(
         self,
         context: Context,
-        points: list[Point2],
+        points: list[Vector2],
         closed: bool = False,
         color: Vector4 = Vector4(0.8, 0.8, 0.8, 1.0),
         width: Optional[float] = None,
@@ -47,9 +46,9 @@ class Line2D(ViewItem):
         self._width = width
         self._program['color'].write(color.astype('f4').tobytes())
 
-        points = np.array(points, dtype='f4')
+        positions = np.array(points, dtype='f4')
 
-        def intersect_lines(p1: Point2, d1: Vector2, p2: Point2, d2: Vector2) -> Point2:
+        def intersect_lines(p1: Vector2, d1: Vector2, p2: Vector2, d2: Vector2) -> Point2:
             A = np.array([d1, -d2]).T
             b = p2 - p1
 
@@ -61,9 +60,9 @@ class Line2D(ViewItem):
             return p1 + t_s[0] * d1
 
         if self._width is not None:
-            polygon_points = np.zeros((points.shape[0] * 2, 2), dtype='f4')
+            polygon_points = np.zeros((positions.shape[0] * 2, 2), dtype='f4')
 
-            vectors = points[1:] - points[:-1]
+            vectors = positions[1:] - positions[:-1]
             normals = np.zeros_like(vectors)
             normals[:, 0] = -vectors[:, 1]
             normals[:, 1] = vectors[:, 0]
@@ -75,33 +74,33 @@ class Line2D(ViewItem):
 
             if closed:
                 polygon_points[0] = polygon_points[-2] = intersect_lines(
-                    points[0] - normals[0] * hwidth, vectors[0],
-                    points[-1] - normals[-1] * hwidth, vectors[-1]
+                    positions[0] - normals[0] * hwidth, vectors[0],
+                    positions[-1] - normals[-1] * hwidth, vectors[-1]
                 )
                 polygon_points[1] = polygon_points[-1] = intersect_lines(
-                    points[0] + normals[0] * hwidth, vectors[0],
-                    points[-1] + normals[-1] * hwidth, vectors[-1]
+                    positions[0] + normals[0] * hwidth, vectors[0],
+                    positions[-1] + normals[-1] * hwidth, vectors[-1]
                 )
             else:
-                polygon_points[0] = points[0] - normals[0] * hwidth
-                polygon_points[1] = points[0] + normals[0] * hwidth
-                polygon_points[-2] = points[-1] - normals[-1] * hwidth
-                polygon_points[-1] = points[-1] + normals[-1] * hwidth
+                polygon_points[0] = positions[0] - normals[0] * hwidth
+                polygon_points[1] = positions[0] + normals[0] * hwidth
+                polygon_points[-2] = positions[-1] - normals[-1] * hwidth
+                polygon_points[-1] = positions[-1] + normals[-1] * hwidth
 
-            for i in range(1, len(points) - 1):
+            for i in range(1, len(positions) - 1):
                 polygon_points[2 * i] = intersect_lines(
                     polygon_points[2 * i - 2], vectors[i - 1],
-                    points[i] - normals[i] * hwidth, vectors[i]
+                    positions[i] - normals[i] * hwidth, vectors[i]
                 )
 
                 polygon_points[2 * i + 1] = intersect_lines(
                     polygon_points[2 * i - 1], vectors[i - 1],
-                    points[i] + normals[i] * hwidth, vectors[i]
+                    positions[i] + normals[i] * hwidth, vectors[i]
                 )
 
             vertices = polygon_points
         else:
-            vertices = points
+            vertices = positions
 
         self._vbo = self.context.buffer(vertices)
         self._vao = self.context.vertex_array(

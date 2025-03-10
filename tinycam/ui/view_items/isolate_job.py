@@ -1,10 +1,13 @@
+from typing import cast
+
 from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.globals import GLOBALS
+from tinycam.project import CncIsolateJob
 from tinycam.types import Vector3, Vector4, Matrix44
+from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.line3d import Line3D
 from tinycam.ui.view_items.project_item import CncProjectItemView
-from tinycam.ui.utils import qcolor_to_vec4
 
 
 PATH_COLORS = {
@@ -29,29 +32,31 @@ class CncIsolateJobView(CncProjectItemView):
         return Matrix44.identity()
 
     def _update_geometry(self):
-        if self._view_geometry is self._model.geometry and self._model.tool_diameter == self._tool_diameter:
+        model = cast(CncIsolateJob, self._model)
+
+        if self._view_geometry is model.geometry and model.tool_diameter == self._tool_diameter:
             return
 
         self.clear_items()
 
         G = GLOBALS.GEOMETRY
 
-        if self._model.geometry is not None:
-            for line in G.lines(self._model.geometry):
+        if model.geometry is not None:
+            for line in G.lines(model.geometry):
                 line_view = Line2D(
                     self.context,
-                    G.points(self._transform_geometry(self._model, line)),
+                    G.points(self._transform_geometry(model, line)),
                     closed=line.is_closed,
                     color=qcolor_to_vec4(self._model.color),
-                    width=self._model.tool_diameter,
+                    width=model.tool_diameter,
                 )
                 self.add_item(line_view)
 
-            commands = self._model.generate_commands()
+            commands = model.generate_commands()
             tracer = CncPathTracer()
             tracer.execute_commands(commands)
 
-            current_path_points = []
+            current_path_points: list[Vector3] = []
             current_path_type = None
             for path in tracer.paths:
                 if path.type != current_path_type:

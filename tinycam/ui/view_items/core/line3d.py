@@ -1,11 +1,10 @@
 import moderngl
 import numpy as np
 from typing import Optional
-from tinycam.types import Vector4
+from tinycam.types import Vector3, Vector4
 from tinycam.ui.view import Context, ViewItem, RenderState
 
 
-type Vector3 = np.ndarray
 type Point3 = Vector3
 
 

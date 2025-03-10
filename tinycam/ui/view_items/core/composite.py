@@ -1,15 +1,16 @@
 from collections.abc import Sequence
-from tinycam.ui.view import Context, ViewItem
+
+from tinycam.ui.view import Context, ViewItem, RenderState
 
 
 class Composite(ViewItem):
     def __init__(
         self,
         context: Context,
-        items: Sequence[ViewItem] = None,
+        items: Sequence[ViewItem] | None = None,
     ):
         super().__init__(context)
-        self._items = items or []
+        self._items = list(items or [])
 
     @property
     def items(self) -> Sequence[ViewItem]:
@@ -24,6 +25,6 @@ class Composite(ViewItem):
     def clear_items(self):
         self._items.clear()
 
-    def render(self, state: ViewItem):
+    def render(self, state: RenderState):
         for item in self._items:
             item.render(state)
