@@ -1,6 +1,6 @@
 from typing import cast
 
-from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
+from tinycam.types import Vector2, Vector3, Vector4, Quaternion, Matrix44
 
 
 class Camera:
@@ -120,6 +120,13 @@ class Camera:
             self._projection_matrix = self._calculate_projection_matrix()
         return self._projection_matrix
 
+    def screen_to_world_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
+        ndc = self.screen_to_ndc_point(screen_point, z=z)
+
+        v = (self.projection_matrix * self.view_matrix).inverse * Vector4.from_vector3(ndc)
+        v /= v.w
+        return v.xyz
+
     def screen_to_ndc_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
         return Vector3(
             2. * screen_point.x / self.pixel_width - 1.,
@@ -131,6 +138,11 @@ class Camera:
         return Vector2(
             (ndc_point.x + 1.) * 0.5 * self.pixel_width,
             (1. - ndc_point.y) * 0.5 * self.pixel_height,
+        )
+
+    def world_to_screen_point(self, world_point: Vector3) -> Vector2:
+        return self.ndc_to_screen_point(
+            (self.view_matrix * self.projection_matrix * Vector4.from_vector3(world_point)).xyz
         )
 
 
