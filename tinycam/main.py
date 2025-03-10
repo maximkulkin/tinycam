@@ -1,6 +1,7 @@
 import sys
 
 from PySide6 import QtGui
+import PySide6.QtAsyncio as QtAsyncio
 
 from tinycam.globals import GLOBALS
 from tinycam.application import CncApplication
@@ -20,4 +21,5 @@ QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 main_window = CncMainWindow()
 main_window.show()
 
-GLOBALS.APP.exec()
+async_loop = QtAsyncio.QAsyncioEventLoop(GLOBALS.APP)
+async_loop.run_forever()  # internally calls app.exec()
