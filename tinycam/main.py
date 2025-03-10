@@ -13,7 +13,7 @@ GLOBALS.APP = CncApplication(sys.argv)
 
 fmt = QtGui.QSurfaceFormat()
 fmt.setVersion(4, 1)
-fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
+fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
 fmt.setDepthBufferSize(24)
 QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
