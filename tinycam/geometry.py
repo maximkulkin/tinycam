@@ -1,11 +1,12 @@
+import math
 from collections.abc import Sequence
 from functools import reduce
-import math
 from typing import overload
-import shapely
+
 import shapely.affinity
 from shapely.geometry.base import BaseGeometry as Shape
-from tinycam.types import Vector2, Vector3, Point2Like, Rect
+
+from tinycam.types import Vector2, Vector3, Rect
 
 
 type number = int | float
