@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from functools import reduce
 from typing import overload
 
+import numpy as np
 import shapely.affinity
 from shapely.geometry.base import BaseGeometry as Shape
 
@@ -46,11 +47,11 @@ class Geometry:
 
     # geometry
     @overload
-    def line(self, points: Sequence[PointLike]) -> Line: ...
+    def line(self, points: Sequence[PointLike] | np.ndarray) -> Line: ...
     @overload
-    def line(self, points: Sequence[PointLike], width: number) -> Polygon: ...
+    def line(self, points: Sequence[PointLike] | np.ndarray, width: number) -> Polygon: ...
 
-    def line(self, points: Sequence[PointLike], width: number=0.0):
+    def line(self, points: Sequence[PointLike] | np.ndarray, width: number=0.0):
         line = shapely.LineString(points)
         if width > 0:
             line = line.buffer(width / 2)
@@ -110,7 +111,7 @@ class Geometry:
     def box(self, pmin: PointLike, pmax: PointLike) -> Polygon:
         return shapely.box(pmin[0], pmin[1], pmax[0], pmax[1])
 
-    def polygon(self, points: Sequence[PointLike]) -> Polygon:
+    def polygon(self, points: Sequence[PointLike] | np.ndarray) -> Polygon:
         return shapely.Polygon(points)
 
     # utils
