@@ -201,6 +201,9 @@ class Context:
     def __getattr__(self, name: str) -> object:
         return getattr(self._context, name)
 
+    def detect_framebuffer(self) -> mgl.Framebuffer:
+        return self._context.detect_framebuffer()
+
     def clear(
         self,
         color: Vector4 | tuple[number, number, number, number] | np.ndarray | QtGui.QColor = Vector4(),
