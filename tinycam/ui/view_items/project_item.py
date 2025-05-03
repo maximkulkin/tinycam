@@ -45,10 +45,7 @@ class CncProjectItemView(Composite):
             self.add_item(view)
 
     def _model_matrix(self):
-        return (
-            Matrix44.from_translation((self._model.offset[0], self._model.offset[1], 0.0)) *
-            Matrix44.from_scale((self._model.scale[0], self._model.scale[1], 1.0))
-        )
+        return Matrix44.identity()
 
     def _on_model_changed(self):
         self._update_geometry()
