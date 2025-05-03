@@ -28,7 +28,11 @@ ITEM_COLORS = [
 
 class ProjectItemModel(QtGui.QStandardItemModel):
     def flags(self, index):
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+        )
 
 
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
