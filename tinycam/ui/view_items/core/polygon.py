@@ -49,6 +49,8 @@ class Polygon(ViewItem):
             polygons = [polygon]
         elif isinstance(polygon, sg.MultiPolygon):
             polygons = polygon.geoms
+        else:
+            raise ValueError(f'Unsupported polygon type {type(polygon)}')
 
         for polygon in polygons:
             shapely.prepare(polygon)
