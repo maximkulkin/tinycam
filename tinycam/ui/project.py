@@ -289,7 +289,7 @@ class CncProjectWindow(CncWindow):
         for item in self.project.items:
             self._add_item(item)
 
-    def _add_item(self, item: CncProjectItem, index: int | None = None):
+    def _add_item(self, item: CncProjectItem):
         visibleItem = QtGui.QStandardItem()
         visibleItem.setData(item.visible, Qt.ItemDataRole.DisplayRole)
 
@@ -302,21 +302,19 @@ class CncProjectWindow(CncWindow):
         nameItem = QtGui.QStandardItem(item.name)
 
         items = [visibleItem, debugItem, colorItem, nameItem]
-        if index is None:
-            self._model.appendRow(items)
-        else:
-            self._model.insertRow(index, items)
+        self._model.appendRow(items)
 
-    def _on_item_added(self, index: int):
-        self._add_item(self.project.items[index], index)
+    def _on_item_added(self, item: CncProjectItem):
+        self._add_item(item)
 
-    def _on_item_removed(self, index: int):
+    def _on_item_removed(self, item: CncProjectItem):
+        index = self.project.items.index(item)
         self._updating_selection = True
         self._model.removeRow(index)
         self._updating_selection = False
 
-    def _on_item_changed(self, index: int):
-        item = self.project.items[index]
+    def _on_item_changed(self, item: CncProjectItem):
+        index = self.project.items.index(item)
 
         self._model.setData(
             self._model.index(index, 0),
@@ -367,7 +365,8 @@ class CncProjectWindow(CncWindow):
 
         selection_model = self._view.selectionModel()
         selection_model.clear()
-        for idx in self.project.selection:
+        for item in self.project.selection:
+            idx = self.project.items.index(item)
             selection_model.select(
                 model_index(idx),
                 QtCore.QItemSelectionModel.SelectionFlag.SelectCurrent
@@ -380,10 +379,10 @@ class CncProjectWindow(CncWindow):
         if self._updating_selection:
             return
 
-        self.project.selectedItems = [
+        self.project.selection.set([
             self.project.items[index.row()]
             for index in self._view.selectedIndexes()
-        ]
+        ])
 
     def _on_context_menu(self, position: QtCore.QPoint):
         if self._view.currentIndex() is None:
@@ -404,25 +403,25 @@ class CncProjectWindow(CncWindow):
         popup.exec(self.mapToGlobal(position).toPoint())
 
     def _delete_items(self):
-        GLOBALS.APP.undo_stack.push(DeleteItemsCommand(self.project.selectedItems))
+        GLOBALS.APP.undo_stack.push(DeleteItemsCommand(list(self.project.selection)))
 
     def _isolate_job(self):
         if len(self.project.selection) == 0:
             return
 
-        command = CreateIsolateJobCommand(self.project.selectedItems[0])
+        command = CreateIsolateJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
         if command.result_item is not None:
-            GLOBALS.APP.project.selectedItems = [command.result_item]
+            GLOBALS.APP.project.selection.set([command.result_item])
 
     def _drill_job(self):
         if len(self.project.selection) == 0:
             return
 
-        command = CreateDrillJobCommand(self.project.selectedItems[0])
+        command = CreateDrillJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
         if command.result_item is not None:
-            GLOBALS.APP.project.selectedItems = [command.result_item]
+            GLOBALS.APP.project.selection.set([command.result_item])
 
     def _export_gcode(self):
         if len(self.project.selection) == 0:
@@ -430,14 +429,14 @@ class CncProjectWindow(CncWindow):
 
         result = QtWidgets.QFileDialog.getSaveFileName(
             parent=self, caption='Export Gcode',
-            dir=f'{self.project.selectedItems[0].name}.gcode',
+            dir=f'{self.project.selection[0].name}.gcode',
             filter='Gerber (*.gcode)',
         )
         if result[0] == '':
             # cancelled
             return
 
-        commands = self.project.selectedItems[0].generate_commands()
+        commands = self.project.selection[0].generate_commands()
         renderer = GcodeRenderer()
         gcode = renderer.render(commands)
 

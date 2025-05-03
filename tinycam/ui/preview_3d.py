@@ -1,5 +1,5 @@
 import math
-from tinycam.project import GerberItem, ExcellonItem, CncJob, CncIsolateJob
+from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 import tinycam.settings as s
 from tinycam.ui.view import CncView
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
@@ -32,6 +32,8 @@ class CncPreview3D(CncView):
     def initializeGL(self):
         super().initializeGL()
 
+        assert(self.ctx is not None)
+
         self.add_item(GridXY(self.ctx))
 
         self._orientation_cube = OrientationCube(
@@ -46,10 +48,10 @@ class CncPreview3D(CncView):
 
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
-        self.project.items.changed.connect(self._on_project_item_changed)
-        self.project.items.updated.connect(self._on_project_item_updated)
-        for i, _ in enumerate(self.project.items):
-            self._on_project_item_added(i)
+        self.project.items.changed.connect(lambda _: self.update())
+        self.project.items.updated.connect(lambda _: self.update())
+        for item in self.project.items:
+            self._on_project_item_added(item)
 
     def _on_orienation_cube_position_changed(self, value: OrientationCubePosition):
         self._orientation_cube.orientation_cube_position = value
@@ -92,36 +94,22 @@ class CncPreview3D(CncView):
 
         self._camera_orbit_controller.rotate(pitch=pitch, yaw=yaw, duration=0.5)
 
-    def _on_project_item_added(self, index: int):
-        item = self.project.items[index]
+    def _on_project_item_added(self, item: CncProjectItem):
+        assert(self.ctx is not None)
 
         match item:
             case CncIsolateJob():
-                view = CncIsolateJobView(self.ctx, index, item)
+                view = CncIsolateJobView(self.ctx, item)
             case GerberItem() | ExcellonItem() | CncJob():
-                view = CncProjectItemView(self.ctx, index, item)
+                view = CncProjectItemView(self.ctx, item)
             case _:
                 return
 
-        for existing_view in self.items:
-            if hasattr(existing_view, 'index') and existing_view.index >= index:
-                existing_view.index += 1
         self.add_item(view)
-        self.update()
 
-    def _on_project_item_removed(self, index: int):
+    def _on_project_item_removed(self, item: CncProjectItem):
         for view in self.items:
-            if hasattr(view, 'index') and view.index == index:
+            if isinstance(view, CncProjectItemView) and view.model is item:
                 self.remove_item(view)
                 self.update()
                 break
-
-        for view in self.items:
-            if hasattr(view, 'index') and view.index > index:
-                view.index -= 1
-
-    def _on_project_item_changed(self, index: int):
-        self.update()
-
-    def _on_project_item_updated(self, index: int):
-        self.update()

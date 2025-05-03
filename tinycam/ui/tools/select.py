@@ -110,23 +110,23 @@ class SelectTool(CncTool):
         if picked is not None:
             obj, _ = picked
             if isinstance(obj, CncProjectItemView):
-                obj_index = obj.index
+                item = obj.model
             else:
-                obj_index = None
+                item = None
         else:
-            obj_index = None
+            item = None
 
-        if obj_index is not None:
+        if item is not None:
             match modifiers:
                 case SelectionModifier.ADDITIVE:
-                    project.selection.add(obj_index)
+                    project.selection.add(item)
                 case SelectionModifier.TOGGLE:
-                    if obj_index in project.selection:
-                        project.selection.remove(obj_index)
+                    if item in project.selection:
+                        project.selection.remove(item)
                     else:
-                        project.selection.add(obj_index)
+                        project.selection.add(item)
                 case _:
-                    project.selection.set([obj_index])
+                    project.selection.set([item])
         else:
             match modifiers:
                 case SelectionModifier.ADDITIVE | SelectionModifier.TOGGLE:
@@ -150,7 +150,7 @@ class SelectTool(CncTool):
             if rect.contains(bounds):
                 selection.append(item)
 
-        self.project.selectedItems = selection
+        self.project.selection.set(selection)
 
     def _make_selection_modifiers(
         self,

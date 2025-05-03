@@ -28,10 +28,11 @@ class CncCanvas2D(CncView):
 
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
-        self.project.items.changed.connect(self._on_project_item_changed)
-        self.project.items.updated.connect(self._on_project_item_updated)
-        for i, _ in enumerate(self.project.items):
-            self._on_project_item_added(i)
+        self.project.items.changed.connect(lambda _: self.update())
+        self.project.items.updated.connect(lambda _: self.update())
+
+        for item in self.project.items:
+            self._on_project_item_added(item)
 
         self._tool = SelectTool(self.project, self)
         self._tool.activate()
@@ -55,11 +56,8 @@ class CncCanvas2D(CncView):
     def project(self) -> CncProject:
         return self._project
 
-    def _on_project_item_added(self, index: int):
-        if self.ctx is None:
-            return
-
-        item = self.project.items[index]
+    def _on_project_item_added(self, item: CncProjectItem):
+        assert(self.ctx is not None)
 
         match item:
             case GerberItem() | ExcellonItem() | CncJob():
@@ -67,26 +65,14 @@ class CncCanvas2D(CncView):
             case _:
                 return
 
-        for existing_view in self.items:
-            if hasattr(existing_view, 'index') and existing_view.index >= index:
-                existing_view.index += 1
         self.add_item(view)
 
-        self.update()
-
-    def _on_project_item_removed(self, index: int):
+    def _on_project_item_removed(self, item: CncProjectItem):
         for view in self.items:
-            if hasattr(view, 'index') and view.index == index:
+            if isinstance(view, CncProjectItemView) and view.model is item:
                 self.remove_item(view)
                 self.update()
                 break
 
-        for view in self.items:
-            if hasattr(view, 'index') and view.index > index:
-                view.index -= 1
 
-    def _on_project_item_changed(self, _index: int):
-        self.update()
 
-    def _on_project_item_updated(self, _index: int):
-        self.update()

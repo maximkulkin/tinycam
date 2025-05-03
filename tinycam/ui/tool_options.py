@@ -17,7 +17,7 @@ class CncToolOptionsWindow(CncWindow):
         GLOBALS.APP.project.selection.changed.connect(self._on_project_selection_changed)
 
     def _on_project_selection_changed(self):
-        items = list(GLOBALS.APP.project.selection.items())
+        items = list(GLOBALS.APP.project.selection)
         if items:
             self._property_editor.target = items[0]
         else:

@@ -11,11 +11,10 @@ from tinycam.ui.utils import qcolor_to_vec4
 class CncProjectItemView(Composite):
     priority = 100
 
-    def __init__(self, context: Context, index: int, model: CncProjectItem):
+    def __init__(self, context: Context, model: CncProjectItem):
         super().__init__(
             context,
         )
-        self.index = index
         self._model = model
         self._model.changed.connect(self._on_model_changed)
         self._model.updated.connect(self._on_model_changed)
@@ -23,6 +22,10 @@ class CncProjectItemView(Composite):
         self._view_geometry = None
         self._tool_diameter = None
         self._update_geometry()
+
+    @property
+    def model(self) -> CncProjectItem:
+        return self._model
 
     def _update_geometry(self):
         if self._view_geometry is self._model.geometry:
