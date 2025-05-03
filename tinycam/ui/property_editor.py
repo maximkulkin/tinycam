@@ -327,10 +327,16 @@ class PropertyEditor(QtWidgets.QWidget):
 
             row = self._layout.rowCount()
             if span:
-                self._layout.addWidget(QtWidgets.QLabel(prop.label), row, 0, 1, 2, Qt.AlignLeft)
+                self._layout.addWidget(
+                    QtWidgets.QLabel(prop.label),
+                    row, 0, 1, 2,
+                    Qt.AlignmentFlag.AlignLeft,
+                )
                 layout = QtWidgets.QHBoxLayout()
                 layout.addWidget(editor)
-                self._layout.addLayout(layout, row + 1, 0, 1, 2, Qt.AlignJustify)
+                self._layout.addLayout(
+                    layout, row + 1, 0, 1, 2, Qt.AlignmentFlag.AlignJustify,
+                )
             else:
                 self._layout.addWidget(QtWidgets.QLabel(prop.label), row, 0)
                 self._layout.addWidget(editor, row, 1)
