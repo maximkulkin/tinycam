@@ -206,14 +206,27 @@ class Context:
 
     def clear(
         self,
-        color: Vector4 | tuple[number, number, number, number] | np.ndarray | QtGui.QColor = Vector4(),
+        color: Vector4 | tuple[float, float, float, float] | np.ndarray | QtGui.QColor = Vector4(),
         depth: float = 1.0,
         viewport: tuple[int, int, int, int] | Rect | None = None,
     ):
         if isinstance(color, QtGui.QColor):
-            color = Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
+            c = (color.redF(), color.greenF(), color.blueF(), color.alphaF())
+        elif isinstance(color, (Vector4, np.ndarray)):
+            c = (float(color[0]), float(color[1]), float(color[2]), float(color[3]))
+        elif isinstance(color, tuple):
+            c = (float(color[0]), float(color[1]), float(color[2]), float(color[3]))
+
+        if isinstance(viewport, Rect):
+            viewport = (int(viewport.x), int(viewport.y),
+                        int(viewport.width), int(viewport.height))
+
         # Viewport is (x, y, width, height)
-        self._context.clear(color=color, depth=depth, viewport=viewport)
+        self._context.clear(
+            color=c,
+            depth=depth,
+            viewport=cast(tuple[int, int, int, int] | None, viewport),
+        )
 
     def scope(self, **kwargs):
         return Scope(self, **kwargs)
