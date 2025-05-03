@@ -24,13 +24,13 @@ class CncIsolateJob(CncJob):
     def __init__(self,
                  source_item: CncProjectItem,
                  color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
-                 tool_diameter=0.1,
-                 spindle_speed=None,
-                 cut_depth=None,
-                 cut_speed=None,
-                 travel_height=None,
-                 pass_count=None,
-                 pass_overlap=None):
+                 tool_diameter: float=0.1,
+                 spindle_speed: int|None=None,
+                 cut_depth: float|None=None,
+                 cut_speed: float|None=None,
+                 travel_height: float|None=None,
+                 pass_count: int|None=None,
+                 pass_overlap: int|None=None):
         super().__init__(
             'Isolate %s' % source_item.name,
             color=color,
