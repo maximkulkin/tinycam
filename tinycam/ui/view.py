@@ -2,7 +2,7 @@ from collections.abc import Callable, Sequence
 import moderngl as mgl
 from numbers import Number as number
 import numpy as np
-from typing import Any, cast
+from typing import Any, cast, Protocol, TypeGuard
 from PIL.Image import Image
 from PySide6 import QtCore, QtGui, QtOpenGLWidgets
 from PySide6.QtCore import Qt
@@ -93,14 +93,18 @@ class Scope:
         self._context.enable_only(self._old_flags)
 
 
+class HasContext(Protocol):
+    _context: mgl.Context
+
+
 class ContextProxy:
     def __set_name__(self, owner: object, name: str):
         self._name = name
 
-    def __get__(self, obj: object, cls) -> object:
-        return getattr(object._context, self._name)
+    def __get__(self, obj: HasContext, cls) -> object:
+        return getattr(obj._context, self._name)
 
-    def __set__(self, obj: object, value: object):
+    def __set__(self, obj: HasContext, value: object):
         setattr(obj._context, self._name, value)
 
 
