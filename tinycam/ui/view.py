@@ -329,6 +329,14 @@ class ViewItem:
         raise NotImplementedError()
 
 
+class HasOnClick(Protocol):
+    def on_click(self, tag: object): ...
+
+
+def has_on_click(obj: object) -> TypeGuard[HasOnClick]:
+    return hasattr(obj, 'on_click')
+
+
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -440,7 +448,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
             picked = self.pick_item(mouse_event.position())
             if picked is not None:
                 pickable, tag = picked
-                if hasattr(pickable, 'on_click'):
+                if has_on_click(pickable):
                     pickable.on_click(tag)
                     return True
 
