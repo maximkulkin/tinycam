@@ -1,11 +1,17 @@
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
-from tinycam.globals import GLOBALS
-
 
 class CncProjectItem(QtCore.QObject):
+    # Signal whenever any property of an item has changed
     changed: QtCore.Signal
+
+    # Signal used to signal when asynchronous operation on the item has finished
+    #
+    # E.g. if changing parameter of a job that causes expensive computations,
+    # first changed signal will be emitted to signal that the property has changed.
+    # When asynchronous update will finish, updated signal will be emitted, so that
+    # e.g. UI can update item geometry.
     updated: QtCore.Signal
 
     def __init__(self, name, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
@@ -15,6 +21,7 @@ class CncProjectItem(QtCore.QObject):
         self._visible = True
         self._debug = False
         self._selected = False
+
         self._updating = False
         self._updated = False
 
@@ -28,6 +35,15 @@ class CncProjectItem(QtCore.QObject):
         return clone
 
     def __enter__(self):
+        """A context to withhold update events for an item if multiple updates are planned
+
+        Example:
+
+            with item:
+                item.color = color1
+                item.visible = True
+
+        """
         self._updating = True
         self._updated = False
         return self
@@ -100,9 +116,6 @@ class CncProjectItem(QtCore.QObject):
             return
         self._selected = value
         self._signal_changed()
-
-    def contains(self, point: QtCore.QPoint | QtCore.QPointF):
-        return GLOBALS.GEOMETRY.contains(self._geometry, (point.x(), point.y()))
 
 
 CncProjectItem.changed = QtCore.Signal(CncProjectItem)
