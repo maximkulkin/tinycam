@@ -1,3 +1,5 @@
+from typing import cast
+
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
@@ -80,16 +82,16 @@ class IntPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._prop = prop
+        self._prop = cast(IntProperty, prop)
 
         self._editor = QtWidgets.QSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
-        if prop.min_value is not None:
-            self._editor.setMinimum(prop.min_value)
-        if prop.max_value is not None:
-            self._editor.setMaximum(prop.max_value)
-        if prop.suffix is not None:
-            self._editor.setSuffix(prop.suffix)
+        if self._prop.min_value is not None:
+            self._editor.setMinimum(self._prop.min_value)
+        if self._prop.max_value is not None:
+            self._editor.setMaximum(self._prop.max_value)
+        if self._prop.suffix is not None:
+            self._editor.setSuffix(self._prop.suffix)
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
         self.setLayout(layout)
@@ -117,16 +119,16 @@ class FloatPropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._prop = prop
+        self._prop = cast(FloatProperty, prop)
 
         self._editor = QtWidgets.QDoubleSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
-        if prop.min_value is not None:
-            self._editor.setMinimum(prop.min_value)
-        if prop.max_value is not None:
-            self._editor.setMaximum(prop.max_value)
-        if prop.suffix is not None:
-            self._editor.setSuffix(prop.suffix)
+        if self._prop.min_value is not None:
+            self._editor.setMinimum(self._prop.min_value)
+        if self._prop.max_value is not None:
+            self._editor.setMaximum(self._prop.max_value)
+        if self._prop.suffix is not None:
+            self._editor.setSuffix(self._prop.suffix)
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
         self.setLayout(layout)
@@ -154,7 +156,7 @@ class Vector2PropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._prop = prop
+        self._prop = cast(Vector2Property, prop)
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -204,7 +206,7 @@ class Vector3PropertyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._target = target
-        self._prop = prop
+        self._prop = cast(Vector3Property, prop)
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
