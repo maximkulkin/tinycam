@@ -438,9 +438,9 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def event(self, event: QtCore.QEvent):
         mouse_event = cast(QMouseEvent, event)
 
-        if (event.type() == QtCore.QEvent.MouseButtonRelease and
-                mouse_event.button() == Qt.LeftButton and
-                mouse_event.modifiers() == Qt.NoModifier):
+        if (event.type() == QtCore.QEvent.Type.MouseButtonRelease and
+                mouse_event.button() == Qt.MouseButton.LeftButton and
+                mouse_event.modifiers() == Qt.KeyboardModifier.NoModifier):
 
             picked = self.pick_item(mouse_event.position())
             if picked is not None:
