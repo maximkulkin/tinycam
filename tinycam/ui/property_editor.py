@@ -28,10 +28,10 @@ class StringPropertyEditor(QtWidgets.QWidget):
         self.refreshValue()
 
     def value(self) -> str:
-        return self._editor.value()
+        return self._editor.text()
 
     def setValue(self, value: str):
-        self._editor.setValue(value)
+        self._editor.setText(value)
 
     def refreshValue(self):
         self.setValue(getattr(self._target, self._prop.name))
