@@ -375,7 +375,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         self.update()
 
     def remove_items(self, predicate: Callable[[ViewItem], bool]):
-        self._items = self._items.filter(lambda item: not predicate(item))
+        self._items = [item for item in self._items if not predicate(item)]
         self.update()
 
     def pick_item(
