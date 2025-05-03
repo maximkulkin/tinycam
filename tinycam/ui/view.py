@@ -64,7 +64,7 @@ class Scope:
         self._attrs = {k: v for k, v in attrs.items() if v is not None}
         self._framebuffer = framebuffer
 
-        self._old_flags = None
+        self._old_flags = 0
         self._old_values = {}
         self._old_framebuffer: mgl.Framebuffer | None = None
 
