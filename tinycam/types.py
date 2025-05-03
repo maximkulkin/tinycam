@@ -377,6 +377,14 @@ class Rect(np.ndarray):
     point = Vector2Proxy((0, 1))
     rect_size = Vector2Proxy((2, 3))
 
+    def extend(self, dx: number, dy: number) -> 'Rect':
+        return Rect.from_coords(
+            self.xmin - dx,
+            self.ymin - dy,
+            self.xmax + dx,
+            self.ymax + dy,
+        )
+
     def __str__(self) -> str:
         return f'Rect(x={self.x}, y={self.y}, width={self.width}, height={self.height})'
 
