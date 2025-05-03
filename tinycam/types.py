@@ -437,6 +437,141 @@ class Rect(np.ndarray):
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
 
+class Box(np.ndarray):
+    def __new__(
+        cls,
+        x: number = 0,
+        y: number = 0,
+        z: number = 0,
+        width: number = 0,
+        height: number = 0,
+        depth: number = 0,
+    ):
+        return np.array([x, y, z, width, height, depth]).view(cls)
+
+    x = Vector1Proxy(0)
+    y = Vector1Proxy(1)
+    z = Vector1Proxy(2)
+    width = Vector1Proxy(3)
+    height = Vector1Proxy(4)
+    depth = Vector1Proxy(5)
+
+    @property
+    def xmin(self) -> float:
+        return self[0]
+
+    @property
+    def ymin(self) -> float:
+        return self[1]
+
+    @property
+    def zmin(self) -> float:
+        return self[2]
+
+    @property
+    def xmax(self) -> float:
+        return self[0] + self[3]
+
+    @property
+    def ymax(self) -> float:
+        return self[1] + self[4]
+
+    @property
+    def zmax(self) -> float:
+        return self[2] + self[5]
+
+    @property
+    def center(self) -> Vector3:
+        return Vector3(
+            self.x + self.width * 0.5,
+            self.y + self.height * 0.5,
+            self.z + self.depth * 0.5,
+        )
+
+    point = Vector3Proxy((0, 1, 2))
+    box_size = Vector3Proxy((3, 4, 5))
+
+    def extend(self, dx: number, dy: number, dz: number) -> 'Box':
+        return Box.from_coords(
+            self.xmin - dx,
+            self.ymin - dy,
+            self.zmin - dz,
+            self.xmax + dx,
+            self.ymax + dy,
+            self.zmax + dz,
+        )
+
+    def __str__(self) -> str:
+        return f'Box(x={self.x}, y={self.y}, z={self.z}, width={self.width}, height={self.height}, depth={self.depth})'
+
+    def contains(self, obj: 'Box | Vector3') -> bool:
+        match obj:
+            case Box():
+                xmin, ymin, zmin, xmax, ymax, zmax = obj.xmin, obj.ymin, obj.zmin, obj.xmax, obj.ymax, obj.zmax
+                return (self.xmin <= xmin and xmax <= self.xmax and
+                        self.ymin <= ymin and ymax <= self.ymax and
+                        self.zmin <= zmin and zmax <= self.zmax)
+            case Vector3():
+                return (
+                    self.xmin >= obj[0] and self.xmax <= obj[0] and
+                    self.ymin >= obj[1] and self.ymax <= obj[1] and
+                    self.zmin >= obj[2] and self.zmax <= obj[2]
+                )
+
+    def intersect(self, box: 'Box') -> 'Box | None':
+        x1, x2 = max(self.xmin, box.xmin), min(self.xmax, box.xmax)
+        if x2 < x1:
+            return None
+
+        y1, y2 = max(self.ymin, box.ymin), min(self.ymax, box.ymax)
+        if y2 < y1:
+            return None
+
+        z1, z2 = max(self.zmin, box.zmin), min(self.zmax, box.zmax)
+        if z2 < z1:
+            return None
+
+        return Box.from_coords(x1, y1, z1, x2, y2, z2)
+
+    def merge(self, box: 'Box') -> 'Box':
+        return Box.from_coords(
+            x1=min(self.xmin, box.xmin),
+            y1=min(self.ymin, box.ymin),
+            z1=min(self.zmin, box.zmin),
+            x2=max(self.xmax, box.xmax),
+            y2=max(self.ymax, box.ymax),
+            z2=max(self.zmax, box.zmax),
+        )
+
+    @staticmethod
+    def from_point_and_size(bottom_left: Vector3, size: Vector3) -> 'Box':
+        return Box(bottom_left.x, bottom_left.y, bottom_left.z,
+                   size.x, size.y, size.z)
+
+    @staticmethod
+    def from_center_and_size(center: Vector3, size: Vector3) -> 'Box':
+        return Box(
+            center.x - size.x * 0.5,
+            center.y - size.y * 0.5,
+            center.z - size.z * 0.5,
+            size.x,
+            size.y,
+            size.z,
+        )
+
+    @staticmethod
+    def from_coords(x1: number, y1: number, z1: number,
+                    x2: number, y2: number, z2: number) -> 'Box':
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+        if z1 > z2:
+            z1, z2 = z2, z1
+
+        return Box(x1, y1, z1, x2 - x1, y2 - y1, z2 - z1)
+
+
 __all__ = [
     'Vector2',
     'Vector3',
