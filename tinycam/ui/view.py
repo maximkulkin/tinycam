@@ -340,8 +340,6 @@ def has_on_click(obj: object) -> TypeGuard[HasOnClick]:
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ctx: Context | None = None
-
         self.setMouseTracking(True)
 
         self._items: list[ViewItem] = []
@@ -417,8 +415,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
 
     def initializeGL(self):
         super().initializeGL()
-        self.ctx = Context(mgl.create_context(required=410))
-        self.context = self.ctx
+        self.ctx = Context(mgl.create_context(require=410))
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)
