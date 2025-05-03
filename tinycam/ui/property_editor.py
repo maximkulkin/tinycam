@@ -296,7 +296,7 @@ class PropertyEditor(QtWidgets.QWidget):
         props = [
             prop
             for name in dir(target)
-            for prop in [getattr(target.__class__, name, None)]
+            for prop in [target.__class__.__dict__.get(name, None)]
             if isinstance(prop, Property)
         ]
 
