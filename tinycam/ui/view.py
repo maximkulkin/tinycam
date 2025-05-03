@@ -278,8 +278,8 @@ class Context:
 
     def framebuffer(
         self,
-        color_attachments: list[mgl.Texture],
-        depth_attachment: mgl.Texture | None = None,
+        color_attachments: list[mgl.Texture | mgl.Renderbuffer],
+        depth_attachment: mgl.Texture | mgl.Renderbuffer | None = None,
     ) -> mgl.Framebuffer:
         return self._context.framebuffer(
             color_attachments=color_attachments,
