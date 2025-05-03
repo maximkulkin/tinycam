@@ -51,7 +51,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self._prop = prop
 
         self._editor = QtWidgets.QCheckBox(self)
-        self._editor.statChanged.connect(self._on_value_changed)
+        self._editor.stateChanged.connect(self._on_value_changed)
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
         self.setLayout(layout)
@@ -59,7 +59,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self.refreshValue()
 
     def value(self) -> bool:
-        return self._editor.checked()
+        return self._editor.isChecked()
 
     def setValue(self, value: bool):
         self._editor.setChecked(value)
@@ -68,7 +68,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self.setValue(getattr(self._target, self._prop.name))
 
     def _on_value_changed(self, state: Qt.CheckState):
-        value = state == Qt.Checked
+        value = state == Qt.CheckState.Checked
         setattr(self._target, self._prop.name, value)
         self.valueChanged.emit(value)
 
