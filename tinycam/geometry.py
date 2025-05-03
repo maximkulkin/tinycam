@@ -5,14 +5,13 @@ from typing import overload
 
 import numpy as np
 import shapely.affinity
+import shapely.ops
 from shapely.geometry.base import BaseGeometry as Shape
 
 from tinycam.types import Vector2, Vector3, Rect
 
 
 type number = int | float
-type Vector2 = tuple[number, number]
-type Vector3 = tuple[number, number, number]
 
 type Point = shapely.Point
 type Line = shapely.LineString
@@ -39,6 +38,18 @@ type AnyShape = Point | Line | Polygon | Group | MultiLineString | MultiPolygon
 #
 #     def contains(self, point: PointLike):
 #         return shapely.contains_xy(self._data, point[0], point[1])
+
+
+def get_x(point: PointLike) -> float:
+    if isinstance(point, shapely.Point):
+        return point.x
+    return point[0]
+
+
+def get_y(point: PointLike) -> float:
+    if isinstance(point, shapely.Point):
+        return point.y
+    return point[1]
 
 
 class Geometry:
@@ -93,8 +104,8 @@ class Geometry:
 
         points = []
         while (angle > end_angle if ccw else angle < end_angle):
-            points.append((center[0] + math.cos(angle) * radius,
-                           center[1] + math.sin(angle) * radius))
+            points.append((get_x(center) + math.cos(angle) * radius,
+                           get_y(center) + math.sin(angle) * radius))
             angle += angle_step
 
         if angle != end_angle:
@@ -105,11 +116,11 @@ class Geometry:
             arc = arc.buffer(width / 2)
         return arc
 
-    def circle(self, diameter: number, center: PointLike = (0, 0)) -> Polygon:
+    def circle(self, diameter: number, center: PointLike = Vector2(0, 0)) -> Polygon:
         return shapely.Point(center).buffer(diameter / 2)
 
     def box(self, pmin: PointLike, pmax: PointLike) -> Polygon:
-        return shapely.box(pmin[0], pmin[1], pmax[0], pmax[1])
+        return shapely.box(get_x(pmin), get_y(pmin), get_x(pmax), get_y(pmax))
 
     def polygon(self, points: Sequence[PointLike] | np.ndarray) -> Polygon:
         return shapely.Polygon(points)
@@ -124,47 +135,47 @@ class Geometry:
         return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
 
     def lines(self, shape: AnyShape) -> list[Line]:
-        if isinstance(shape, LineString):
+        if isinstance(shape, shapely.LineString):
             return [shape]
-        elif isinstance(shape, MultiLineString):
+        elif isinstance(shape, shapely.MultiLineString):
             return shape.geoms
 
         raise ValueError('Geometry is not a line: %s' % shape.__class__)
 
     def polygons(self, shape: Polygon | MultiPolygon) -> list[Polygon]:
-        if isinstance(shape, Polygon):
+        if isinstance(shape, shapely.Polygon):
             return [shape]
-        elif isinstance(shape, MultiPolygon):
+        elif isinstance(shape, shapely.MultiPolygon):
             return shape.geoms
 
         raise ValueError('Geometry is not a polygon: %s' % shape.__class__)
 
     def exteriors(self, shape: AnyShape) -> list[Line]:
-        if isinstance(shape, Polygon):
+        if isinstance(shape, shapely.Polygon):
             return [shape.exterior]
-        elif isinstance(shape, MultiPolygon):
+        elif isinstance(shape, shapely.MultiPolygon):
             return [
                 geom.exterior
                 for geom in shape.geoms
-                if isinstance(geom, Polygon)
+                if isinstance(geom, shapely.Polygon)
             ]
 
         return []
 
     def interiors(self, shape: AnyShape) -> list[Line]:
-        if isinstance(shape, Polygon):
+        if isinstance(shape, shapely.Polygon):
             return shape.interiors
-        elif isinstance(shape, MultiPolygon):
+        elif isinstance(shape, shapely.MultiPolygon):
             return [
                 interior
                 for geom in shape.geoms
-                if isinstance(geom, Polygon)
+                if isinstance(geom, shapely.Polygon)
                 for interior in geom.interiors
             ]
         return []
 
     def contains(self, shape: AnyShape, point: PointLike) -> bool:
-        return shapely.contains_xy(shape, point[0], point[1])
+        return shapely.contains_xy(shape, get_x(point), get_y(point))
 
     # boolean operations
 
@@ -185,19 +196,19 @@ class Geometry:
 
     def translate[T: AnyShape](self, shape: T, offset: Vector2 | Vector3) -> T:
         if len(offset) < 3:
-            offset = (offset[0], offset[1], 0)
+            offset = Vector3(offset[0], offset[1], 0)
         return shapely.affinity.translate(shape, offset[0], offset[1], offset[2])
 
-    def rotate[T: AnyShape](self, shape: T, angle: number, origin: PointLike = (0, 0)) -> T:
+    def rotate[T: AnyShape](self, shape: T, angle: number, origin: PointLike = Vector2(0, 0)) -> T:
         """Rotate shape around origin by given angle in degrees counterclockwise."""
-        return shapely.affinity.rotate(shape, angle, origin)
+        return shapely.affinity.rotate(shape, angle, shapely.Point(origin))
 
     def scale[T: AnyShape](self, shape: T, factor: number | Vector2 | Vector3) -> T:
         """Scale shape by given factor."""
         if isinstance(factor, (int, float)):
-            factor = (factor, factor, factor)
+            factor = Vector3(factor, factor, factor)
         elif len(factor) == 2:
-            factor = (factor[0], factor[1], 1)
+            factor = Vector3(factor[0], factor[1], 1)
         return shapely.affinity.scale(shape, factor[0], factor[1], factor[2])
 
     def buffer(self, shape: AnyShape, offset: number) -> Polygon:
@@ -207,5 +218,5 @@ class Geometry:
         return shapely.simplify(shape, tolerance)
 
     def nearest(self, from_shape: AnyShape, to_shape: AnyShape) -> Point:
-        point_a, point_b = shapely.ops.nearest_points(from_shape, to_shape)
+        _, point_b = shapely.ops.nearest_points(from_shape, to_shape)
         return point_b
