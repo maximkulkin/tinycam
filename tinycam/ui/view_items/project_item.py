@@ -1,7 +1,7 @@
 import moderngl as mgl
-import shapely
+import numpy as np
 from tinycam.project import CncProjectItem
-from tinycam.types import Vector4, Matrix44
+from tinycam.types import Vector4, Matrix44, Box
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core.composite import Composite
 from tinycam.ui.view_items.core.polygon import Polygon
@@ -26,6 +26,15 @@ class CncProjectItemView(Composite):
     @property
     def model(self) -> CncProjectItem:
         return self._model
+
+    @property
+    def bounds(self) -> Box:
+        if self._view_geometry is None:
+            return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
+        min_coords = np.min(self._view_geometry, axis=0)
+        max_coords = np.max(self._view_geometry, axis=0)
+        return Box.from_coords(min_coords[0], min_coords[1], min_coords[2],
+                               max_coords[0], max_coords[1], max_coords[2])
 
     def _update_geometry(self):
         if self._view_geometry is self._model.geometry:
