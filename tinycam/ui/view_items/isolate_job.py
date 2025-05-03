@@ -68,10 +68,10 @@ class CncIsolateJobView(CncProjectItemView):
                         )
                         self.add_item(path_view)
 
-                    current_path_points = [path.start * Vector3(1, -1, 1), path.end * Vector3(1, -1, 1)]
+                    current_path_points = [path.start, path.end]
                     current_path_type = path.type
                 else:
-                    current_path_points.append(path.end * Vector3(1, -1, 1))
+                    current_path_points.append(path.end)
 
             if current_path_points:
                 path_view = CncPathView(
