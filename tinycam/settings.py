@@ -11,7 +11,7 @@ def humanize(s: str) -> str:
     return ' '.join(parts)
 
 
-class CncSetting(QtCore.QObject):
+class CncSetting[T](QtCore.QObject):
     changed: QtCore.Signal = QtCore.Signal(object)
 
     def __init__(
@@ -19,14 +19,14 @@ class CncSetting(QtCore.QObject):
         path: str,
         label: str | None = None,
         description: str | None = None,
-        default: object | None = None,
+        default: T | None = None,
     ):
         super().__init__()
         self._path: str = path
-        self._value: object = None
+        self._value: T | None = None
         self._label: str | None = label
         self._description: str | None = description
-        self._default: object = default
+        self._default: T | None = default
 
     @property
     def path(self) -> str:
@@ -41,13 +41,13 @@ class CncSetting(QtCore.QObject):
         return self._description
 
     @property
-    def value(self) -> object:
+    def value(self) -> T | None:
         if self._value is None:
             return self.default
         return self._value
 
     @value.setter
-    def value(self, value: object):
+    def value(self, value: T):
         if self._value == value:
             return
 
@@ -61,7 +61,7 @@ class CncSetting(QtCore.QObject):
         self._value = None
 
     @property
-    def default(self) -> object | None:
+    def default(self) -> T | None:
         return self._default
 
     def save(self) -> str:
@@ -74,7 +74,7 @@ class CncSetting(QtCore.QObject):
         raise NotImplementedError()
 
 
-class CncStringSetting(CncSetting):
+class CncStringSetting(CncSetting[str]):
     @override
     def load(self, value: str):
         self._value: object = value
@@ -88,7 +88,7 @@ class CncStringSetting(CncSetting):
         return 'STRING'
 
 
-class CncIntegerSetting(CncSetting):
+class CncIntegerSetting(CncSetting[int]):
     def __init__(
         self,
         *args,
@@ -138,7 +138,7 @@ class CncIntegerSetting(CncSetting):
         return 'INTEGER'
 
 
-class CncFloatSetting(CncSetting):
+class CncFloatSetting(CncSetting[float]):
     def __init__(
         self,
         *args,
@@ -188,7 +188,7 @@ class CncFloatSetting(CncSetting):
         return 'FLOAT'
 
 
-class CncBooleanSetting(CncSetting):
+class CncBooleanSetting(CncSetting[bool]):
     @override
     def save(self) -> str:
         data = 'true' if bool(self.value) else 'false'
@@ -207,7 +207,7 @@ class CncBooleanSetting(CncSetting):
         return 'BOOLEAN'
 
 
-class CncVector2Setting(CncSetting):
+class CncVector2Setting(CncSetting[Vector2]):
     @override
     def save(self) -> str:
         return f'{self.value[0]},{self.value[1]}'  # pyright: ignore
@@ -225,7 +225,7 @@ class CncVector2Setting(CncSetting):
         return 'VECTOR2'
 
 
-class CncEnumSetting(CncSetting):
+class CncEnumSetting(CncSetting[enum.Enum]):
     def __init__(self, *args, enum_type: type[enum.Enum] | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         if enum_type is None:
@@ -253,7 +253,7 @@ class CncEnumSetting(CncSetting):
         return f'{self.enum_type}'
 
 
-class CncListSetting[T](CncSetting):
+class CncListSetting[T](CncSetting[list[T]]):
     def __init__(self, item_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.item_type = item_type
@@ -322,7 +322,13 @@ class CncSectionSettings:
     def _make_path(self, path: str) -> str:
         return f'{self._path}/{path}'
 
-    def register(self, path: str, type: type[CncSetting], *args, **kwargs):
+    def register[S: CncSetting](
+        self,
+        path: str,
+        type: type[S],
+        *args,
+        **kwargs
+    ) -> S:
         return self._settings.register(self._make_path(path), type, *args, **kwargs)
 
     def __getitem__(self, path: str) -> CncSetting:
@@ -374,16 +380,16 @@ class CncSettings(QtCore.QObject):
     def section(self, path: str) -> CncSectionSettings:
         return CncSectionSettings(self, path)
 
-    def register(
+    def register[S: CncSetting](
         self,
         path: str,
-        setting_type: type[CncSetting],
+        setting_type: type[S],
         *args,
         label: str | None = None,
         description: str | None = None,
         default: object | None = None,
         **kwargs
-    ):
+    ) -> S:
         if path in self._settings:
             raise CncSettingAlreadyExistsError(path)
 
@@ -394,10 +400,12 @@ class CncSettings(QtCore.QObject):
         if label is None:
             label = humanize(parts[-1])
 
-        self._settings[path] = setting_type(
+        setting = setting_type(
             path, *args, label=label, description=description,
             default=default, **kwargs
         )
+        self._settings[path] = setting
+        return setting
 
     def __getitem__(self, path: str) -> CncSetting:
         return self._settings[path]
