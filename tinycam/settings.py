@@ -493,3 +493,4 @@ class ControlType(enum.Enum):
 SETTINGS.register('general/units', CncEnumSetting, enum_type=Units, default=Units.MM)
 SETTINGS.register('general/control_type', CncEnumSetting, enum_type=ControlType,
                   default=ControlType.MOUSE)
+SETTINGS.register('general/invert_zoom', CncBooleanSetting, default=False)
