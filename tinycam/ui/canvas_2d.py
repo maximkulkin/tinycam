@@ -40,6 +40,11 @@ class CncCanvas2D(CncView):
         self._tool = SelectTool(self.project, self)
         self._tool.activate()
 
+    def resizeGL(self, width, height):
+        super().resizeGL(width, height)
+        if isinstance(self._camera, OrthographicCamera):
+            self._camera.resize(width, height, keep_aspect=False)
+
     @property
     def tool(self) -> CncTool:
         return self._tool

@@ -184,7 +184,7 @@ class PanAndZoomController(QtCore.QObject):
         self._last_position = None
         self._pan_button = Qt.MouseButton.MiddleButton
         self._pan_modifiers = Qt.KeyboardModifier.NoModifier
-        self._zoom_multiplier = 1.0
+        self._zoom_inverter = 1.0
 
         self._panning = False
 
@@ -204,7 +204,7 @@ class PanAndZoomController(QtCore.QObject):
                 self._pan_modifiers = Qt.KeyboardModifier.MetaModifier
 
     def _on_invert_zoom_changed(self, value: bool):
-        self._zoom_multiplier = -1.0 if value else 1.0
+        self._zoom_inverter = -1.0 if value else 1.0
 
     def _unproject(self, p: QtCore.QPointF) -> Vector3:
         return unproject((p.x(), p.y()), self._camera)
@@ -252,7 +252,7 @@ class PanAndZoomController(QtCore.QObject):
 
             if isinstance(self._camera, OrthographicCamera):
                 c = self._camera
-                s = Vector2(c.right - c.left, c.top - c.bottom)
+                s = Vector2(c.width, c.height) * c.zoom
                 delta = self._last_position - position
                 d = Vector2(delta.x(), -delta.y()) / self._camera.pixel_size * s
 
@@ -275,13 +275,11 @@ class PanAndZoomController(QtCore.QObject):
             screen_point = wheel_event.position()
             p0 = self._unproject(screen_point)
 
-            scale = 0.9 ** (wheel_event.angleDelta().y() / 120.0 * self._zoom_multiplier)
+            scale = 0.9 ** (wheel_event.angleDelta().y() / 120.0 * self._zoom_inverter)
+
             if isinstance(self._camera, OrthographicCamera):
                 c = cast(OrthographicCamera, self._camera)
-                c.left *= scale
-                c.right *= scale
-                c.top *= scale
-                c.bottom *= scale
+                c.zoom *= scale
             else:
                 self._camera.position *= Vector3(1, 1, scale)
 

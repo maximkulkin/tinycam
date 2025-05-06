@@ -204,57 +204,56 @@ class PerspectiveCamera(Camera):
 class OrthographicCamera(Camera):
     def __init__(
         self,
-        left: float = -10.0,
-        right: float = 10.0,
-        top: float = 10.0,
-        bottom: float = -10.0,
+        width: float = 20.0,
+        height: float = 20.0,
+        zoom: float = 1.0,
         **kwargs
     ):
         super().__init__(**kwargs)
-        self._left = left
-        self._right = right
-        self._top = top
-        self._bottom = bottom
+        self._width = width
+        self._height = height
+        self._zoom = zoom
 
     @property
-    def left(self) -> float:
-        return self._left
+    def width(self) -> float:
+        return self._width
 
-    @left.setter
-    def left(self, value: float) -> None:
-        self._left = value
+    @width.setter
+    def width(self, value: float):
+        self._width = value
         self._invalidate_projection_matrix()
 
     @property
-    def right(self) -> float:
-        return self._right
+    def height(self) -> float:
+        return self._height
 
-    @right.setter
-    def right(self, value: float) -> None:
-        self._right = value
+    @height.setter
+    def height(self, value: float):
+        self._height = value
         self._invalidate_projection_matrix()
 
     @property
-    def top(self) -> float:
-        return self._top
+    def zoom(self) -> float:
+        return self._zoom
 
-    @top.setter
-    def top(self, value: float) -> None:
-        self._top = value
+    @zoom.setter
+    def zoom(self, value: float):
+        self._zoom = value
         self._invalidate_projection_matrix()
 
-    @property
-    def bottom(self) -> float:
-        return self._bottom
-
-    @bottom.setter
-    def bottom(self, value: float) -> None:
-        self._bottom = value
+    def resize(self, width: float, height: float, keep_aspect: bool = True):
+        if keep_aspect:
+            aspect = self.width / self.height
+            width = height * aspect
+        self._width = width
+        self._height = height
         self._invalidate_projection_matrix()
 
     def _calculate_projection_matrix(self) -> Matrix44:
+        w = self.width * 0.5 * self.zoom
+        h = self.height * 0.5 * self.zoom
         return Matrix44.orthogonal_projection(
-            left=self.left, right=self.right,
-            top=self.top, bottom=self.bottom,
+            left=-w, right=w,
+            bottom=-h, top=h,
             near=self.near, far=self.far,
         )
