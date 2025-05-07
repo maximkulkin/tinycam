@@ -124,8 +124,7 @@ class Camera:
         ndc = self.screen_to_ndc_point(screen_point, z=z)
 
         v = (self.projection_matrix * self.view_matrix).inverse * Vector4.from_vector3(ndc)
-        v /= v.w
-        return v.xyz
+        return v.dehomogenize().xyz
 
     def screen_to_ndc_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
         return Vector3(

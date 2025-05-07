@@ -191,6 +191,12 @@ class Vector4(pyrr.Vector4):
     def from_vector3(cls, v: Vector3, w: number = 1.0) -> 'Vector4':
         return Vector4(v[0], v[1], v[2], w)
 
+    def dehomogenize(self) -> 'Vector4':
+        w = self.w
+        if w == 0.0:
+            raise ValueError('Cant dehomogenize, W component is zero')
+        return Vector4(self[0]/w, self[1]/w, self[2]/w, 1.0)
+
     def __add__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__add__(other).view(Vector4)
 
