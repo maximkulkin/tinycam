@@ -247,21 +247,9 @@ class PanAndZoomController(QtCore.QObject):
 
             assert(self._last_position is not None)
 
-            if isinstance(self._camera, OrthographicCamera):
-                c = self._camera
-                s = Vector2(c.width, c.height) * c.zoom
-                delta = self._last_position - position
-                d = Vector2(delta.x(), -delta.y()) / self._camera.pixel_size * s
-
-                self._camera.position += Vector3.from_vector2(d)
-            else:
-                p0 = self._camera.unproject(vector2(self._last_position))
-                p1 = self._camera.unproject(vector2(position))
-
-                d = p0 - p1
-                d.z = 0
-
-                self._camera.position += d
+            p0 = self._camera.unproject(vector2(self._last_position))
+            p1 = self._camera.unproject(vector2(position))
+            self._camera.position += (p0 - p1) * Vector3(1, 1, 0)
 
             widget.setCursor(QtGui.QCursor(Qt.CursorShape.ClosedHandCursor))
 
