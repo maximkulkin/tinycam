@@ -270,11 +270,8 @@ class PanAndZoomController(QtCore.QObject):
             else:
                 self._camera.position *= Vector3(1, 1, scale)
 
-                p1 = self._camera.unproject(vector2(screen_point))
-                d = p0 - p1
-                d.z = 0
-
-                self._camera.position += d
+            p1 = self._camera.unproject(vector2(screen_point))
+            self._camera.position += (p0 - p1) * Vector3(1, 1, 0)
 
             widget.update()
 
