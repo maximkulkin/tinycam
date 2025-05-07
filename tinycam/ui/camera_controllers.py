@@ -231,7 +231,7 @@ class PanAndZoomController(QtCore.QObject):
 
             position = mouse_event.position()
             if not self._panning:
-                assert(self._start_position is not None)
+                assert self._start_position is not None
                 if (self._start_position - position).manhattanLength() > 20:
                     self._panning = True
                     self._last_position = self._start_position
@@ -245,7 +245,7 @@ class PanAndZoomController(QtCore.QObject):
                 self._start_position = None
                 return False
 
-            assert(self._last_position is not None)
+            assert self._last_position is not None
 
             p0 = self._camera.unproject(vector2(self._last_position))
             p1 = self._camera.unproject(vector2(position))
@@ -308,7 +308,7 @@ class FreeMoveController(QtCore.QObject):
         sens = mouse_sensitivity
         self._mouse_sensitivity: Vector2 = (
             Vector2(sens, sens) if isinstance(sens, float)
-                else Vector2(cast(tuple[float, float], sens))
+            else Vector2(cast(tuple[float, float], sens))
         )
 
         self._pitch = 0.0
@@ -393,7 +393,6 @@ class FreeMoveController(QtCore.QObject):
     def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
-
 
         if event.type() == QEvent.Type.KeyPress:
             match cast(QKeyEvent, event).key():
