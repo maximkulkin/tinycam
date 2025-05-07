@@ -144,6 +144,19 @@ class Camera:
             (self.view_matrix * self.projection_matrix * Vector4.from_vector3(world_point)).xyz
         )
 
+    def project(self, world_point: Vector3) -> Vector2:
+        ndc = (
+            self.projection_matrix *
+            self.view_matrix *
+            Vector4.from_vector3(world_point, w=1.0)
+        ).dehomogenize()
+        return self.ndc_to_screen_point(ndc.xyz)
+
+    def unproject(self, screen_point: Vector2) -> Vector3:
+        ndc = self.screen_to_ndc_point(screen_point)
+        m = (self.projection_matrix * self.view_matrix).inverse
+        return (m * Vector4.from_vector3(ndc, w=1.0)).dehomogenize().xyz
+
 
 class PerspectiveCamera(Camera):
     def __init__(
@@ -198,6 +211,12 @@ class PerspectiveCamera(Camera):
         return Matrix44.perspective_projection(
             self._fov, self._aspect, self._near, self._far,
         )
+
+    def unproject(self, screen_point: Vector2) -> Vector3:
+        point = super().unproject(screen_point)
+        point -= point.z * (self.position - point) / (self.position.z - point.z)
+
+        return point
 
 
 class OrthographicCamera(Camera):

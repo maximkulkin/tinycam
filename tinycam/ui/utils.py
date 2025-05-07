@@ -1,33 +1,23 @@
-from PySide6 import QtGui
 from itertools import chain
-from tinycam.types import Vector2, Vector3, Vector4, Matrix44
-from tinycam.ui.camera import Camera
-from typing import cast
+
+import numpy as np
+from PySide6 import QtGui, QtCore
+from tinycam.types import Vector2, Vector4
 
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
     return Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF())
 
 
-def project(point: Vector3, camera: Camera) -> Vector2:
-    sp = camera.projection_matrix * camera.view_matrix * Vector4.from_vector3(point, 1.0)
-    return camera.ndc_to_screen_point(sp)
-
-
-def unproject(point: tuple[float, float], camera: Camera) -> Vector3:
-    vp = camera.projection_matrix * camera.view_matrix
-    ivp = vp.inverse
-
-    ndc = camera.screen_to_ndc_point(Vector2(point))
-
-    p = Vector4(ndc[0], ndc[1], ndc[2], 1)
-    v = ivp * p
-    if v.w != 0.0:
-        v /= v.w
-
-    r = v.xyz
-    r -= r.z * (camera.position - r) / (camera.position.z - r.z)
-    return r
+def vector2(
+    point: np.ndarray | tuple[float, float] | QtCore.QPoint | QtCore.QPointF,
+) -> Vector2:
+    if isinstance(point, QtCore.QPoint):
+        return Vector2(point.x(), point.y())
+    elif isinstance(point, QtCore.QPointF):
+        return Vector2(point.x(), point.y())
+    else:
+        return Vector2(point[0], point[1])
 
 
 def point_inside_polygon(p: Vector2, polygon: list[Vector2]) -> bool:

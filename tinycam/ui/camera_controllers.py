@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QWidget
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
 from tinycam.ui.camera import Camera, OrthographicCamera
-from tinycam.ui.utils import unproject
+from tinycam.ui.utils import vector2
 
 
 class Axis(enum.Enum):
@@ -206,9 +206,6 @@ class PanAndZoomController(QtCore.QObject):
     def _on_invert_zoom_changed(self, value: bool):
         self._zoom_inverter = -1.0 if value else 1.0
 
-    def _unproject(self, p: QtCore.QPointF) -> Vector3:
-        return unproject((p.x(), p.y()), self._camera)
-
     def eventFilter(self, widget: QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
             self._widget = widget
@@ -258,11 +255,13 @@ class PanAndZoomController(QtCore.QObject):
 
                 self._camera.position += Vector3.from_vector2(d)
             else:
-                p0 = self._unproject(self._last_position)
-                p1 = self._unproject(position)
-                d = Vector2(p0 - p1)
+                p0 = self._camera.unproject(vector2(self._last_position))
+                p1 = self._camera.unproject(vector2(position))
 
-                self._camera.position += Vector3.from_vector2(d)
+                d = p0 - p1
+                d.z = 0
+
+                self._camera.position += d
 
             widget.setCursor(QtGui.QCursor(Qt.CursorShape.ClosedHandCursor))
 
@@ -273,7 +272,7 @@ class PanAndZoomController(QtCore.QObject):
             wheel_event = cast(QWheelEvent, event)
 
             screen_point = wheel_event.position()
-            p0 = self._unproject(screen_point)
+            p0 = self._camera.unproject(vector2(screen_point))
 
             scale = 0.9 ** (wheel_event.angleDelta().y() / 120.0 * self._zoom_inverter)
 
@@ -283,10 +282,11 @@ class PanAndZoomController(QtCore.QObject):
             else:
                 self._camera.position *= Vector3(1, 1, scale)
 
-                p1 = self._unproject(screen_point)
+                p1 = self._camera.unproject(vector2(screen_point))
                 d = p0 - p1
+                d.z = 0
 
-                self._camera.position += Vector3(d.x, d.y, 0)
+                self._camera.position += d
 
             widget.update()
 
