@@ -168,7 +168,6 @@ class Controller:
         self.status_poll_interval = 1.0
         self.max_commands = 10
 
-        self._shutdown = False
         self._ready = False
         self._locked = False
 
@@ -192,28 +191,46 @@ class Controller:
         self._machine_coordinates = (0., 0., 0.)
         self._workspace_coordinates = (0., 0., 0.)
 
-        asyncio.create_task(self._reader_task())
-        asyncio.create_task(self._command_sender())
-        asyncio.create_task(self._state_poller_task())
+        self._reader_task = asyncio.create_task(self._reader_run())
+        self._command_sender_task = asyncio.create_task(self._command_sender_run())
+        self._state_poller_task = asyncio.create_task(self._state_poller_run())
 
-    def shutdown(self) -> None:
-        self._shutdown = True
-        self._reader.close()
+    async def shutdown(self) -> None:
+        self._reader_task.cancel()
+        self._command_sender_task.cancel()
+        self._state_poller_task.cancel()
+
+        try:
+            await self._reader_task
+        except asyncio.CancelledError:
+            pass
+
+        try:
+            await self._command_sender_task
+        except asyncio.CancelledError:
+            pass
+
+        try:
+            await self._state_poller_task
+        except asyncio.CancelledError:
+            pass
+
         self._writer.close()
+        await self._writer.wait_closed()
 
-    async def _reader_task(self) -> None:
-        while not self._shutdown:
+    async def _reader_run(self) -> None:
+        while True:
             line = (await self._reader.readline()).decode('utf-8').replace('\r\n', '')
             await self._process_line(line)
 
-    async def _state_poller_task(self) -> None:
-        while not self._shutdown:
+    async def _state_poller_run(self) -> None:
+        while True:
             if self.ready:
                 await self.status_report()
             await asyncio.sleep(self.status_poll_interval)
 
-    async def _command_sender(self) -> None:
-        while not self._shutdown:
+    async def _command_sender_run(self) -> None:
+        while True:
             command, future = await self._commands.get()
 
             if isinstance(command, str):
