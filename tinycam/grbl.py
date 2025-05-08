@@ -307,6 +307,8 @@ class Controller:
                         self._status = Status.RUN
                     case 'JOG':
                         self._status = Status.JOG
+                    case 'Alarm':
+                        self._status = Status.ALARM
                     case 'ALARM':
                         self._status = Status.ALARM
                     case 'HOLD':
