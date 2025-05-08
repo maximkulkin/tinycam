@@ -268,8 +268,8 @@ class OrthographicCamera(Camera):
         self._invalidate_projection_matrix()
 
     def _calculate_projection_matrix(self) -> Matrix44:
-        w = self.width * 0.5 * self.zoom
-        h = self.height * 0.5 * self.zoom
+        w = self.width * 0.5 / self.zoom
+        h = self.height * 0.5 / self.zoom
         return Matrix44.orthogonal_projection(
             left=-w, right=w,
             bottom=-h, top=h,

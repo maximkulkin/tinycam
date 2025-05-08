@@ -266,7 +266,7 @@ class PanAndZoomController(QtCore.QObject):
 
             if isinstance(self._camera, OrthographicCamera):
                 c = cast(OrthographicCamera, self._camera)
-                c.zoom *= scale
+                c.zoom /= scale
             else:
                 self._camera.position *= Vector3(1, 1, scale)
 

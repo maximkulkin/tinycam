@@ -107,7 +107,7 @@ class CncCanvas2D(CncView):
             bounds.zmax + 5.0
         )
         c = cast(OrthographicCamera, self.camera)
-        c.zoom = max(float((bounds.width + 10) / c.width),
-                     float((bounds.height + 10) / c.height))
+        c.zoom = min(float(c.width / (bounds.width + 10)),
+                     float(c.height / (bounds.height + 10)))
 
         self.update()
