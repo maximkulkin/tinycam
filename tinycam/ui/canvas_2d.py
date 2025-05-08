@@ -1,3 +1,5 @@
+from typing import cast
+
 from PySide6 import QtCore
 from tinycam.project import CncProject, CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 from tinycam.ui.camera import OrthographicCamera
@@ -88,5 +90,22 @@ class CncCanvas2D(CncView):
                 self.update()
                 break
 
+    def zoom_to_fit(self):
+        items = [item for item in self.items if isinstance(item, CncProjectItemView)]
+        if not items:
+            return
 
+        bounds = items[0].bounds
+        for item in items[1:]:
+            bounds = bounds.merge(item.bounds)
 
+        self.camera.position = Vector3(
+            bounds.center.x,
+            bounds.center.y,
+            bounds.zmax + 5.0
+        )
+        c = cast(OrthographicCamera, self.camera)
+        c.zoom = max(float((bounds.width + 10) / c.width),
+                     float((bounds.height + 10) / c.height))
+
+        self.update()

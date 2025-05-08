@@ -1,5 +1,6 @@
 import moderngl as mgl
 import numpy as np
+import shapely as s
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector4, Matrix44, Box
 from tinycam.ui.view import Context, RenderState
@@ -31,10 +32,37 @@ class CncProjectItemView(Composite):
     def bounds(self) -> Box:
         if self._view_geometry is None:
             return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
-        min_coords = np.min(self._view_geometry, axis=0)
-        max_coords = np.max(self._view_geometry, axis=0)
-        return Box.from_coords(min_coords[0], min_coords[1], min_coords[2],
-                               max_coords[0], max_coords[1], max_coords[2])
+        match self._view_geometry:
+            case s.MultiPolygon():
+                xmin = min(
+                    coord[0]
+                    for geom in self._view_geometry.geoms
+                    for coord in geom.exterior.coords
+                )
+                ymin = min(
+                    coord[1]
+                    for geom in self._view_geometry.geoms
+                    for coord in geom.exterior.coords
+                )
+
+                xmax = max(
+                    coord[0]
+                    for geom in self._view_geometry.geoms
+                    for coord in geom.exterior.coords
+                )
+                ymax = max(
+                    coord[1]
+                    for geom in self._view_geometry.geoms
+                    for coord in geom.exterior.coords
+                )
+            case _:
+                xmin = min(coord.x for coord in self._view_geometry.coords)
+                ymin = min(coord.y for coord in self._view_geometry.coords)
+
+                xmax = max(coord.x for coord in self._view_geometry.coords)
+                ymax = max(coord.y for coord in self._view_geometry.coords)
+
+        return Box.from_coords(xmin, ymin, -0.5, xmax, ymax, 0.5)
 
     def _update_geometry(self):
         if self._view_geometry is self._model.geometry:

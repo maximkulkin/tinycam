@@ -59,6 +59,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_file)
+        self.toolbar.addAction('Zoom To Fit', self._zoom_to_fit)
 
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -138,6 +139,13 @@ class CncMainWindow(QtWidgets.QMainWindow):
                     f'Error parsing Excellon file: {e}',
                 )
             return None
+
+    def _zoom_to_fit(self):
+        match self.tabs.currentIndex():
+            case 0:
+                self.canvas_2d.zoom_to_fit()
+            case 1:
+                self.preview_3d.zoom_to_fit()
 
     def _edit_settings(self):
         settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)

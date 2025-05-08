@@ -1,7 +1,11 @@
 import math
+from typing import cast
+
 from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 import tinycam.settings as s
+from tinycam.types import Vector2, Vector3
 from tinycam.ui.view import CncView
+from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
@@ -113,3 +117,34 @@ class CncPreview3D(CncView):
                 self.remove_item(view)
                 self.update()
                 break
+
+    def zoom_to_fit(self):
+        items = [item for item in self.items if isinstance(item, CncProjectItemView)]
+        if not items:
+            return
+
+        bounds = items[0].bounds
+        for item in items[1:]:
+            bounds = bounds.merge(item.bounds)
+
+        c = cast(PerspectiveCamera, self.camera)
+
+        rotation = c.rotation.conjugate
+        n = rotation * c.FORWARD
+        vw = rotation * c.RIGHT
+        vh = rotation * c.UP
+
+        points = [
+            p - n * n.dot(p - bounds.center) - bounds.center
+            for p in bounds.corners
+        ]
+
+        r = max(
+            max([vw.dot(p), vh.dot(p)])
+            for p in points
+        )
+        z = (r + 10.0) / math.tan(c.fov * 0.5)
+
+        c.position = bounds.center - n * z
+
+        self.update()
