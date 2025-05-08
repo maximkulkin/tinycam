@@ -1,6 +1,6 @@
 import asyncio
 import enum
-from typing import Tuple
+from typing import Tuple, Callable
 
 __all__ = [
     'Error',
@@ -158,7 +158,13 @@ class Units(enum.Enum):
 
 
 class Controller:
-    def __init__(self, reader, writer, on_line_send=None, on_line_receive=None):
+    def __init__(
+        self,
+        reader,
+        writer,
+        on_line_send: Callable[[str], None]=lambda _: None,
+        on_line_receive: Callable[[str], None]=lambda _: None,
+    ):
         self._reader = reader
         self._writer = writer
 
@@ -332,14 +338,13 @@ class Controller:
             if not self._command_results.empty():
                 self._command_response.append(l)
 
-        if self._on_line_receive:
-            self._on_line_receive(line)
+        self._on_line_receive(line)
 
     def send_nowait(self, data: str | bytes, echo: bool = True):
         if isinstance(data, str):
             data = data.encode('utf-8')
         self._writer.write(data)
-        if echo and self._on_line_send:
+        if echo:
             self._on_line_send(data.decode('utf-8'))
 
     async def send(self, data: str | bytes, echo: bool = True):
