@@ -497,6 +497,15 @@ class Box(np.ndarray):
     point = Vector3Proxy((0, 1, 2))
     box_size = Vector3Proxy((3, 4, 5))
 
+    @property
+    def corners(self) -> list[Vector3]:
+        return [
+            Vector3(x, y, z)
+            for x in [self.xmin, self.xmax]
+            for y in [self.ymin, self.ymax]
+            for z in [self.zmin, self.zmax]
+        ]
+
     def extend(self, dx: number, dy: number, dz: number) -> 'Box':
         return Box.from_coords(
             self.xmin - dx,
