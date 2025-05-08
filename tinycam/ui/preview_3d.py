@@ -36,7 +36,7 @@ class CncPreview3D(CncView):
     def initializeGL(self):
         super().initializeGL()
 
-        assert(self.ctx is not None)
+        assert self.ctx is not None
 
         self.add_item(GridXY(self.ctx))
 
@@ -99,7 +99,7 @@ class CncPreview3D(CncView):
         self._camera_orbit_controller.rotate(pitch=pitch, yaw=yaw, duration=0.5)
 
     def _on_project_item_added(self, item: CncProjectItem):
-        assert(self.ctx is not None)
+        assert self.ctx is not None
 
         match item:
             case CncIsolateJob():
