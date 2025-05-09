@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt, QEvent, QAbstractItemModel, QModelIndex
 from PySide6.QtGui import QMouseEvent
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QStyleOptionViewItem
 from typing import cast
 
 from tinycam.gcode import GcodeRenderer
@@ -173,7 +173,12 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
         self._table_view = table_view
         self._delegate = None
 
-    def createEditor(self, parent, option, index):
+    def createEditor(
+        self,
+        parent: QWidget | None,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+    ):
         if self._delegate is None:
             self._delegate = ColorComboBoxDelegate(self)
 
@@ -232,7 +237,7 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
             return True
         return super().helpEvent(event, view, option, index)
 
-    def paint(self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QModelIndex):
+    def paint(self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         color = index.data(Qt.ItemDataRole.DisplayRole)
         color = QtGui.QColor(color)
         color.setAlphaF(1.0)
