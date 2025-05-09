@@ -404,7 +404,7 @@ class CncProjectWindow(CncWindow):
         elif isinstance(item, CncJob):
             popup.addAction('Export G-code', self._export_gcode)
 
-        popup.exec(self.mapToGlobal(position).toPoint())
+        popup.exec(self.mapToGlobal(position))
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(list(self.project.selection)))
