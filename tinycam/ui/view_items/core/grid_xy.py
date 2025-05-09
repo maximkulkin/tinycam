@@ -2,6 +2,7 @@ import math
 import moderngl as mgl
 import numpy as np
 from tinycam.types import Vector3
+from tinycam.ui.camera import PerspectiveCamera, OrthographicCamera
 from tinycam.ui.view import Context, ViewItem, RenderState
 
 
@@ -50,10 +51,10 @@ class GridXY(ViewItem):
                 const float axes_width = 1.0;
                 const vec4 x_axis_color = vec4(1.0, 0.0, 0.0, 0.5);
                 const vec4 y_axis_color = vec4(0.0, 1.0, 0.0, 0.5);
-                const float grid_major_width = 1.0;
+                const float grid_major_width = 1.5;
                 const float grid_minor_width = 1.0;
                 const vec4 grid_major_color = vec4(0.2, 0.2, 0.2, 1.0);
-                const vec4 grid_minor_color = vec4(0.1, 0.1, 0.1, 1.0);
+                const vec4 grid_minor_color = vec4(0.2, 0.2, 0.2, 1.0);
 
                 vec4 normalize(vec4 v) {
                     return v / max(v.w, 1e-6);
@@ -78,9 +79,6 @@ class GridXY(ViewItem):
 
                 void main() {
                     float t = -near_point.z / (far_point.z - near_point.z);
-                    if (t <= 0)
-                        discard;
-
                     vec3 fragPos = near_point + t * (far_point - near_point);
 
                     vec4 fragPosNDC = normalize(mvp_matrix * vec4(fragPos, 1.0));
@@ -136,12 +134,20 @@ class GridXY(ViewItem):
         mvp = state.camera.projection_matrix * state.camera.view_matrix
 
         self._program['mvp_matrix'].write(mvp)
-        d = Vector3.dot(state.camera.rotation * state.camera.FORWARD, Vector3(0, 0, 1))
-        if d != 0:
-            d = state.camera.position.z / d
-        self._program['scale'] = pow(10, 0.4 - int(math.log(abs(d * 0.25), 10)))
-        scale_fraction, _ = math.modf(math.log(abs(d * 0.25), 10))
-        self._program['subscale'] = 1.0 - scale_fraction
+        match state.camera:
+            case PerspectiveCamera():
+                d = Vector3.dot(state.camera.rotation * state.camera.FORWARD, Vector3(0, 0, 1))
+                if d != 0:
+                    d = state.camera.position.z / d
+                self._program['scale'] = pow(10, int(math.log(abs(d), 10)))
+                scale_fraction, _ = math.modf(math.log(abs(d), 10))
+                self._program['subscale'] = 1.0 - scale_fraction
+            case OrthographicCamera():
+                d = math.log(state.camera.zoom, 10)
+                scale_fraction, scale_integer = math.modf(d - 0.8)
+                self._program['scale'] = pow(10, scale_integer)
+                self._program['subscale'] = scale_fraction
+
         self._program['screen_size'] = state.camera.pixel_size
 
         with self.context.scope(flags=mgl.DEPTH_TEST | mgl.BLEND):
