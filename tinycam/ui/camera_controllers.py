@@ -25,10 +25,14 @@ class Axis(enum.Enum):
             case Axis.Z: return Quaternion.from_z_rotation
 
 
-class CameraOrbitAnimation(QtCore.QObject):
-    finished = QtCore.Signal()
-
-    def __init__(self, controller: 'OrbitController', pitch: float, yaw: float, duration: float):
+class CameraOrbitAnimation(QtCore.QAbstractAnimation):
+    def __init__(
+        self,
+        controller: 'OrbitController',
+        pitch: float,
+        yaw: float,
+        duration: float,
+    ):
         super().__init__()
 
         self._controller = controller
@@ -40,37 +44,15 @@ class CameraOrbitAnimation(QtCore.QObject):
 
         self._duration_ms = int(duration * 1000)
 
-        self._timer = QtCore.QTimer()
-        self._timer.setInterval(20)
-        self._timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self._timer.timeout.connect(self._on_timeout)
+    def duration(self) -> int:
+        return self._duration_ms
 
-    def start(self):
-        self._start_time = QtCore.QTime.currentTime()
-        self._timer.start()
-
-    def stop(self):
-        self._timer.stop()
-
-    @property
-    def is_active(self):
-        return self._timer.isActive()
-
-    def _on_timeout(self):
-        delta_time_ms = self._start_time.msecsTo(QtCore.QTime.currentTime())
-        if delta_time_ms > self._duration_ms:
-            self._controller.rotate(self._target_pitch, self._target_yaw)
-            self._timer.stop()
-            self.finished.emit()
-            return
-
-        t = delta_time_ms / self._duration_ms
+    def updateCurrentTime(self, currentTime: int):
+        t = currentTime / self.duration()
         # TODO: implement slerp instead of lerp
         pitch = self._start_pitch + t * (self._target_pitch - self._start_pitch)
         yaw = self._start_yaw + t * (self._target_yaw - self._start_yaw)
         self._controller.rotate(pitch, yaw)
-
-        self._timer.start()
 
 
 class OrbitController(QtCore.QObject):
