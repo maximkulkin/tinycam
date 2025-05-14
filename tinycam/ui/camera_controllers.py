@@ -1,3 +1,4 @@
+import numpy as np
 import enum
 import math
 from typing import cast, Callable, Union
@@ -9,6 +10,7 @@ from PySide6.QtWidgets import QWidget
 
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
+from tinycam.utils import lerp
 from tinycam.ui.camera import Camera, OrthographicCamera
 from tinycam.ui.utils import vector2
 
@@ -151,6 +153,58 @@ class OrbitController(QtCore.QObject):
             )
 
         return False
+
+
+class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
+    def __init__(
+        self,
+        camera: OrthographicCamera,
+        *,
+        duration: float,
+        position: Vector3 | None = None,
+        zoom: float | None = None,
+        on_update: Callable[[], None] = lambda: None,
+    ):
+        super().__init__()
+
+        self._camera = camera
+
+        self._start_position = Vector3(self._camera.position)
+
+        self._start_zoom = self._camera.zoom
+
+        self._target_position = position if position is not None else self._start_position
+        self._target_zoom = zoom if zoom is not None else self._start_zoom
+        self._last_t = 0.0
+        self._log_start_zoom = math.log(self._start_zoom)
+        self._log_target_zoom = math.log(self._target_zoom)
+
+        screen_point = self._camera.project(self._target_position)
+        self._position_delta = Vector3.from_vector2(self._camera.pixel_size * 0.5 - screen_point) / self._target_zoom * Vector3(-1, 1, 0)
+
+        self._duration_ms = int(duration * 1000)
+        self._on_update = on_update
+
+    def duration(self) -> int:
+        return self._duration_ms
+
+    def updateCurrentTime(self, currentTime: int):
+        t = currentTime / self.duration()
+
+        delta = (t - self._last_t) * self._position_delta
+
+        screen_point = self._camera.project(self._target_position)
+        p0 = self._camera.unproject(screen_point)
+
+        self._camera.zoom = math.exp(lerp(self._log_start_zoom, self._log_target_zoom, t))
+
+        p1 = self._camera.unproject(screen_point)
+        v1 = (p0 - p1) * Vector3(1, 1, 0)
+
+        self._camera.position += v1 + delta
+        self._on_update()
+
+        self._last_t = t
 
 
 class PanAndZoomController(QtCore.QObject):

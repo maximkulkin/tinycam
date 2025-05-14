@@ -3,7 +3,7 @@ from typing import cast
 from PySide6 import QtCore
 from tinycam.project import CncProject, CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
 from tinycam.ui.camera import OrthographicCamera
-from tinycam.ui.camera_controllers import PanAndZoomController
+from tinycam.ui.camera_controllers import PanAndZoomController, CameraPanAndZoomAnimation
 from tinycam.ui.view import CncView
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
@@ -25,6 +25,8 @@ class CncCanvas2D(CncView):
 
         self._pan_and_zoom_controller = PanAndZoomController(self._camera)
         self.installEventFilter(self._pan_and_zoom_controller)
+
+        self._animation = None
 
     def initializeGL(self):
         super().initializeGL()
@@ -109,13 +111,23 @@ class CncCanvas2D(CncView):
         for item in items[1:]:
             bounds = bounds.merge(item.bounds)
 
-        self.camera.position = Vector3(
+        position = Vector3(
             bounds.center.x,
             bounds.center.y,
             bounds.zmax + 5.0
         )
         c = cast(OrthographicCamera, self.camera)
-        c.zoom = min(float(c.width / (bounds.width + 10)),
-                     float(c.height / (bounds.height + 10)))
+        zoom = min(float(c.width / (bounds.width + 10)),
+                   float(c.height / (bounds.height + 10)))
 
-        self.update()
+        if self._animation is not None:
+            self._animation.stop()
+
+        self._animation = CameraPanAndZoomAnimation(
+            cast(OrthographicCamera, self.camera),
+            duration=0.5,
+            position=position,
+            zoom=zoom,
+            on_update=self.update,
+        )
+        self._animation.start()
