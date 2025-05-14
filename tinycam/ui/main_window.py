@@ -56,7 +56,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.setMenuBar(self.menu)
 
         self.toolbar = QtWidgets.QToolBar()
-        self.toolbar.setObjectName('Toolbar')
+        self.toolbar.setObjectName('main_toolbar')
+        self.toolbar.setWindowTitle('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_file)
         self.toolbar.addAction('Zoom In', 'Ctrl++', self._zoom_in)
