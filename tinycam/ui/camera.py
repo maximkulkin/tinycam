@@ -120,12 +120,6 @@ class Camera:
             self._projection_matrix = self._calculate_projection_matrix()
         return self._projection_matrix
 
-    def screen_to_world_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
-        ndc = self.screen_to_ndc_point(screen_point, z=z)
-
-        v = (self.projection_matrix * self.view_matrix).inverse * Vector4.from_vector3(ndc)
-        return v.dehomogenize().xyz
-
     def screen_to_ndc_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
         return Vector3(
             2. * screen_point.x / self.pixel_width - 1.,
@@ -139,23 +133,20 @@ class Camera:
             (1. - ndc_point.y) * 0.5 * self.pixel_height,
         )
 
+    def screen_to_world_point(self, screen_point: Vector2, z: float = 0.0) -> Vector3:
+        ndc = self.screen_to_ndc_point(screen_point, z=z)
+
+        v = (self.projection_matrix * self.view_matrix).inverse * Vector4.from_vector3(ndc)
+        return v.dehomogenize().xyz
+
     def world_to_screen_point(self, world_point: Vector3) -> Vector2:
         return self.ndc_to_screen_point(
-            (self.view_matrix * self.projection_matrix * Vector4.from_vector3(world_point)).xyz
+            (self.projection_matrix * self.view_matrix *
+                Vector4.from_vector3(world_point, w=1.0)).dehomogenize().xyz
         )
 
-    def project(self, world_point: Vector3) -> Vector2:
-        ndc = (
-            self.projection_matrix *
-            self.view_matrix *
-            Vector4.from_vector3(world_point, w=1.0)
-        ).dehomogenize()
-        return self.ndc_to_screen_point(ndc.xyz)
-
-    def unproject(self, screen_point: Vector2) -> Vector3:
-        ndc = self.screen_to_ndc_point(screen_point)
-        m = (self.projection_matrix * self.view_matrix).inverse
-        return (m * Vector4.from_vector3(ndc, w=1.0)).dehomogenize().xyz
+    project = world_to_screen_point
+    unproject = screen_to_world_point
 
 
 class PerspectiveCamera(Camera):
