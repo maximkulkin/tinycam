@@ -103,7 +103,7 @@ class Vector2(np.ndarray):
 class Vector3(pyrr.Vector3):
     def __new__(
         cls,
-        x_or_data: number | tuple[number, number, number] |  np.ndarray = 0.0,
+        x_or_data: number | tuple[number, number, number] | np.ndarray = 0.0,
         y: number = 0.0,
         z: number = 0.0
     ):
@@ -195,7 +195,7 @@ class Vector4(pyrr.Vector4):
         w = self.w
         if w == 0.0:
             raise ValueError('Cant dehomogenize, W component is zero')
-        return Vector4(self[0]/w, self[1]/w, self[2]/w, 1.0)
+        return Vector4(self[0] / w, self[1] / w, self[2] / w, 1.0)
 
     def __add__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__add__(other).view(Vector4)
@@ -221,11 +221,16 @@ class Vector4(pyrr.Vector4):
 
 class Quaternion(pyrr.Quaternion):
     @overload
-    def __mul__(self, other: Vector3) -> Vector3: ...
+    def __mul__(self, other: Vector3) -> Vector3:
+        ...
+
     @overload
-    def __mul__(self, other: Vector4) -> Vector4: ...
+    def __mul__(self, other: Vector4) -> Vector4:
+        ...
+
     @overload
-    def __mul__(self, other: 'Quaternion') -> 'Quaternion': ...
+    def __mul__(self, other: 'Quaternion') -> 'Quaternion':
+        ...
 
     def __mul__(self, other):
         return super().__mul__(other).view(other.__class__)
@@ -324,9 +329,12 @@ class Matrix44(pyrr.Matrix44):
         ).view(cls)
 
     @overload
-    def __mul__(self, other: 'Matrix44') -> 'Matrix44': ...
+    def __mul__(self, other: 'Matrix44') -> 'Matrix44':
+        ...
+
     @overload
-    def __mul__(self, other: Vector4) -> Vector4: ...
+    def __mul__(self, other: Vector4) -> Vector4:
+        ...
 
     def __mul__(self, other):
         if isinstance(other, Matrix44):
