@@ -118,6 +118,14 @@ class CncPreview3D(CncView):
                 self.update()
                 break
 
+    def zoom_in(self):
+        self.camera.position *= Vector3(1, 1, 0.9)
+        self.update()
+
+    def zoom_out(self):
+        self.camera.position *= Vector3(1, 1, 1.1)
+        self.update()
+
     def zoom_to_fit(self):
         items = [item for item in self.items if isinstance(item, CncProjectItemView)]
         if not items:

@@ -59,7 +59,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar.setObjectName('Toolbar')
         self.addToolBar(self.toolbar)
         self.toolbar.addAction('Import', self._import_file)
-        self.toolbar.addAction('Zoom To Fit', self._zoom_to_fit)
+        self.toolbar.addAction('Zoom In', 'Ctrl++', self._zoom_in)
+        self.toolbar.addAction('Zoom Out', 'Ctrl+-', self._zoom_out)
+        self.toolbar.addAction('Zoom To Fit', 'Ctrl+=', self._zoom_to_fit)
 
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -81,11 +83,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+3',
         )
 
-        # self.view_menu.addSeparator()
-        # self.view_menu.addAction('Zoom In', self._zoom_in, shortcut='Ctrl++')
-        # self.view_menu.addAction('Zoom Out', self._zoom_out, shortcut='Ctrl+-')
-        # self.view_menu.addAction('Zoom To Fit', self._zoom_to_fit,
-        #                          shortcut='Ctrl+=')
+        self.view_menu.addSeparator()
+        self.view_menu.addAction('Zoom In', self._zoom_in, shortcut='Ctrl++')
+        self.view_menu.addAction('Zoom Out', self._zoom_out, shortcut='Ctrl+-')
+        self.view_menu.addAction('Zoom To Fit', self._zoom_to_fit,
+                                 shortcut='Ctrl+=')
         self.view_menu.addSeparator()
 
         self._load_settings()
@@ -139,6 +141,20 @@ class CncMainWindow(QtWidgets.QMainWindow):
                     f'Error parsing Excellon file: {e}',
                 )
             return None
+
+    def _zoom_in(self):
+        match self.tabs.currentIndex():
+            case 0:
+                self.canvas_2d.zoom_in()
+            case 1:
+                self.preview_3d.zoom_in()
+
+    def _zoom_out(self):
+        match self.tabs.currentIndex():
+            case 0:
+                self.canvas_2d.zoom_out()
+            case 1:
+                self.preview_3d.zoom_out()
 
     def _zoom_to_fit(self):
         match self.tabs.currentIndex():
