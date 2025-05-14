@@ -95,12 +95,10 @@ class CncCanvas2D(CncView):
                 break
 
     def zoom_in(self):
-        cast(OrthographicCamera, self.camera).zoom *= 1.1
-        self.update()
+        self._pan_and_zoom_controller.zoom(1.0, duration=0.2)
 
     def zoom_out(self):
-        cast(OrthographicCamera, self.camera).zoom *= 0.9
-        self.update()
+        self._pan_and_zoom_controller.zoom(-1.0, duration=0.2)
 
     def zoom_to_fit(self):
         items = [item for item in self.items if isinstance(item, CncProjectItemView)]

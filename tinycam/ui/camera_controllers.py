@@ -158,7 +158,7 @@ class OrbitController(QtCore.QObject):
 class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
     def __init__(
         self,
-        camera: OrthographicCamera,
+        camera: Camera,
         *,
         duration: float,
         position: Vector3 | None = None,
@@ -171,7 +171,7 @@ class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
 
         self._start_position = Vector3(self._camera.position)
 
-        self._start_zoom = self._camera.zoom
+        self._start_zoom = self._camera.zoom if isinstance(self._camera, OrthographicCamera) else 1.0
 
         self._target_position = position if position is not None else self._start_position
         self._target_zoom = zoom if zoom is not None else self._start_zoom
@@ -179,8 +179,11 @@ class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
         self._log_start_zoom = math.log(self._start_zoom)
         self._log_target_zoom = math.log(self._target_zoom)
 
-        screen_point = self._camera.project(self._target_position)
-        self._position_delta = Vector3.from_vector2(self._camera.pixel_size * 0.5 - screen_point) / self._target_zoom * Vector3(-1, 1, 0)
+        if isinstance(self._camera, OrthographicCamera):
+            screen_point = self._camera.project(self._target_position)
+            self._position_delta = Vector3.from_vector2(self._camera.pixel_size * 0.5 - screen_point) / self._target_zoom * Vector3(-1, 1, 0)
+        else:
+            self._position_delta = self._target_position - self._start_position
 
         self._duration_ms = int(duration * 1000)
         self._on_update = on_update
@@ -191,17 +194,21 @@ class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
     def updateCurrentTime(self, currentTime: int):
         t = currentTime / self.duration()
 
-        delta = (t - self._last_t) * self._position_delta
+        position_delta = (t - self._last_t) * self._position_delta
+        zoom_adjustment = Vector3()
 
-        screen_point = self._camera.project(self._target_position)
-        p0 = self._camera.unproject(screen_point)
+        if isinstance(self._camera, OrthographicCamera):
+            screen_point = self._camera.project(self._target_position)
+            p0 = self._camera.unproject(screen_point)
 
-        self._camera.zoom = math.exp(lerp(self._log_start_zoom, self._log_target_zoom, t))
+            self._camera.zoom = math.exp(
+                lerp(self._log_start_zoom, self._log_target_zoom, t)
+            )
 
-        p1 = self._camera.unproject(screen_point)
-        v1 = (p0 - p1) * Vector3(1, 1, 0)
+            p1 = self._camera.unproject(screen_point)
+            zoom_adjustment = (p0 - p1) * Vector3(1, 1, 0)
 
-        self._camera.position += v1 + delta
+        self._camera.position += position_delta + zoom_adjustment
         self._on_update()
 
         self._last_t = t
@@ -223,6 +230,7 @@ class PanAndZoomController(QtCore.QObject):
         self._zoom_inverter = 1.0
 
         self._panning = False
+        self._animation = None
 
         SETTINGS['general/control_type'].changed.connect(self._on_control_type_changed)
         self._on_control_type_changed(SETTINGS.get('general/control_type'))
@@ -241,6 +249,63 @@ class PanAndZoomController(QtCore.QObject):
 
     def _on_invert_zoom_changed(self, value: bool):
         self._zoom_inverter = -1.0 if value else 1.0
+
+    def zoom(
+        self,
+        amount: float,
+        focal_point: Vector2 | None = None,
+        duration: float | None = None,
+    ):
+        if focal_point is None:
+            focal_point = self._camera.view_center
+
+        camera = self._camera
+        rotation = camera.rotation.conjugate
+
+        p0 = camera.unproject(focal_point)
+
+        target_position = camera.position
+        target_zoom = None
+        if isinstance(camera, OrthographicCamera):
+            original_zoom = camera.zoom
+            target_zoom = original_zoom / (0.9 ** amount)
+
+            camera.zoom = target_zoom
+            p1 = self._camera.unproject(focal_point)
+            camera.zoom = original_zoom
+        else:
+            original_position = camera.position
+            target_position = original_position + rotation * Camera.FORWARD * 10 * amount
+
+            camera.position = target_position
+            p1 = self._camera.unproject(focal_point)
+            camera.position = original_position
+
+        target_position += (p0 - p1) * Vector3(1, 1, 0)
+
+        if duration is None:
+            camera.position = target_position
+            if isinstance(camera, OrthographicCamera) and target_zoom is not None:
+                camera.zoom = target_zoom
+
+            assert self._widget is not None
+            self._widget.update()
+        else:
+            if self._animation is not None:
+                self._animation.stop()
+
+            self._animation = CameraPanAndZoomAnimation(
+                camera=camera,
+                position=target_position,
+                zoom=target_zoom,
+                duration=duration,
+                on_update=self._widget.update if self._widget is not None else lambda: None,
+            )
+            self._animation.finished.connect(self._on_animation_finished)
+            self._animation.start()
+
+    def _on_animation_finished(self):
+        self._animation = None
 
     def eventFilter(self, widget: QWidget, event: QtCore.QEvent) -> bool:
         if widget != self._widget:
@@ -295,21 +360,10 @@ class PanAndZoomController(QtCore.QObject):
         elif event.type() == QEvent.Type.Wheel:
             wheel_event = cast(QWheelEvent, event)
 
-            screen_point = wheel_event.position()
-            p0 = self._camera.unproject(vector2(screen_point))
-
-            scale = 0.9 ** (wheel_event.angleDelta().y() / 120.0 * self._zoom_inverter)
-
-            if isinstance(self._camera, OrthographicCamera):
-                c = cast(OrthographicCamera, self._camera)
-                c.zoom /= scale
-            else:
-                self._camera.position *= Vector3(1, 1, scale)
-
-            p1 = self._camera.unproject(vector2(screen_point))
-            self._camera.position += (p0 - p1) * Vector3(1, 1, 0)
-
-            widget.update()
+            self.zoom(
+                amount=wheel_event.angleDelta().y() / 120.0 * self._zoom_inverter,
+                focal_point=vector2(wheel_event.position()),
+            )
 
         return False
 

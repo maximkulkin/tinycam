@@ -6,7 +6,7 @@ import tinycam.settings as s
 from tinycam.types import Vector2, Vector3
 from tinycam.ui.view import CncView
 from tinycam.ui.camera import PerspectiveCamera
-from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController
+from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
@@ -30,6 +30,7 @@ class CncPreview3D(CncView):
             self._pan_and_zoom_controller,
             self._camera_orbit_controller,
         ]
+        self._camera_animation = None
         for controller in self._controllers:
             self.installEventFilter(controller)
 
@@ -119,12 +120,10 @@ class CncPreview3D(CncView):
                 break
 
     def zoom_in(self):
-        self.camera.position *= Vector3(1, 1, 0.9)
-        self.update()
+        self._pan_and_zoom_controller.zoom(1.0, duration=0.2)
 
     def zoom_out(self):
-        self.camera.position *= Vector3(1, 1, 1.1)
-        self.update()
+        self._pan_and_zoom_controller.zoom(-1.0, duration=0.2)
 
     def zoom_to_fit(self):
         items = [item for item in self.items if isinstance(item, CncProjectItemView)]
@@ -153,6 +152,13 @@ class CncPreview3D(CncView):
         )
         z = (r + 10.0) / math.tan(c.fov * 0.5)
 
-        c.position = bounds.center - n * z
+        if self._camera_animation is not None:
+            self._camera_animation.stop()
 
-        self.update()
+        self._camera_animation = CameraPanAndZoomAnimation(
+            camera=self.camera,
+            position=bounds.center - n * z,
+            duration=0.5,
+            on_update=self.update,
+        )
+        self._camera_animation.start()
