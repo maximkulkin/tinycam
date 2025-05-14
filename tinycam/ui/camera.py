@@ -56,12 +56,21 @@ class Camera:
         self._pixel_size = value
 
     @property
+    def pixel_center(self) -> Vector2:
+        return self._pixel_size * 0.5
+
+    @property
     def pixel_width(self) -> float:
         return float(self.pixel_size.x)
 
     @property
     def pixel_height(self) -> float:
         return float(self.pixel_size.y)
+
+    view_size = pixel_size
+    view_center = pixel_center
+    view_width = pixel_width
+    view_height = pixel_height
 
     @property
     def device_pixel_ratio(self) -> float:
