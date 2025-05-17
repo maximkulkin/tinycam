@@ -9,7 +9,7 @@ from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
-from tinycam.ui.cnc_controller import CncControllerWindow
+from tinycam.ui.cnc_controller import CncControllerWindow, CncControllerConsoleWindow, CncConnectionToolbar
 from tinycam.ui.settings import CncSettingsDialog
 
 
@@ -64,6 +64,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.toolbar.addAction('Zoom Out', 'Ctrl+-', self._zoom_out)
         self.toolbar.addAction('Zoom To Fit', 'Ctrl+=', self._zoom_to_fit)
 
+        self.cnc_connection_toolbar = CncConnectionToolbar()
+        self.addToolBar(self.cnc_connection_toolbar)
+
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
         GLOBALS.APP.task_manager.statusbar = self.statusbar
@@ -85,6 +88,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
             CncControllerWindow(self.project),
             Qt.DockWidgetArea.RightDockWidgetArea,
             shortcut='Ctrl+3',
+        )
+        self._add_dock_window(
+            CncControllerConsoleWindow(self.project),
+            Qt.DockWidgetArea.BottomDockWidgetArea,
+            shortcut='Ctrl+4',
         )
 
         self.view_menu.addSeparator()
