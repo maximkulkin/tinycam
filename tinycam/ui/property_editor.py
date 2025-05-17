@@ -268,8 +268,7 @@ class PropertyEditor(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         self._layout = QtWidgets.QGridLayout()
-        self._widget = QtWidgets.QWidget()
-        self._widget.setLayout(self._layout)
+        self.setLayout(self._layout)
 
         self._editors = []
 
