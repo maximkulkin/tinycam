@@ -72,15 +72,18 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._windows_menu = {}
 
         self._add_dock_window(
-            CncProjectWindow(self.project), Qt.LeftDockWidgetArea,
+            CncProjectWindow(self.project),
+            Qt.DockWidgetArea.LeftDockWidgetArea,
             shortcut='Ctrl+1',
         )
         self._add_dock_window(
-            CncToolOptionsWindow(self.project), Qt.RightDockWidgetArea,
+            CncToolOptionsWindow(self.project),
+            Qt.DockWidgetArea.RightDockWidgetArea,
             shortcut='Ctrl+2',
         )
         self._add_dock_window(
-            CncControllerWindow(self.project), Qt.RightDockWidgetArea,
+            CncControllerWindow(self.project),
+            Qt.DockWidgetArea.RightDockWidgetArea,
             shortcut='Ctrl+3',
         )
 
