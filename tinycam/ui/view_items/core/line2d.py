@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import moderngl as mgl
 import numpy as np
 from typing import Optional
@@ -12,7 +13,7 @@ class Line2D(ViewItem):
     def __init__(
         self,
         context: Context,
-        points: list[Vector2],
+        points: Sequence[Vector2],
         closed: bool = False,
         color: Vector4 = Vector4(0.8, 0.8, 0.8, 1.0),
         width: Optional[float] = None,
