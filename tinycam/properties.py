@@ -7,10 +7,10 @@ from tinycam.types import Vector2, Vector3
 class Property[T]:
     def __init__(self, *,
                  label: str | None = None,
-                 on_update: Callable[[object], None] | None = None):
+                 on_update: Callable[[object], None] = lambda _: None):
         self._name: str | None = None
         self._label: str | None = label
-        self._on_update: Callable[[object], None] | None = on_update
+        self._on_update: Callable[[object], None] = on_update
 
     @property
     def name(self) -> str:
@@ -33,8 +33,7 @@ class Property[T]:
 
     def __set__(self, instance: object, value: T):
         instance.__dict__[self._variable_name] = value
-        if self._on_update is not None:
-            self._on_update(instance)
+        self._on_update(instance)
 
 
 class StringProperty(Property[str]):
