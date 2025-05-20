@@ -53,7 +53,7 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self._prop = prop
 
         self._editor = QtWidgets.QCheckBox(self)
-        self._editor.stateChanged.connect(self._on_value_changed)
+        self._editor.checkStateChanged.connect(self._on_value_changed)
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
         self.setLayout(layout)
