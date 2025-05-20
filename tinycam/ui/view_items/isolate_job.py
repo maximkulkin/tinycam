@@ -3,10 +3,11 @@ from typing import cast
 from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.globals import GLOBALS
 from tinycam.project import CncIsolateJob
-from tinycam.types import Vector3, Vector4, Matrix44
+from tinycam.types import Vector2, Vector3, Vector4, Matrix44
 from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.line3d import Line3D
+from tinycam.ui.view_items.core.direction_markers import DirectionMarkers
 from tinycam.ui.view_items.project_item import CncProjectItemView
 
 
@@ -42,44 +43,64 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
         G = GLOBALS.GEOMETRY
 
         if model.geometry is not None:
-            for line in G.lines(model.geometry):
-                line_view = Line2D(
-                    self.context,
-                    G.points(line),
-                    closed=line.is_closed,
-                    color=qcolor_to_vec4(self._model.color),
-                    width=model.tool_diameter,
-                )
-                self.add_item(line_view)
+            if model.show_outline:
+                for line in G.lines(model.geometry):
+                    line_view = Line2D(
+                        self.context,
+                        G.points(line),
+                        closed=line.is_closed,
+                        color=qcolor_to_vec4(self._model.color),
+                        width=model.tool_diameter,
+                    )
+                    self.add_item(line_view)
 
-            commands = model.generate_commands()
-            tracer = CncPathTracer()
-            tracer.execute_commands(commands)
+            if model.show_path:
+                commands = model.generate_commands()
+                tracer = CncPathTracer()
+                tracer.execute_commands(commands)
 
-            current_path_points: list[Vector3] = []
-            current_path_type = None
-            for path in tracer.paths:
-                if path.type != current_path_type:
-                    if current_path_points:
-                        path_view = CncPathView(
-                            self.context,
-                            current_path_points,
-                            color=PATH_COLORS[current_path_type],
-                        )
-                        self.add_item(path_view)
+                current_path_points: list[Vector3] = []
+                current_path_type = CncPathType.TRAVEL
+                for path in tracer.paths:
+                    if path.type != current_path_type:
+                        if current_path_points:
+                            path_view = CncPathView(
+                                self.context,
+                                current_path_points,
+                                color=PATH_COLORS[current_path_type],
+                            )
+                            self.add_item(path_view)
 
-                    current_path_points = [path.start, path.end]
-                    current_path_type = path.type
-                else:
-                    current_path_points.append(path.end)
+                            marker_positions = []
+                            marker_directions = []
+                            for p1, p2 in zip(current_path_points, current_path_points[1:]):
+                                v = p2 - p1
 
-            if current_path_points:
-                path_view = CncPathView(
-                    self.context,
-                    current_path_points,
-                    color=PATH_COLORS[current_path_type],
-                )
-                self.add_item(path_view)
+                                if v.length > 2.0:
+                                    marker_positions.append(p1 + 0.3 * v)
+                                    marker_directions.append(v)
+
+                            direction_markers = DirectionMarkers(
+                                self.context,
+                                positions=marker_positions,
+                                directions=marker_directions,
+                                size=Vector2(0.5, 0.25),
+                                color=PATH_COLORS[current_path_type],
+                            )
+                            self.add_item(direction_markers)
+
+                        current_path_points = [path.start, path.end]
+                        current_path_type = path.type
+                    else:
+                        current_path_points.append(path.end)
+
+                if current_path_points:
+                    path_view = CncPathView(
+                        self.context,
+                        current_path_points,
+                        color=PATH_COLORS[current_path_type],
+                    )
+                    self.add_item(path_view)
 
             self._view_geometry = self._model.geometry
             self._tool_diameter = self._model.tool_diameter

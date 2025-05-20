@@ -5,7 +5,7 @@ from tinycam.geometry import Line
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.project.jobs.job import CncJob
-from tinycam.properties import IntProperty, FloatProperty
+from tinycam.properties import IntProperty, FloatProperty, BoolProperty
 import tinycam.settings as s
 from tinycam.tasks import run_task
 
@@ -48,6 +48,8 @@ class CncIsolateJob(CncJob):
         self._pass_overlap = pass_overlap or defaults['pass_overlap'].value
         self._spindle_speed = spindle_speed or defaults['spindle_speed'].value
         self._travel_height = travel_height or defaults['travel_height'].value
+        self._show_outline = True
+        self._show_path = True
 
         self._geometry = None
 
@@ -69,6 +71,8 @@ class CncIsolateJob(CncJob):
     cut_speed = FloatProperty(on_update=_update)
     spindle_speed = IntProperty(on_update=_update)
     travel_height = FloatProperty(on_update=_update)
+    show_outline = BoolProperty(on_update=_update)
+    show_path = BoolProperty(on_update=_update)
 
     def _on_source_item_changed(self, _item):
         self._update()
