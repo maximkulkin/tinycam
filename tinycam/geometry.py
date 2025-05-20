@@ -127,8 +127,21 @@ class Geometry:
 
     # utils
 
-    def points(self, shape: AnyShape) -> list[Point]:
-        return shape.coords
+    def points(self, shape: AnyShape) -> Sequence[Vector2]:
+        match shape:
+            case shapely.MultiLineString() | shapely.MultiPolygon():
+                return [
+                    Vector2(coord[0], coord[1])
+                    for geom in shape.geoms
+                    for coord in geom.coords
+                ]
+            case shapely.LineString() | shapely.LinearRing() | shapely.Polygon():
+                return [
+                    Vector2(coord[0], coord[1])
+                    for coord in shape.coords
+                ]
+            case _:
+                raise ValueError(f'Unknown shape: {shape}')
 
     def bounds(self, *shapes: tuple[AnyShape, ...]) -> Rect:
         xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
