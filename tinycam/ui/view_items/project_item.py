@@ -1,6 +1,6 @@
 import moderngl as mgl
-import numpy as np
 import shapely as s
+from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector4, Matrix44, Box
 from tinycam.ui.view import Context, RenderState
@@ -56,11 +56,13 @@ class CncProjectItemView[T: CncProjectItem](Composite):
                     for coord in geom.exterior.coords
                 )
             case _:
-                xmin = min(coord.x for coord in self._view_geometry.coords)
-                ymin = min(coord.y for coord in self._view_geometry.coords)
+                G = GLOBALS.GEOMETRY
+                points = G.points(self._view_geometry)
+                xmin = min(float(coord.x) for coord in points)
+                ymin = min(float(coord.y) for coord in points)
 
-                xmax = max(coord.x for coord in self._view_geometry.coords)
-                ymax = max(coord.y for coord in self._view_geometry.coords)
+                xmax = max(float(coord.x) for coord in points)
+                ymax = max(float(coord.y) for coord in points)
 
         return Box.from_coords(xmin, ymin, -0.5, xmax, ymax, 0.5)
 
