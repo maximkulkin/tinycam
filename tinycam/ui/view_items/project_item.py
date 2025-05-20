@@ -9,10 +9,10 @@ from tinycam.ui.view_items.core.polygon import Polygon
 from tinycam.ui.utils import qcolor_to_vec4
 
 
-class CncProjectItemView(Composite):
+class CncProjectItemView[T: CncProjectItem](Composite):
     priority = 100
 
-    def __init__(self, context: Context, model: CncProjectItem):
+    def __init__(self, context: Context, model: T):
         super().__init__(
             context,
         )
@@ -25,7 +25,7 @@ class CncProjectItemView(Composite):
         self._update_geometry()
 
     @property
-    def model(self) -> CncProjectItem:
+    def model(self) -> T:
         return self._model
 
     @property
@@ -65,20 +65,21 @@ class CncProjectItemView(Composite):
         return Box.from_coords(xmin, ymin, -0.5, xmax, ymax, 0.5)
 
     def _update_geometry(self):
-        if self._view_geometry is self._model.geometry:
+        geometry = self._model.geometry
+        if self._view_geometry is geometry:
             return
 
         if self._view is not None:
             self.remove_item(self._view)
 
-        if self._model.geometry is not None:
+        if geometry is not None:
             view = Polygon(
                 self.context,
-                self._model.geometry,
+                geometry,
                 model_matrix=self._model_matrix(),
                 color=qcolor_to_vec4(self._model.color),
             )
-            self._view_geometry = self._model.geometry
+            self._view_geometry = geometry
             self.add_item(view)
 
     def _model_matrix(self):

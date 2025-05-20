@@ -26,13 +26,13 @@ class CncPathView(Line3D):
         pass
 
 
-class CncIsolateJobView(CncProjectItemView):
+class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
 
     def _model_matrix(self):
         return Matrix44.identity()
 
     def _update_geometry(self):
-        model = cast(CncIsolateJob, self._model)
+        model = self._model
 
         if self._view_geometry is model.geometry and model.tool_diameter == self._tool_diameter:
             return
