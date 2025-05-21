@@ -2,6 +2,9 @@ import asyncio
 import enum
 from typing import Tuple, Callable
 
+from blinker import Signal
+
+
 __all__ = [
     'Error',
     'ErrorType',
@@ -145,37 +148,54 @@ class Positioning(enum.Enum):
     ABSOLUTE = 0
     RELATIVE = 1
 
+    def __str__(self) -> str:
+        match self:
+            case self.ABSOLUTE: return 'ABSOLUTE'
+            case self.RELATIVE: return 'RELATIVE'
+
 
 class Plane(enum.Enum):
     XY = 0
     XZ = 1
     YZ = 2
 
+    def __str__(self) -> str:
+        match self:
+            case self.XY: return 'XY'
+            case self.XZ: return 'XZ'
+            case self.YZ: return 'YZ'
+
 
 class Units(enum.Enum):
     IN = 0
     MM = 1
 
+    def __str__(self) -> str:
+        match self:
+            case self.IN: return 'IN'
+            case self.MM: return 'MM'
+
 
 class Controller:
-    def __init__(
-        self,
-        reader,
-        writer,
-        on_line_send: Callable[[str], None]=lambda _: None,
-        on_line_receive: Callable[[str], None]=lambda _: None,
-    ):
+    ready_changed = Signal('ready: bool')
+    status_changed = Signal('status: Status')
+    positioning_changed = Signal('positioning: Positioning')
+    units_changed = Signal('units: Units')
+    plane_changed = Signal('plane: Plane')
+    feedrate_changed = Signal('feedrate: float')
+    spindle_speed_changed = Signal('spindle_speed: float')
+
+    line_sent = Signal('line: str')
+    line_received = Signal('line: str')
+
+    def __init__(self, reader, writer):
         self._reader = reader
         self._writer = writer
-
-        self._on_line_send = on_line_send
-        self._on_line_receive = on_line_receive
 
         self.status_poll_interval = 1.0
         self.max_commands = 10
 
         self._ready = False
-        self._locked = False
 
         self._commands = asyncio.Queue()
         self._command_results = asyncio.Queue(self.max_commands)
@@ -248,11 +268,35 @@ class Controller:
     def _parse_coordinates(self, s: str) -> Coordinates:
         return tuple(float(v) for v in s.split(','))
 
+    def _set_status(self, new_status: Status):
+        changed = self._status != new_status
+        self._status = new_status
+        if changed:
+            self.status_changed.send(new_status)
+
+    def _set_plane(self, new_plane: Plane):
+        changed = self._plane != new_plane
+        self._plane = new_plane
+        if changed:
+            self.plane_changed.send(new_plane)
+
+    def _set_positioning(self, new_positioning: Positioning):
+        changed = self._positioning != new_positioning
+        self._positioning = new_positioning
+        if changed:
+            self.positioning_changed.send(new_positioning)
+
+    def _set_units(self, new_units: Units):
+        changed = self._units != new_units
+        self._units = new_units
+        if changed:
+            self.units_changed.send(new_units)
+
     async def _process_line(self, line):
         l = line.strip()
-        print(f'Processing line "{l}"')
         if l.startswith('Grbl '):
             self._ready = True
+            self.ready_changed.send(True)
             self.send_command('$$')
             self.send_command('$G')
             self.send_command('$#')
@@ -269,19 +313,19 @@ class Controller:
                             case 'G0' | 'G1' | 'G2' | 'G3':
                                 self._modal_command = part
                             case 'G17':
-                                self._plane = Plane.XY
+                                self._set_plane(Plane.XY)
                             case 'G18':
-                                self._plane = Plane.XZ
+                                self._set_plane(Plane.XZ)
                             case 'G19':
-                                self._plane = Plane.YZ
+                                self._set_plane(Plane.YZ)
                             case 'G20':
-                                self._units = Units.IN
+                                self._set_units(Units.IN)
                             case 'G21':
-                                self._units = Units.MM
+                                self._set_units(Units.MM)
                             case 'G90':
-                                self._positioning = Positioning.ABSOLUTE
+                                self._set_positioning(Positioning.ABSOLUTE)
                             case 'G91':
-                                self._positioning = Positioning.RELATIVE
+                                self._set_positioning(Positioning.RELATIVE)
                 case 'G54' | 'G55' | 'G56' | 'G57' | 'G58' | 'G59':
                     index = int(topic[1:]) - 54
                     self._workspace_offsets[index] = self._parse_coordinates(l)
@@ -302,19 +346,19 @@ class Controller:
             if parts:
                 match parts[0]:
                     case 'Idle':
-                        self._status = Status.IDLE
+                        self._set_status(Status.IDLE)
                     case 'Run':
-                        self._status = Status.RUN
+                        self._set_status(Status.RUN)
                     case 'JOG':
-                        self._status = Status.JOG
+                        self._set_status(Status.JOG)
                     case 'Alarm':
-                        self._status = Status.ALARM
+                        self._set_status(Status.ALARM)
                     case 'ALARM':
-                        self._status = Status.ALARM
+                        self._set_status(Status.ALARM)
                     case 'HOLD':
-                        self._status = Status.HOLD
+                        self._set_status(Status.HOLD)
                     case 'DOOR':
-                        self._status = Status.DOOR
+                        self._set_status(Status.SAFETY_DOOR)
                     case _:
                         print(f'Unknown state: {parts[0]}')
 
@@ -340,14 +384,14 @@ class Controller:
             if not self._command_results.empty():
                 self._command_response.append(l)
 
-        self._on_line_receive(line)
+        self.line_received.send(line)
 
     def send_nowait(self, data: str | bytes, echo: bool = True):
         if isinstance(data, str):
             data = data.encode('utf-8')
         self._writer.write(data)
         if echo:
-            self._on_line_send(data.decode('utf-8'))
+            self.line_sent.send(data.decode('utf-8'))
 
     async def send(self, data: str | bytes, echo: bool = True):
         self.send_nowait(data, echo=echo)
@@ -369,6 +413,7 @@ class Controller:
     async def soft_reset(self) -> None:
         await self.send(b'\x18', echo=False)
         self._ready = False
+        self.ready_changed.send(True)
 
     async def status_report(self) -> None:
         await self.send(b'?', echo=False)
@@ -439,6 +484,10 @@ class Controller:
     def locked(self) -> bool:
         return self._status == Status.ALARM
 
+    @property
+    def status(self) -> Status:
+        return self._status
+
     async def unlock(self) -> None:
         await self.send_command('$X')
 
@@ -467,7 +516,7 @@ class Controller:
                 self.send_command('G17')
             case Plane.XZ:
                 self.send_command('G18')
-            case Plane.YX:
+            case Plane.YZ:
                 self.send_command('G19')
         self._plane = value
 
@@ -489,6 +538,7 @@ class Controller:
     def set_feedrate(self, value: float) -> None:
         self.send_command(f'F{value}')
         self._feedrate = value
+        self.feedrate_changed.send(value)
 
     @property
     def spindle_speed(self) -> float:
@@ -497,6 +547,7 @@ class Controller:
     def set_spindle_speed(self, value: float) -> None:
         self.send_command(f'S{value}')
         self._spindle_speed = value
+        self.spindle_speed_changed.send(value)
 
     @property
     def reference_position1(self) -> Coordinates:
