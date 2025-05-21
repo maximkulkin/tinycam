@@ -1,10 +1,11 @@
-import asyncio
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
+from qasync import asyncSlot
 import serial.tools.list_ports
 
 from tinycam.globals import GLOBALS
 from tinycam import cnc_controller
+from tinycam import grbl
 from tinycam.ui.window import CncWindow
 
 
@@ -49,6 +50,10 @@ class CncConnectionToolbar(QtWidgets.QToolBar):
         self._connect_button.setEnabled(False)
         self._connect_button.clicked.connect(self._on_connect_clicked)
 
+        self._unlock_button = QtWidgets.QPushButton('Unlock')
+        self._unlock_button.setEnabled(False)
+        self._unlock_button.clicked.connect(self._on_unlock_clicked)
+
         self._port_selector = SerialPortSelector()
         self._port_selector.currentIndexChanged.connect(self._on_port_changed)
 
@@ -60,23 +65,87 @@ class CncConnectionToolbar(QtWidgets.QToolBar):
             self._baud_selector.findData(DEFAULT_BAUD_RATE)
         )
 
-        self.addWidget(self._connect_button)
         self.addWidget(self._port_selector)
         self.addWidget(self._baud_selector)
+        self.addWidget(self._connect_button)
+        self.addWidget(self._unlock_button)
+
+        GLOBALS.CNC_CONTROLLER.connected_changed.connect(self._on_connected_changed)
+
+        self._connect_timeout_timer = QtCore.QTimer()
+        self._connect_timeout_timer.setSingleShot(True)
+        self._connect_timeout_timer.setInterval(10000)
+        self._connect_timeout_timer.timeout.connect(self._on_connect_timeout)
+
+    @property
+    def grbl(self) -> grbl.Controller:
+        assert GLOBALS.CNC_CONTROLLER.grbl is not None
+        return GLOBALS.CNC_CONTROLLER.grbl
 
     def _on_port_changed(self, _index: int):
         self._connect_button.setEnabled(self._port_selector.currentIndex() > 0)
 
-    def _on_connect_clicked(self):
-        port = self._port_selector.currentData()
-        baud = self._baud_selector.currentData()
+    @asyncSlot()
+    async def _on_connect_clicked(self):
+        if GLOBALS.CNC_CONTROLLER.connected:
+            self._connect_button.setText('Disconnecting...')
+            self._connect_button.setEnabled(False)
+            await GLOBALS.CNC_CONTROLLER.disconnect()
+        else:
+            port = self._port_selector.currentData()
+            baud = self._baud_selector.currentData()
 
-        if port is None or baud is None:
-            return
+            if port is None or baud is None:
+                return
 
-        asyncio.ensure_future(
-            GLOBALS.CNC_CONTROLLER.connect_serial(port.device, baud)
-        )
+            await GLOBALS.CNC_CONTROLLER.connect(port.device, baud)
+
+            self._connect_button.setText('Connecting...')
+            self._connect_button.setEnabled(False)
+            self._port_selector.setEnabled(False)
+            self._baud_selector.setEnabled(False)
+            self._connect_timeout_timer.start()
+
+    def _on_connect_timeout(self):
+        self._connect_button.setText('Connect')
+        self._connect_button.setEnabled(self._port_selector.currentIndex() > 0)
+        self._port_selector.setEnabled(True)
+        self._baud_selector.setEnabled(True)
+
+    @asyncSlot()
+    async def _on_unlock_clicked(self):
+        await self.grbl.unlock()
+
+    def _on_connected_changed(self, value: bool):
+        if value:
+            if self.grbl.ready:
+                self._on_ready_changed(True)
+            else:
+                self.grbl.ready_changed.connect(self._on_ready_changed)
+                self.grbl.status_changed.connect(self._on_status_changed)
+        else:
+            self._connect_button.setText('Connect')
+            self._connect_button.setEnabled(True)
+            self._port_selector.setEnabled(True)
+            self._baud_selector.setEnabled(True)
+
+    def _on_ready_changed(self, value: bool):
+        if value:
+            self._connect_timeout_timer.stop()
+            self._connect_button.setText('Disconnect')
+            self._connect_button.setEnabled(True)
+            self._port_selector.setEnabled(False)
+            self._baud_selector.setEnabled(False)
+            self._unlock_button.setEnabled(self.grbl.status == grbl.Status.ALARM)
+        else:
+            self._connect_button.setText('Connecting...')
+            self._connect_button.setEnabled(False)
+            self._port_selector.setEnabled(False)
+            self._baud_selector.setEnabled(False)
+            self._unlock_button.setEnabled(False)
+
+    def _on_status_changed(self, status: 'grbl.Status'):
+        self._unlock_button.setEnabled(status == grbl.Status.ALARM)
 
 
 class CncControllerConsoleWindow(CncWindow):
@@ -86,7 +155,8 @@ class CncControllerConsoleWindow(CncWindow):
         self.setObjectName("cnc_controller_console")
         self.setWindowTitle("CNC console")
 
-        GLOBALS.CNC_CONTROLLER.connectedChanged.connect(self._on_connected_changed)
+        GLOBALS.CNC_CONTROLLER.connected_changed.connect(self._on_connected_changed)
+        GLOBALS.CNC_CONTROLLER.history_changed.connect(self._on_history_changed)
 
         self._log_view = QtWidgets.QTextEdit()
         self._log_view.setReadOnly(True)
@@ -118,15 +188,32 @@ class CncControllerConsoleWindow(CncWindow):
         main_widget.setLayout(layout)
         self.setWidget(main_widget)
 
-    def _on_connected_changed(self):
+    @property
+    def grbl(self) -> grbl.Controller:
+        assert GLOBALS.CNC_CONTROLLER.grbl is not None
+        return GLOBALS.CNC_CONTROLLER.grbl
+
+    def _on_connected_changed(self, value: bool):
         self._command_entry_group.setEnabled(GLOBALS.CNC_CONTROLLER.connected)
         self._on_command_changed(self._command_edit.text())
+        self._log_view.setText('\n'.join(
+            line
+            for line in GLOBALS.CNC_CONTROLLER.history
+            if not line.startswith('> <')
+        ))
 
     def _on_command_changed(self, text: str):
         self._command_send_button.setEnabled(text != '')
 
-    def _on_command_send_button_clicked(self):
-        pass
+    def _on_history_changed(self, line: str):
+        if line.startswith('> <'):
+            return
+
+        self._log_view.append(line)
+
+    @asyncSlot()
+    async def _on_command_send_button_clicked(self):
+        await self.grbl.send(self._command_edit.text())
 
 
 class CncCoordinateDisplay(QtWidgets.QWidget):
@@ -137,10 +224,15 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         font.setPointSize(48)
 
         self._label = QtWidgets.QLabel(label)
-        self._label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self._label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         self._label.setFont(font)
+
         self._value = QtWidgets.QLabel('0')
-        self._value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._value.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self._value.setFont(font)
 
         layout = QtWidgets.QHBoxLayout()

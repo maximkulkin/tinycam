@@ -1,30 +1,73 @@
-import tinycam.grbl
+from blinker import Signal
+
 import serial_asyncio
+from tinycam import grbl
+from PySide6 import QtCore
+
+
+BAUD_RATES = [
+    9600,
+    14400,
+    19200,
+    38400,
+    57600,
+    115200,
+    128000,
+    256000,
+]
 
 
 class CncController:
+    connected_changed = Signal('connected: bool')
+    history_changed = Signal('line: str')
+
     def __init__(self):
+        super().__init__()
         self._grbl = None
-        self._r = None
-        self._w = None
+        self._history = []
 
     @property
-    def status(self):
-        if self._grbl is None:
-            return 'Disconnected'
+    def connected(self) -> bool:
+        return self._grbl is not None
 
-        return self._grbl.status
+    @property
+    def grbl(self) -> grbl.Controller | None:
+        return self._grbl
 
-    async def connect(self, port, baud=115200):
-        self._r, self._w = await serial_asyncio.open_serial_connection(
-            url=self._port,
-            baudrate=self._baud,
-        )
-        self._grbl = tinycam.grbl.Controller(self._r, self._w)
+    @property
+    def history(self) -> list[str]:
+        return self._history
 
-    def disconnect(self):
+    async def connect(self, port: str, baud: int = 115200):
+        try:
+            r, w = await serial_asyncio.open_serial_connection(
+                url=port,
+                baudrate=baud,
+                timeout=10,  # 10 second timeout
+            )
+            self._grbl = grbl.Controller(r, w)
+            self._grbl.line_sent.connect(self._on_line_sent)
+            self._grbl.line_received.connect(self._on_line_received)
+        except Exception as e:
+            print(f'Failed to connect: {e}')
+            return
+
+        self.connected_changed.send(True)
+
+    async def disconnect(self):
         if self._grbl is None:
             return
 
-        self._grbl.shutdown()
+        await self._grbl.shutdown()
         self._grbl = None
+        self.connected_changed.send(False)
+
+    def _on_line_sent(self, line: str):
+        line = f'< {line}'
+        self._history.append(line)
+        self.history_changed.send(line)
+
+    def _on_line_received(self, line: str):
+        line = f'> {line}'
+        self._history.append(line)
+        self.history_changed.send(line)
