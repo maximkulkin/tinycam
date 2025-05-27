@@ -1,12 +1,14 @@
 from collections.abc import Sequence
+from typing import ForwardRef
 
-from PySide6 import QtCore, QtGui
+from tinycam.signals import Signal
+from PySide6 import QtGui
 from PySide6.QtCore import Qt
 
 
-class CncProjectItem(QtCore.QObject):
+class CncProjectItem:
     # Signal whenever any property of an item has changed
-    changed: QtCore.Signal
+    changed = Signal(ForwardRef('CncProjectItem'))
 
     # Signal used to signal when asynchronous operation on the item has finished
     #
@@ -14,10 +16,9 @@ class CncProjectItem(QtCore.QObject):
     # first changed signal will be emitted to signal that the property has changed.
     # When asynchronous update will finish, updated signal will be emitted, so that
     # e.g. UI can update item geometry.
-    updated: QtCore.Signal
+    updated = Signal(ForwardRef('CncProjectItem'))
 
     def __init__(self, name, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
-        super().__init__()
         self._name = name
         self._color = color
         self._visible = True
@@ -136,10 +137,6 @@ class CncProjectItem(QtCore.QObject):
     @property
     def children(self) -> 'CncProjectItemCollection':
         return self._children
-
-
-CncProjectItem.changed = QtCore.Signal(CncProjectItem)
-CncProjectItem.updated = QtCore.Signal(CncProjectItem)
 
 
 class CncProjectItemCollection:

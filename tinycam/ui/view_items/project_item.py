@@ -87,7 +87,7 @@ class CncProjectItemView[T: CncProjectItem](Composite):
     def _model_matrix(self):
         return Matrix44.identity()
 
-    def _on_model_changed(self):
+    def _on_model_changed(self, model: T):
         self._update_geometry()
 
         for item in self.items:
