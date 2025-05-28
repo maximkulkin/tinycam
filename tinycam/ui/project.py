@@ -6,7 +6,7 @@ from typing import cast
 
 from tinycam.gcode import GcodeRenderer
 from tinycam.globals import GLOBALS
-from tinycam.project import CncProjectItem, ExcellonItem, GerberItem, CncJob
+from tinycam.project import CncProject, CncProjectItem, ExcellonItem, GerberItem, CncJob
 from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
     CreateIsolateJobCommand,
@@ -26,30 +26,204 @@ ITEM_COLORS = [
 ]
 
 
-class ProjectItemModel(QtGui.QStandardItemModel):
-    def flags(self, index):
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsEditable
-        )
+class ProjectModel(QAbstractItemModel):
+    def __init__(self, project: CncProject, parent=None):
+        super().__init__(parent)
+        self._project = project
+        self._project.items.added.connect(self._on_item_added)
+        self._project.items.removed.connect(self._on_item_removed)
+        self._project.items.changed.connect(self._on_item_changed)
+
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+        if not parent.isValid():
+            if row > 0:
+                return QModelIndex()
+
+            return self.createIndex(row, column, self._project)
+
+        item = cast(CncProjectItem, parent.internalPointer())
+        if row < 0 or row > len(item.children):
+            return QModelIndex()
+
+        return self.createIndex(row, column, item.children[row])
+
+    def parent(self, index: QModelIndex) -> QModelIndex:
+        if not index.isValid():
+            return QModelIndex()
+
+        item = cast(CncProjectItem, index.internalPointer())
+        parent = item.parent
+        if parent is None:
+            return QModelIndex()
+
+        if parent.parent is None:
+            return self.createIndex(0, 0, parent)
+
+        row = parent.parent.children.index(parent)
+        if row == -1:
+            return QModelIndex()
+
+        return self.createIndex(row, 0, parent)
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if not parent.isValid():
+            # Top level
+            return 1
+
+        item = cast(CncProjectItem, parent.internalPointer())
+        return len(item.children)
+
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return 3
+
+    def data(
+        self,
+        index: QModelIndex,
+        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+    ) -> object:
+        if not index.isValid():
+            return None
+
+        if role != Qt.ItemDataRole.DisplayRole:
+            return None
+
+        item = cast(CncProjectItem, index.internalPointer())
+        if not index.parent().isValid():
+            # Root
+            if index.column() == 0:
+                return item.name
+
+            return None
+        else:
+            match index.column():
+                case 0: return item.name
+                case 1: return item.color
+                case 2: return item.visible
+                case _: return None
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> object:
+        return None
+
+    def canDropMimeData(
+        self,
+        data: object,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        if not parent.isValid():
+            # Items are not allowed to be dropped to top level
+            return False
+
+        return super().canDropMimeData(data, action, row, column, parent)
+
+    def _on_item_added(self, item: CncProjectItem):
+        parent = item.parent
+        if parent is None:
+            parent_index = QModelIndex()
+            idx = 0
+        else:
+            parent_index = self.createIndex(
+                0 if parent.parent is None else parent.parent.children.index(parent),
+                0,
+                parent
+            )
+            idx = parent.children.index(item)
+
+        if idx >= 0:
+            self.beginInsertRows(parent_index, idx, idx)
+            self.endInsertRows()
+
+    def _on_item_removed(self, item: CncProjectItem):
+        parent = item.parent
+        if parent is None:
+            parent_index = QModelIndex()
+            idx = 0
+        else:
+            parent_index = self.createIndex(
+                0 if parent.parent is None else parent.parent.children.index(parent),
+                0,
+                parent
+            )
+            idx = parent.children.index(item)
+
+        if idx >= 0:
+            self.beginRemoveRows(parent_index, idx, idx)
+            self.endRemoveRows()
+
+    def _on_item_changed(self, item: CncProjectItem):
+        parent = item.parent
+        if parent is None:
+            idx = 0
+        else:
+            idx = parent.children.index(item)
+
+        if idx >= 0:
+            index = self.createIndex(idx, 0, item)
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
+
+
+def load_icon(path: str, bg_color: QtGui.QColor = QtGui.QColor('white')) -> QtGui.QIcon:
+    img = QtGui.QPixmap(path)
+    painter = QtGui.QPainter(img)
+    painter.setCompositionMode(
+        QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
+    )
+    painter.fillRect(img.rect(), bg_color)
+    painter.end()
+    return QtGui.QIcon(img)
+
+
+class ItemStyleDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._visible_icon = load_icon('icons/eye-open.svg')
+        self._invisible_icon = load_icon('icons/eye-closed.svg')
+
+    def paint(self, painter: QtGui.QPainter, option, index):
+        if not index.parent().isValid():
+            return super().paint(painter, option, index)
+
+        visible = index.data(Qt.ItemDataRole.DisplayRole)
+
+        if visible:
+            icon = self._visible_icon
+        else:
+            icon = self._invisible_icon
+
+        rect = QtCore.QRect(option.rect)
+        rect.adjust(4, 4, -4, -4)
+
+        icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter)
+
+    def createEditor(self, parent, option, index):
+        return None
+
+    def editorEvent(self, event, model, option, index):
+        if (event.type() == QEvent.Type.MouseButtonPress and
+                cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
+            model.setData(
+                index,
+                not index.data(Qt.ItemDataRole.DisplayRole),
+                Qt.ItemDataRole.DisplayRole,
+            )
+            model.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def helpEvent(self, event, view, option, index):
+        if event.type() == QEvent.Type.ToolTip:
+            QtWidgets.QToolTip.showText(event.globalPos(), 'Show / Hide', view)
+            return True
+        return super().helpEvent(event, view, option, index)
 
 
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._visible_icon = self._load_icon('icons/eye-open.svg')
-        self._invisible_icon = self._load_icon('icons/eye-closed.svg')
-
-    def _load_icon(self, path):
-        img = QtGui.QPixmap(path)
-        painter = QtGui.QPainter(img)
-        painter.setCompositionMode(
-            QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
-        )
-        painter.fillRect(img.rect(), QtGui.QColor('white'))
-        painter.end()
-        return QtGui.QIcon(img)
+        self._visible_icon = load_icon('icons/eye-open.svg')
+        self._invisible_icon = load_icon('icons/eye-closed.svg')
 
     def paint(self, painter: QtGui.QPainter, option, index):
         visible = index.data(Qt.ItemDataRole.DisplayRole)
@@ -89,18 +263,8 @@ class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
 class DebugStyleDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._debug_enabled_icon = self._load_icon('icons/debug-view.svg')
-        self._debug_disabled_icon = self._load_icon('icons/debug-view.svg', QtGui.QColor('grey'))
-
-    def _load_icon(self, path, color=QtGui.QColor('white')):
-        img = QtGui.QPixmap(path)
-        painter = QtGui.QPainter(img)
-        painter.setCompositionMode(
-            QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
-        )
-        painter.fillRect(img.rect(), color)
-        painter.end()
-        return QtGui.QIcon(img)
+        self._debug_enabled_icon = load_icon('icons/debug-view.svg')
+        self._debug_disabled_icon = load_icon('icons/debug-view.svg', QtGui.QColor('grey'))
 
     def paint(self, painter, option, index):
         debug = index.data(Qt.ItemDataRole.DisplayRole)
@@ -128,24 +292,6 @@ class DebugStyleDelegate(QtWidgets.QStyledItemDelegate):
             QtWidgets.QToolTip.showText(event.globalPos(), 'Debug view', view)
             return True
         return super().helpEvent(event, view, option, index)
-
-
-class CheckboxStyleDelegate(QtWidgets.QStyledItemDelegate):
-    def paint(self, painter, option, index):
-        checked = index.data(Qt.ItemDataRole.DisplayRole)
-
-        style = QtWidgets.QApplication.style()
-        checkbox_option = QtWidgets.QStyleOptionButton()
-        checkbox_option.state = QtWidgets.QStyle.StateFlag.State_Enabled | (QtWidgets.QStyle.StateFlag.State_On if checked else QtWidgets.QStyle.StateFlag.State_Off)
-
-        rect = style.subElementRect(QtWidgets.QStyle.SubElement.SE_CheckBoxIndicator, option)
-        rect.moveCenter(option.rect.center())
-        checkbox_option.rect = rect
-
-        style.drawControl(QtWidgets.QStyle.ControlElement.CE_CheckBox, checkbox_option, painter)
-
-    def sizeHint(self, option, index):
-        return QtCore.QSize(20, 20)
 
 
 class ColorComboBoxDelegate(QtWidgets.QStyledItemDelegate):
@@ -258,89 +404,87 @@ class CncProjectWindow(CncWindow):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context_menu)
 
-        self.project.items.added.connect(self._on_item_added)
-        self.project.items.removed.connect(self._on_item_removed)
-        self.project.items.changed.connect(self._on_item_changed)
         self.project.selection.changed.connect(self._on_project_selection_changed)
 
         self._updating_selection = False
 
-        self._model = ProjectItemModel(self)
-        self._model.setHorizontalHeaderLabels(['', '', '', 'Name'])
-        self._model.dataChanged.connect(self._on_model_data_changed)
+        self._model = ProjectModel(self.project)
+        # self._model.setHorizontalHeaderLabels(['', '', '', 'Name'])
 
-        self._view = QtWidgets.QTableView(self)
+        self._view = QtWidgets.QTreeView()
         self._view.setModel(self._model)
-        self._view.setColumnWidth(0, 25)
-        self._view.setColumnWidth(1, 25)
-        self._view.setColumnWidth(2, 60)
-        self._view.horizontalHeader().setStretchLastSection(True)
-        self._view.horizontalHeader().hide()
-        self._view.verticalHeader().hide()
-        self._view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
-        self._view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self._view.setEditTriggers(
-              QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
-            | QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed
+        # self._view.setColumnWidth(0, 25)
+        self._view.header().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        self._view.header().setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
+        self._view.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
+        self._view.header().resizeSection(0, 200)
+        self._view.header().resizeSection(1, 60)
+        self._view.header().resizeSection(2, 25)
+
+        # self._view.setColumnWidth(2, 25)
+        # self._view.header().hide()
+        # self._view.header().setStretchLastSection(True)
+
+        self._view.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
         )
-        self._view.selectionModel().selectionChanged.connect(
-            self._on_table_view_selection_changed
+        self._view.setSelectionMode(
+            QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
         )
+
+        self._view.setDragEnabled(True)
+        self._view.setAcceptDrops(True)
+        self._view.setDropIndicatorShown(True)
+        self._view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self._view.setItemsExpandable(True)
+        self._view.setRootIsDecorated(True)
 
         self._view_visible_delegate = VisibleStyleDelegate()
         self._view_debug_delegate = DebugStyleDelegate()
         self._view_color_delegate = ColorBoxStyleDelegate(self._view)
-        self._view.setItemDelegateForColumn(0, self._view_visible_delegate)
-        self._view.setItemDelegateForColumn(1, self._view_debug_delegate)
-        self._view.setItemDelegateForColumn(2, self._view_color_delegate)
+        # self._view.setItemDelegateForColumn(0, self._view_visible_delegate)
+        # self._view.setItemDelegateForColumn(1, self._view_debug_delegate)
+        # self._view.setItemDelegateForColumn(2, self._view_color_delegate)
+
+        # self._view.setEditTriggers(
+        #       QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
+        #     | QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed
+        # )
+        self._view.selectionModel().selectionChanged.connect(
+            self._on_view_selection_changed
+        )
 
         self.setWidget(self._view)
-        for item in self.project.items:
-            self._add_item(item)
 
-    def _add_item(self, item: CncProjectItem):
-        visibleItem = QtGui.QStandardItem()
-        visibleItem.setData(item.visible, Qt.ItemDataRole.DisplayRole)
+        self._view.expandAll()
 
-        debugItem = QtGui.QStandardItem()
-        debugItem.setData(item.debug, Qt.ItemDataRole.DisplayRole)
+    def _on_project_selection_changed(self):
+        if self._updating_selection:
+            return
 
-        colorItem = QtGui.QStandardItem()
-        colorItem.setData(item.color, Qt.ItemDataRole.DisplayRole)
-
-        nameItem = QtGui.QStandardItem(item.name)
-
-        items = [visibleItem, debugItem, colorItem, nameItem]
-        self._model.appendRow(items)
-
-    def _on_item_added(self, item: CncProjectItem):
-        self._add_item(item)
-
-    def _on_item_removed(self, item: CncProjectItem):
-        index = self.project.items.index(item)
         self._updating_selection = True
-        self._model.removeRow(index)
+
+        selection_model = self._view.selectionModel()
+        selection_model.clear()
+        for item in self.project.selection:
+            index = self.project.items.index(item)
+            selection_model.select(
+                self._model.createIndex(index, 0, item),
+                QtCore.QItemSelectionModel.SelectionFlag.Select
+                | QtCore.QItemSelectionModel.SelectionFlag.Rows
+            )
+
         self._updating_selection = False
 
-    def _on_item_changed(self, item: CncProjectItem):
-        index = self.project.items.index(item)
+    def _on_view_selection_changed(self, _selected, _deselected):
+        if self._updating_selection:
+            return
 
-        self._model.setData(
-            self._model.index(index, 0),
-            item.visible, Qt.ItemDataRole.DisplayRole
-        )
-        self._model.setData(
-            self._model.index(index, 1),
-            item.debug, Qt.ItemDataRole.DisplayRole
-        )
-        self._model.setData(
-            self._model.index(index, 2),
-            item.color, Qt.ItemDataRole.DisplayRole
-        )
-        self._model.setData(
-            self._model.index(index, 3),
-            item.name, Qt.ItemDataRole.DisplayRole
-        )
+        self.project.selection.set([
+            self.project.items[index.row()]
+            for index in self._view.selectedIndexes()
+            if index.parent().isValid()
+        ])
 
     def _on_model_data_changed(self, top_left, bottom_right, _roles):
         def get_value(row, col):
@@ -362,36 +506,6 @@ class CncProjectWindow(CncWindow):
             }
             if updates:
                 GLOBALS.APP.undo_stack.push(UpdateItemsCommand([item], updates))
-
-    def _on_project_selection_changed(self):
-        if self._updating_selection:
-            return
-
-        self._updating_selection = True
-
-        def model_index(idx: int) -> QModelIndex:
-            return self._view.model().createIndex(idx, 0)
-
-        selection_model = self._view.selectionModel()
-        selection_model.clear()
-        for item in self.project.selection:
-            idx = self.project.items.index(item)
-            selection_model.select(
-                model_index(idx),
-                QtCore.QItemSelectionModel.SelectionFlag.SelectCurrent
-                    | QtCore.QItemSelectionModel.SelectionFlag.Rows
-            )
-
-        self._updating_selection = False
-
-    def _on_table_view_selection_changed(self, _selected, _deselected):
-        if self._updating_selection:
-            return
-
-        self.project.selection.set([
-            self.project.items[index.row()]
-            for index in self._view.selectedIndexes()
-        ])
 
     def _on_context_menu(self, position: QtCore.QPoint):
         if self._view.currentIndex() is None:
