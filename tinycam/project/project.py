@@ -1,118 +1,15 @@
 from collections.abc import Sequence
 from typing import Iterator
 
-from PySide6 import QtCore
+from tinycam.project.item import CncProjectItem, CncProjectItemCollection
+from tinycam.signals import Signal
 
-from tinycam.project.item import CncProjectItem
 
-
-class CncProject(QtCore.QObject):
-    class ItemCollection(QtCore.QObject):
-        added = QtCore.Signal(CncProjectItem)
-        removed = QtCore.Signal(CncProjectItem)
-        changed = QtCore.Signal(CncProjectItem)
-        updated = QtCore.Signal(CncProjectItem)
-
-        def __init__(self):
-            super().__init__()
-            self._items = []
-            self._item_changed_callbacks = {}
-
-        def insert(self, index: int, item: CncProjectItem):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-
-            item.changed.connect(self._on_item_changed)
-            item.updated.connect(self._on_item_updated)
-
-            self._items.insert(index, item)
-            self.added.emit(item)
-
-        def append(self, item: CncProjectItem):
-            item.changed.connect(self._on_item_changed)
-            item.updated.connect(self._on_item_updated)
-
-            self._items.append(item)
-            self.added.emit(item)
-
-        def extend(self, items: Sequence[CncProjectItem]):
-            for item in items:
-                self.append(item)
-
-        def remove(self, item: CncProjectItem):
-            index = self.index(item)
-            item.changed.disconnect(self._on_item_changed)
-            item.updated.disconnect(self._on_item_updated)
-            self._items.remove(item)
-            self.removed.emit(item)
-
-        def clear(self):
-            for i in reversed(range(len(self))):
-                del self[i]
-
-        def index(self, item: CncProjectItem) -> int:
-            return self._items.index(item)
-
-        def __iter__(self):
-            yield from self._items
-
-        def __len__(self) -> int:
-            return len(self._items)
-
-        def __getitem__(self, index: int):
-            return self._items[index]
-
-        def __setitem__(self, index: int, item: CncProjectItem):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-
-            old_item = self._items[index]
-            old_item.changed.disconnect(self._on_item_changed)
-            old_item.updated.disconnect(self._on_item_updated)
-
-            self._items[index] = item
-            item.changed.connect(self._on_item_changed)
-            item.updated.connect(self._on_item_updated)
-
-            self.removed.emit(old_item)
-            self.added.emit(item)
-
-        def __delitem__(self, index: int):
-            if index < 0:
-                index += len(self)
-                if index < 0:
-                    raise KeyError()
-
-            item = self._items[index]
-            item.changed.disconnect(self._on_item_changed)
-            item.updated.disconnect(self._on_item_updated)
-            del self._items[index]
-            self.removed.emit(item)
-
-        def __contains__(self, item: CncProjectItem):
-            return item in self._items
-
-        def _on_item_changed(self, item: CncProjectItem):
-            index = self._items.index(item)
-            if index == -1:
-                return
-            self.changed.emit(item)
-
-        def _on_item_updated(self, item: CncProjectItem):
-            index = self._items.index(item)
-            if index == -1:
-                return
-            self.updated.emit(item)
-
-    class Selection(QtCore.QObject):
-        changed = QtCore.Signal()
+class CncProject(CncProjectItem):
+    class Selection:
+        changed = Signal()
 
         def __init__(self, project: 'CncProject'):
-            super().__init__()
             self._project: CncProject = project
             self._items: list[CncProjectItem] = []
 
@@ -197,13 +94,12 @@ class CncProject(QtCore.QObject):
             return item in self._items
 
     def __init__(self):
-        super().__init__()
-        self._items = self.ItemCollection()
+        super().__init__('Project')
         self._selection = self.Selection(self)
 
     @property
-    def items(self) -> 'CncProject.ItemCollection':
-        return self._items
+    def items(self) -> CncProjectItemCollection:
+        return self.children
 
     @property
     def selection(self) -> 'CncProject.Selection':

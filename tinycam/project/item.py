@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
@@ -21,6 +23,8 @@ class CncProjectItem(QtCore.QObject):
         self._visible = True
         self._debug = False
         self._selected = False
+        self._parent = None
+        self._children = CncProjectItemCollection(self)
 
         self._updating = False
         self._updated = False
@@ -32,6 +36,7 @@ class CncProjectItem(QtCore.QObject):
         clone = self.__class__(self.name, self.color)
         clone.visible = self.visible
         clone.selected = self.selected
+        # TODO: clone children?
         return clone
 
     def __enter__(self):
@@ -117,6 +122,133 @@ class CncProjectItem(QtCore.QObject):
         self._selected = value
         self._signal_changed()
 
+    @property
+    def parent(self) -> 'CncProjectItem | None':
+        return self._parent
+
+    @parent.setter
+    def parent(self, value: 'CncProjectItem | None'):
+        if self._parent == value:
+            return
+        self._parent = value
+        self._signal_changed()
+
+    @property
+    def children(self) -> 'CncProjectItemCollection':
+        return self._children
+
 
 CncProjectItem.changed = QtCore.Signal(CncProjectItem)
 CncProjectItem.updated = QtCore.Signal(CncProjectItem)
+
+
+class CncProjectItemCollection:
+    added = Signal(CncProjectItem)
+    removed = Signal(CncProjectItem)
+    changed = Signal(CncProjectItem)
+    updated = Signal(CncProjectItem)
+
+    def __init__(self, owner: CncProjectItem | None = None):
+        self._owner = owner
+        self._items = []
+        self._item_changed_callbacks = {}
+
+    def insert(self, index: int, item: CncProjectItem):
+        if index < 0:
+            index += len(self)
+            if index < 0:
+                raise KeyError()
+
+        self._items.insert(index, item)
+        item.parent = self._owner
+
+        self.added.emit(item)
+
+        item.changed.connect(self._on_item_changed)
+        item.updated.connect(self._on_item_updated)
+
+    def append(self, item: CncProjectItem):
+        self._items.append(item)
+        item.parent = self._owner
+
+        self.added.emit(item)
+
+        item.changed.connect(self._on_item_changed)
+        item.updated.connect(self._on_item_updated)
+
+    def extend(self, items: Sequence[CncProjectItem]):
+        for item in items:
+            self.append(item)
+
+    def remove(self, item: CncProjectItem):
+        item.changed.disconnect(self._on_item_changed)
+        item.updated.disconnect(self._on_item_updated)
+        self._items.remove(item)
+        self.removed.emit(item)
+        if item.parent == self._owner:
+            item.parent = None
+
+    def clear(self):
+        for i in reversed(range(len(self))):
+            del self[i]
+
+    def index(self, item: CncProjectItem) -> int:
+        return self._items.index(item)
+
+    def __iter__(self):
+        yield from self._items
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def __getitem__(self, index: int):
+        return self._items[index]
+
+    def __setitem__(self, index: int, item: CncProjectItem):
+        if index < 0:
+            index += len(self)
+            if index < 0:
+                raise KeyError()
+
+        old_item = self._items[index]
+        if old_item.parent == self._owner:
+            old_item.parent = None
+        old_item.changed.disconnect(self._on_item_changed)
+        old_item.updated.disconnect(self._on_item_updated)
+
+        self._items[index] = item
+        item.parent = self._owner
+        item.changed.connect(self._on_item_changed)
+        item.updated.connect(self._on_item_updated)
+
+        self.removed.emit(old_item)
+        self.added.emit(item)
+
+    def __delitem__(self, index: int):
+        if index < 0:
+            index += len(self)
+            if index < 0:
+                raise KeyError()
+
+        item = self._items[index]
+        if item.parent == self._owner:
+            item.parent = None
+        item.changed.disconnect(self._on_item_changed)
+        item.updated.disconnect(self._on_item_updated)
+        del self._items[index]
+        self.removed.emit(item)
+
+    def __contains__(self, item: CncProjectItem):
+        return item in self._items
+
+    def _on_item_changed(self, item: CncProjectItem):
+        index = self._items.index(item)
+        if index == -1:
+            return
+        self.changed.emit(item)
+
+    def _on_item_updated(self, item: CncProjectItem):
+        index = self._items.index(item)
+        if index == -1:
+            return
+        self.updated.emit(item)
