@@ -58,8 +58,8 @@ class SelectTool(CncTool):
 
             modifiers = self._make_selection_modifiers(mouse_event.modifiers())
             if self._box:
-                assert(self._p1 is not None)
-                assert(self._p2 is not None)
+                assert self._p1 is not None
+                assert self._p2 is not None
                 self._select_items_in_box(self._p1, self._p2, modifiers)
 
                 self.view.remove_item(self._box)
@@ -90,9 +90,9 @@ class SelectTool(CncTool):
         return False
 
     def _make_box(self) -> Rectangle:
-        assert(self.view.ctx is not None)
-        assert(self._p1 is not None)
-        assert(self._p2 is not None)
+        assert self.view.ctx is not None
+        assert self._p1 is not None
+        assert self._p2 is not None
 
         return Rectangle(
             context=self.view.ctx,
