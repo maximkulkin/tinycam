@@ -8,6 +8,7 @@ from tinycam.project.jobs.job import CncJob
 from tinycam.properties import IntProperty, FloatProperty, BoolProperty
 import tinycam.settings as s
 from tinycam.tasks import run_task
+from tinycam.ui.utils import schedule
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
@@ -123,7 +124,8 @@ class CncIsolateJob(CncJob):
 
             self._geometry = geometry
             self._updating_geometry = False
-            self._signal_updated()
+
+            schedule(self._signal_updated)
 
     def _find_closest(self, lines: list[Line], point) -> int:
         # TODO: implement finding index of nearest line
