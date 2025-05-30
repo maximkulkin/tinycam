@@ -1,4 +1,5 @@
 from itertools import chain
+from typing import Callable
 
 import numpy as np
 from PySide6 import QtGui, QtCore
@@ -38,3 +39,7 @@ def clear_layout(layout):
             item.widget().deleteLater()
         elif item.layout() is not None:
             clear_layout(item.layout())
+
+
+def schedule(callback: Callable[[], None]):
+    QtCore.QTimer.singleShot(0, callback)
