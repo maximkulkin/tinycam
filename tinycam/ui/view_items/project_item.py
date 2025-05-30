@@ -75,14 +75,14 @@ class CncProjectItemView[T: CncProjectItem](Composite):
             self.remove_item(self._view)
 
         if geometry is not None:
-            view = Polygon(
+            self._view = Polygon(
                 self.context,
                 geometry,
                 model_matrix=self._model_matrix(),
                 color=qcolor_to_vec4(self._model.color),
             )
             self._view_geometry = geometry
-            self.add_item(view)
+            self.add_item(self._view)
 
     def _model_matrix(self):
         return Matrix44.identity()
