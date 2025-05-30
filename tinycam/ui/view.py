@@ -1,6 +1,5 @@
 from collections.abc import Callable, Sequence
 import moderngl as mgl
-from numbers import Number as number
 import numpy as np
 from typing import Any, cast, Protocol, TypeGuard
 from PIL.Image import Image
