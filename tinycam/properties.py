@@ -1,7 +1,118 @@
+from dataclasses import dataclass
 from collections.abc import Callable
+from numbers import Number
 from typing import cast
 
 from tinycam.types import Vector2, Vector3
+
+
+class PropertyMetadata:
+    def __init__(self):
+        self._items = []
+
+    def append(self, metadata: object):
+        self._items.append(metadata)
+
+    def find(self, type: type) -> object | None:
+        for item in self._items:
+            if isinstance(item, type):
+                return item
+        return None
+
+    def __repr__(self) -> str:
+        return f'PropertyMetdata(items={self._items})'
+
+
+def get_property_metadata(obj: object, property_name: str) -> PropertyMetadata:
+    if not hasattr(type(obj), property_name):
+        return PropertyMetadata()
+    prop = getattr(type(obj), property_name)
+    if isinstance(prop, property):
+        prop = prop.fget
+    if not hasattr(prop, '_property_metadata'):
+        return PropertyMetadata()
+    return prop._property_metadata
+
+
+get_metadata = get_property_metadata
+
+
+def add_property_metadata(func, metadata):
+    if isinstance(func, property):
+        func = func.fget
+    if not hasattr(func, '_property_metadata'):
+        func._property_metadata = PropertyMetadata()
+    func._property_metadata.append(metadata)
+
+
+def property_metadata_decorator(metadata):
+    def decorator(func):
+        add_property_metadata(func, metadata)
+        return func
+
+    return decorator
+
+
+class Hidden:
+    pass
+
+
+def hidden(func):
+    add_property_metadata(func, Hidden())
+    return func
+
+
+class ReadOnly:
+    pass
+
+
+def readonly(func):
+    add_property_metadata(func, ReadOnly())
+    return func
+
+
+@dataclass
+class Label:
+    label: str
+
+
+def label(label: str):
+    return property_metadata_decorator(Label(label))
+
+
+@dataclass
+class Suffix:
+    suffix: str
+
+
+def suffix(suffix: str):
+    return property_metadata_decorator(Suffix(suffix))
+
+
+@dataclass
+class MinValue:
+    value: Number
+
+
+@dataclass
+class MaxValue:
+    value: Number
+
+
+def min_value(value: Number):
+    return property_metadata_decorator(MinValue(value))
+
+
+def max_value(value: Number):
+    return property_metadata_decorator(MaxValue(value))
+
+
+def value_range(min: Number, max: Number):
+    def decorator(func):
+        add_property_metadata(func, MinValue(min))
+        add_property_metadata(func, MaxValue(max))
+        return func
+    return decorator
 
 
 class Property[T]:
@@ -28,7 +139,7 @@ class Property[T]:
 
     def __get__(self, instance: object, objtype: type | None = None) -> T:
         if instance is None:
-            raise ValueError('Property object is None')
+            return self
         return cast(T, instance.__dict__.get(self._variable_name))
 
     def __set__(self, instance: object, value: T):

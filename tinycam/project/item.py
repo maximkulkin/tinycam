@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import ForwardRef
 
+from tinycam import properties
 from tinycam.signals import Signal
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
@@ -68,6 +69,7 @@ class CncProjectItem:
     def _signal_updated(self):
         self.updated.emit(self)
 
+    @properties.hidden
     @property
     def name(self) -> str:
         return self._name
@@ -79,6 +81,7 @@ class CncProjectItem:
         self._name = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def color(self) -> QtGui.QColor:
         return self._color
@@ -90,6 +93,7 @@ class CncProjectItem:
         self._color = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def visible(self) -> bool:
         return self._visible
@@ -101,6 +105,7 @@ class CncProjectItem:
         self._visible = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def debug(self) -> bool:
         return self._debug
@@ -112,6 +117,7 @@ class CncProjectItem:
         self._debug = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def selected(self) -> bool:
         return self._selected
@@ -123,6 +129,7 @@ class CncProjectItem:
         self._selected = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def parent(self) -> 'CncProjectItem | None':
         return self._parent
@@ -134,6 +141,7 @@ class CncProjectItem:
         self._parent = value
         self._signal_changed()
 
+    @properties.hidden
     @property
     def children(self) -> 'CncProjectItemCollection':
         return self._children
