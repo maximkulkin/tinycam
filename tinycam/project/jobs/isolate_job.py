@@ -5,7 +5,7 @@ from tinycam.geometry import Line
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.project.jobs.job import CncJob
-from tinycam.properties import IntProperty, FloatProperty, BoolProperty
+import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
 from tinycam.ui.utils import schedule
@@ -65,15 +65,15 @@ class CncIsolateJob(CncJob):
         self._update_geometry()
         self._signal_changed()
 
-    tool_diameter = FloatProperty(on_update=_update)
-    pass_count = IntProperty(on_update=_update)
-    pass_overlap = IntProperty(on_update=_update, suffix=' %')
-    cut_depth = FloatProperty(on_update=_update)
-    cut_speed = FloatProperty(on_update=_update)
-    spindle_speed = IntProperty(on_update=_update)
-    travel_height = FloatProperty(on_update=_update)
-    show_outline = BoolProperty(on_update=_update)
-    show_path = BoolProperty(on_update=_update)
+    tool_diameter = p.Property[float](on_update=_update)
+    pass_count = p.Property[int](on_update=_update)
+    pass_overlap = p.Property[int](on_update=_update, metadata=[p.Suffix(' %')])
+    cut_depth = p.Property[float](on_update=_update)
+    cut_speed = p.Property[float](on_update=_update)
+    spindle_speed = p.Property[int](on_update=_update)
+    travel_height = p.Property[float](on_update=_update)
+    show_outline = p.Property[bool](on_update=_update)
+    show_path = p.Property[bool](on_update=_update)
 
     def _on_source_item_changed(self, _item):
         self._update()

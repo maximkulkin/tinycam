@@ -3,7 +3,7 @@ from PySide6 import QtGui
 from tinycam.commands import CncCommandBuilder
 from tinycam.globals import GLOBALS
 from tinycam.project.jobs.job import CncJob
-from tinycam.properties import IntProperty, FloatProperty
+import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
 
@@ -53,11 +53,12 @@ class CncDrillJob(CncJob):
         self._update_geometry()
         self._signal_changed()
 
-    tool_diameter = FloatProperty(on_update=_update)
-    cut_depth = FloatProperty(on_update=_update)
-    cut_speed = FloatProperty(on_update=_update)
-    spindle_speed = IntProperty(on_update=_update)
-    travel_height = FloatProperty(on_update=_update)
+    tool_diameter = p.Property[float](on_update=_update)
+    mill_bigger_holes = p.Property[bool](on_update=_update)
+    cut_depth = p.Property[float](on_update=_update)
+    cut_speed = p.Property[float](on_update=_update)
+    spindle_speed = p.Property[int](on_update=_update)
+    travel_height = p.Property[float](on_update=_update)
 
     def _on_source_item_changed(self, _item):
         self._update()

@@ -4,12 +4,7 @@ from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
 from tinycam.ui.utils import clear_layout
-from tinycam import properties
-from tinycam.properties import (
-    Property, StringProperty, BoolProperty, IntProperty, FloatProperty,
-    Vector2Property, Vector3Property,
-    get_property_metadata,
-)
+from tinycam import properties as p
 from tinycam.types import Vector2, Vector3
 
 
@@ -33,11 +28,11 @@ class StringPropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
+        metadata = p.get_metadata(self._target, self._attr)
 
         self._editor = QtWidgets.QLineEdit(self)
         self._editor.textChanged.connect(self._on_value_changed)
-        self._editor.setReadOnly(metadata.find(properties.ReadOnly) is not None)
+        self._editor.setReadOnly(metadata.find(p.ReadOnly) is not None)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
@@ -69,11 +64,11 @@ class BoolPropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
+        metadata = p.get_metadata(self._target, self._attr)
 
         self._editor = QtWidgets.QCheckBox(self)
         self._editor.checkStateChanged.connect(self._on_value_changed)
-        self._editor.setReadOnly(metadata.find(properties.ReadOnly) is not None)
+        self._editor.setReadOnly(metadata.find(p.ReadOnly) is not None)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
@@ -106,21 +101,21 @@ class IntPropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
+        metadata = p.get_metadata(self._target, self._attr)
 
         self._editor = QtWidgets.QSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
-        self._editor.setReadOnly(metadata.find(properties.ReadOnly) is not None)
+        self._editor.setReadOnly(metadata.find(p.ReadOnly) is not None)
 
-        min_value = metadata.find(properties.MinValue)
+        min_value = metadata.find(p.MinValue)
         if min_value is not None:
             self._editor.setMinimum(min_value.value)
 
-        max_value = metadata.find(properties.MaxValue)
+        max_value = metadata.find(p.MaxValue)
         if max_value is not None:
             self._editor.setMaximum(max_value.value)
 
-        suffix = metadata.find(properties.Suffix)
+        suffix = metadata.find(p.Suffix)
         if suffix is not None:
             self._editor.setSuffix(suffix.suffix)
 
@@ -154,21 +149,21 @@ class FloatPropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
+        metadata = p.get_metadata(self._target, self._attr)
 
         self._editor = QtWidgets.QDoubleSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
-        self._editor.setReadOnly(metadata.find(properties.ReadOnly) is not None)
+        self._editor.setReadOnly(metadata.find(p.ReadOnly) is not None)
 
-        min_value = metadata.find(properties.MinValue)
+        min_value = metadata.find(p.MinValue)
         if min_value is not None:
             self._editor.setMinimum(min_value.value)
 
-        max_value = metadata.find(properties.MaxValue)
+        max_value = metadata.find(p.MaxValue)
         if max_value is not None:
             self._editor.setMaximum(max_value.value)
 
-        suffix = metadata.find(properties.Suffix)
+        suffix = metadata.find(p.Suffix)
         if suffix is not None:
             self._editor.setSuffix(suffix.suffix)
 
@@ -202,8 +197,8 @@ class Vector2PropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
-        readonly = metadata.find(properties.ReadOnly) is not None
+        metadata = p.get_metadata(self._target, self._attr)
+        readonly = metadata.find(p.ReadOnly) is not None
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -265,8 +260,8 @@ class Vector3PropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
-        readonly = metadata.find(properties.ReadOnly) is not None
+        metadata = p.get_metadata(self._target, self._attr)
+        readonly = metadata.find(p.ReadOnly) is not None
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -346,11 +341,11 @@ class ListPropertyEditor(QtWidgets.QWidget):
         self._target = target
         self._attr = attr
 
-        metadata = properties.get_metadata(self._target, self._attr)
+        metadata = p.get_metadata(self._target, self._attr)
 
         self._editor = QtWidgets.QSpinBox(self)
         self._editor.valueChanged.connect(self._on_value_changed)
-        self._editor.setReadOnly(metadata.find(properties.ReadOnly) is not None)
+        self._editor.setReadOnly(metadata.find(p.ReadOnly) is not None)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self._editor)
@@ -397,29 +392,21 @@ class PropertyEditor(QtWidgets.QWidget):
         if target is None:
             return
 
-        property_names = [
-            name
-            for name in dir(type(target))
-            if not name.startswith('_')
-        ]
+        property_names = p.get_all(target)
 
         for name in property_names:
             prop = getattr(type(target), name)
-            if not isinstance(prop, (property, properties.Property)):
-                continue
-
             prop_type = self._get_property_type(prop)
 
             editor_type = TYPE_EDITORS.get(prop_type)
             if editor_type is None:
                 continue
 
-            metadata = properties.get_metadata(target, name)
-            hidden = metadata.find(properties.Hidden)
-            if hidden is not None:
+            metadata = p.get_metadata(target, name)
+            if metadata is None:
                 continue
 
-            label_metadata = metadata.find(properties.Label)
+            label_metadata = metadata.find(p.Label)
             if label_metadata is not None:
                 label = label_metadata.label
             else:
@@ -450,12 +437,18 @@ class PropertyEditor(QtWidgets.QWidget):
             prop_type = typing.get_type_hints(prop.__get__)['return']
 
         if isinstance(prop_type, typing.TypeVar):
-            for base in prop.__orig_bases__:
-                origin = typing.get_origin(base)
-                args = typing.get_args(base)
-                if origin is not None and hasattr(origin, '__parameters__'):
-                    tvar_map = dict(zip(origin.__parameters__, args))
-                    prop_type = tvar_map.get(prop_type, prop_type)
+            if (hasattr(prop, '__orig_class__') and
+                    hasattr(prop.__orig_class__, '__args__')):
+                idx = prop.__parameters__.index(prop_type)
+                prop_type = prop.__orig_class__.__args__[idx]
+            else:
+                for base in prop.__orig_bases__:
+                    origin = typing.get_origin(base)
+                    args = typing.get_args(base)
+                    if origin is not None and hasattr(origin, '__parameters__'):
+                        tvar_map = dict(zip(origin.__parameters__, args))
+                        prop_type = tvar_map.get(prop_type, prop_type)
+                        break
 
         return prop_type
 

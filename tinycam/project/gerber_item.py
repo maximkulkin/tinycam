@@ -6,7 +6,7 @@ from tinycam.geometry import Shape
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
 from tinycam.types import Vector2
-from tinycam.properties import Vector2Property
+import tinycam.properties as p
 
 
 class GerberItem(CncProjectItem):
@@ -23,8 +23,8 @@ class GerberItem(CncProjectItem):
         self._update_geometry()
         self._signal_updated()
 
-    offset = Vector2Property(on_update=_update)
-    scale = Vector2Property(on_update=_update)
+    offset = p.Property[Vector2](on_update=_update)
+    scale = p.Property[Vector2](on_update=_update)
 
     def clone(self) -> CncProjectItem:
         clone = GerberItem(self.name, self._geometry)

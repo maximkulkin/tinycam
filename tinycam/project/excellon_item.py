@@ -6,7 +6,7 @@ from tinycam.formats import excellon
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
 from tinycam.types import Vector2
-from tinycam.properties import Vector2Property
+import tinycam.properties as p
 
 
 class ExcellonItem(CncProjectItem):
@@ -22,8 +22,8 @@ class ExcellonItem(CncProjectItem):
         self._update_geometry()
         self._signal_updated()
 
-    offset = Vector2Property(on_update=_update)
-    scale = Vector2Property(on_update=_update)
+    offset = p.Property[Vector2](on_update=_update)
+    scale = p.Property[Vector2](on_update=_update)
 
     def clone(self) -> CncProjectItem:
         clone = ExcellonItem(self.name, self._excellon_file)
