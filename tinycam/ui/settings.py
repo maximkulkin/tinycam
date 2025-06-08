@@ -7,7 +7,8 @@ from PySide6.QtCore import Qt
 
 import tinycam.settings as s
 from tinycam.properties import format_suffix
-from tinycam.ui.property_editor import PropertyEditor
+from tinycam.ui.property_editor import ObjectPropertyEditor
+from tinycam.ui.utils import schedule
 from tinycam.utils import find_if
 
 
@@ -233,8 +234,8 @@ class CncSettingsDialog(QtWidgets.QDialog):
                                 list_widget.takeItem(i)
                                 del item
 
-                    editor = PropertyEditor()
-                    editor.target = value
+                    editor = ObjectPropertyEditor(type(value))
+                    editor.setValue(value)
 
                     delete_button = QtWidgets.QPushButton(
                         QtGui.QIcon.fromTheme("user-trash"), '',
@@ -250,6 +251,16 @@ class CncSettingsDialog(QtWidgets.QDialog):
                     item_widget = QtWidgets.QWidget()
                     item_widget.setLayout(item_layout)
                     item.setSizeHint(item_widget.sizeHint())
+
+                    def update_item_geometry():
+                        item.setSizeHint(item_widget.sizeHint())
+                        item_widget.updateGeometry()
+                        list_widget.doItemsLayout()
+                        list_widget.viewport().update()
+
+                    @editor.valueChanged.connect
+                    def on_item_value_changed(item: object):
+                        schedule(update_item_geometry)
 
                     list_widget.addItem(item)
                     list_widget.setItemWidget(item, item_widget)

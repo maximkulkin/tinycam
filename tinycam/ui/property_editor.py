@@ -470,6 +470,7 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
 
     def _on_property_value_changed(self, name: str, value: object):
         setattr(self._value, name, value)
+        self._populate_props(self._value)
         self.valueChanged.emit(self._value)
 
 
