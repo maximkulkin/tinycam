@@ -2,10 +2,12 @@ from collections.abc import Sequence
 import dataclasses
 from typing import List
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 import tinycam.settings as s
+from tinycam.properties import format_suffix
+from tinycam.ui.property_editor import PropertyEditor
 from tinycam.utils import find_if
 
 
@@ -161,7 +163,8 @@ class CncSettingsDialog(QtWidgets.QDialog):
         for i, setting in enumerate(settings):
             widget = self._make_setting_widget(setting)
             layout.addWidget(QtWidgets.QLabel(setting.label), i, 0)
-            layout.addWidget(widget, i, 1)
+            if widget is not None:
+                layout.addWidget(widget, i, 1)
 
     def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget:
         match setting:
@@ -179,7 +182,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 if setting.maximum is not None:
                     widget.setMaximum(setting.maximum)
                 if setting.suffix is not None:
-                    widget.setSuffix(self._format_suffix(setting.suffix))
+                    widget.setSuffix(format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0)
                 widget.valueChanged.connect(
                     lambda: self.settings.set(setting, widget.value())
@@ -192,7 +195,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 if setting.maximum is not None:
                     widget.setMaximum(setting.maximum)
                 if setting.suffix is not None:
-                    widget.setSuffix(self._format_suffix(setting.suffix))
+                    widget.setSuffix(format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0.0)
                 widget.valueChanged.connect(
                     lambda: self.settings.set(setting, widget.value())
@@ -207,7 +210,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 return widget
             case s.CncEnumSetting():
                 widget = QtWidgets.QComboBox()
-                for value in setting.enum_type:
+                for value in setting.type:
                     label = str(value)
                     widget.addItem(label, value)
                 widget.setCurrentIndex(widget.findData(self.settings.get(setting)))
@@ -215,16 +218,69 @@ class CncSettingsDialog(QtWidgets.QDialog):
                     lambda idx: self.settings.set(setting, widget.itemData(idx))
                 )
                 return widget
+            case s.CncListSetting():
+                widget = QtWidgets.QWidget()
+                list_widget = QtWidgets.QListWidget()
+
+                def add_item(value: object):
+                    item = QtWidgets.QListWidgetItem()
+
+                    def on_delete_button_clicked():
+                        nonlocal item
+                        setting.value.remove(value)
+                        for i in range(list_widget.count()):
+                            if list_widget.item(i) == item:
+                                list_widget.takeItem(i)
+                                del item
+
+                    editor = PropertyEditor()
+                    editor.target = value
+
+                    delete_button = QtWidgets.QPushButton(
+                        QtGui.QIcon.fromTheme("user-trash"), '',
+                    )
+                    delete_button.setFixedSize(QtCore.QSize(34, 34))
+                    delete_button.clicked.connect(on_delete_button_clicked)
+
+                    item_layout = QtWidgets.QHBoxLayout()
+                    item_layout.setContentsMargins(0, 0, 0, 0)
+                    item_layout.addWidget(editor)
+                    item_layout.addWidget(delete_button)
+
+                    item_widget = QtWidgets.QWidget()
+                    item_widget.setLayout(item_layout)
+                    item.setSizeHint(item_widget.sizeHint())
+
+                    list_widget.addItem(item)
+                    list_widget.setItemWidget(item, item_widget)
+
+                for value in setting.value:
+                    add_item(value)
+
+                def on_add_button_clicked():
+                    value = setting.type.__args__[0]()
+                    setting.value.append(value)
+
+                    add_item(value)
+
+                add_button = QtWidgets.QPushButton(
+                    QtGui.QIcon.fromTheme("list-add"), '',
+                )
+                add_button.setFixedSize(QtCore.QSize(32, 32))
+                add_button.clicked.connect(on_add_button_clicked)
+
+                row_layout = QtWidgets.QHBoxLayout()
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.addWidget(add_button)
+                row_layout.addStretch(1)
+
+                layout = QtWidgets.QVBoxLayout()
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(5)
+                layout.addWidget(list_widget)
+                layout.addLayout(row_layout)
+                widget.setLayout(layout)
+                return widget
             case _:
                 print(f'Unknown setting type: {setting.type}')
                 return None
-
-    def _format_suffix(self, suffix: str) -> str:
-        units = 'mm'
-        match s.SETTINGS.get('general/units'):
-            case s.Units.MM:
-                units = 'mm'
-            case s.Units.IN:
-                units = 'in'
-
-        return ' ' + suffix.format(units=units)

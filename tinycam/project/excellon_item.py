@@ -15,15 +15,12 @@ class ExcellonItem(CncProjectItem):
         self._excellon_file = excellon_file
         self._geometry = self._excellon_file.geometry
 
-        self._offset = Vector2(0, 0)
-        self._scale = Vector2(1, 1)
-
     def _update(self):
         self._update_geometry()
         self._signal_updated()
 
-    offset = p.Property[Vector2](on_update=_update)
-    scale = p.Property[Vector2](on_update=_update)
+    offset = p.Property[Vector2](on_update=_update, default=Vector2(0, 0))
+    scale = p.Property[Vector2](on_update=_update, default=Vector2(1, 1))
 
     def clone(self) -> CncProjectItem:
         clone = ExcellonItem(self.name, self._excellon_file)

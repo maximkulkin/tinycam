@@ -1,3 +1,4 @@
+import typing
 from typing import Protocol, Self, overload, runtime_checkable
 
 
@@ -39,3 +40,26 @@ def find_if(items, predicate, missing=None):
             return item
 
     return missing
+
+
+def get_property_type(prop: object) -> type:
+    if hasattr(prop, 'fget'):
+        prop_type = typing.get_type_hints(prop.fget)['return']
+    else:
+        prop_type = typing.get_type_hints(prop.__get__)['return']
+
+    if isinstance(prop_type, typing.TypeVar):
+        if (hasattr(prop, '__orig_class__') and
+                hasattr(prop.__orig_class__, '__args__')):
+            idx = prop.__parameters__.index(prop_type)
+            prop_type = prop.__orig_class__.__args__[idx]
+        else:
+            for base in prop.__orig_bases__:
+                origin = typing.get_origin(base)
+                args = typing.get_args(base)
+                if origin is not None and hasattr(origin, '__parameters__'):
+                    tvar_map = dict(zip(origin.__parameters__, args))
+                    prop_type = tvar_map.get(prop_type, prop_type)
+                    break
+
+    return prop_type

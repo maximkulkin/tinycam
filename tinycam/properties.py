@@ -1,10 +1,19 @@
 from dataclasses import dataclass
 from collections.abc import Callable
 from numbers import Number
-from typing import cast
+from typing import cast, get_args
+
+import tinycam.settings as s
 
 
 METADATA_ATTRIBUTE = '_property_metadata'
+
+
+class ReferenceType:
+
+    @classmethod
+    def all_instances(cls) -> list[object]:
+        raise NotImplementedError()
 
 
 class PropertyMetadata:
@@ -13,6 +22,9 @@ class PropertyMetadata:
 
     def append(self, metadata: object):
         self._items.append(metadata)
+
+    def has(self, type: type) -> bool:
+        return self.find(type) is not None
 
     def find(self, type: type) -> object | None:
         for item in self._items:
@@ -26,11 +38,15 @@ class PropertyMetadata:
 
 class Property[T]:
     def __init__(self, *,
+                 default: T | None = None,
                  metadata: list[object] = [],
+                 order: int | None = None,
                  on_update: Callable[[object], None] = lambda _: None):
-        self.type = T
+        self.default = default
         self._on_update: Callable[[object], None] = on_update
         self._property_metadata = PropertyMetadata(metadata)
+        if order is not None:
+            self._property_metadata.append(Order(order))
 
     def __set_name__(self, objtype, name):
         self._variable_name = f'_{name}'
@@ -38,11 +54,14 @@ class Property[T]:
     def __get__(self, instance: object, objtype: type | None = None) -> T:
         if instance is None:
             return self
-        return cast(T, instance.__dict__.get(self._variable_name))
+        return cast(T, instance.__dict__.get(self._variable_name, self.default))
 
     def __set__(self, instance: object, value: T):
         instance.__dict__[self._variable_name] = value
         self._on_update(instance)
+
+    def type(self):
+        return self.__orig_class__.__args__[0]
 
 
 def metadata(metadata: list[object]):
@@ -51,20 +70,27 @@ def metadata(metadata: list[object]):
     return decorator
 
 
-def get_all(obj: object) -> list[str]:
-    obj_type = type(obj)
-    return [
+def get_all(obj_type: type) -> list[str]:
+    names = [
         name
         for name in dir(obj_type)
-        for prop in [getattr(obj_type, name)]
+        for prop in [getattr(obj_type, name, None)]
         if not name.startswith('_') and hasattr(prop, METADATA_ATTRIBUTE)
     ]
 
+    def order_or_name(name: str):
+        metadata = get_metadata(obj_type, name)
+        order = metadata.find(Order)
+        return (order.order if order is not None else 10000, name)
+
+    return sorted(names, key=order_or_name)
+
 
 def get_metadata(obj: object, property_name: str) -> PropertyMetadata | None:
-    if not hasattr(type(obj), property_name):
-        return PropertyMetadata()
-    prop = getattr(type(obj), property_name)
+    if not hasattr(obj, property_name):
+        return None
+    prop = getattr(obj, property_name)
+
     if isinstance(prop, property):
         prop = prop.fget
     if not hasattr(prop, METADATA_ATTRIBUTE):
@@ -85,6 +111,17 @@ def add_metadata(func, metadata: object):
     return extend_metadata(func, [metadata])
 
 
+def format_suffix(suffix: str) -> str:
+    units = 'mm'
+    match s.SETTINGS.get('general/units'):
+        case s.Units.MM:
+            units = 'mm'
+        case s.Units.IN:
+            units = 'in'
+
+    return ' ' + suffix.format(units=units)
+
+
 class Hidden:
     pass
 
@@ -102,6 +139,10 @@ class Label:
 class Suffix:
     suffix: str
 
+    @property
+    def formatted_suffix(self) -> str:
+        return format_suffix(self.suffix)
+
 
 @dataclass
 class MinValue:
@@ -111,3 +152,13 @@ class MinValue:
 @dataclass
 class MaxValue:
     value: Number
+
+
+@dataclass
+class Order:
+    order: int
+
+
+@dataclass
+class VisibleIf:
+    condition: Callable[[object], bool]

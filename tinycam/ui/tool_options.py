@@ -1,4 +1,3 @@
-from PySide6 import QtWidgets
 from tinycam.globals import GLOBALS
 from tinycam.ui.window import CncWindow
 from tinycam.ui.property_editor import PropertyEditor

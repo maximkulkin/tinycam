@@ -14,17 +14,14 @@ class GerberItem(CncProjectItem):
         super().__init__(name, QtGui.QColor.fromRgbF(0.0, 0.6, 0.0, 0.6))
         self._geometry = geometry
 
-        self._offset = Vector2(0, 0)
-        self._scale = Vector2(1, 1)
-
         self._update_geometry()
 
     def _update(self):
         self._update_geometry()
         self._signal_updated()
 
-    offset = p.Property[Vector2](on_update=_update)
-    scale = p.Property[Vector2](on_update=_update)
+    offset = p.Property[Vector2](on_update=_update, default=Vector2(0, 0))
+    scale = p.Property[Vector2](on_update=_update, default=Vector2(1, 1))
 
     def clone(self) -> CncProjectItem:
         clone = GerberItem(self.name, self._geometry)

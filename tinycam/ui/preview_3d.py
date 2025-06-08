@@ -14,7 +14,7 @@ from tinycam.ui.view_items.orientation_cube import OrientationCube, Orientation,
 
 
 s.SETTINGS.register('3D/orientation_cube_position',
-                    s.CncEnumSetting, enum_type=OrientationCubePosition,
+                    s.CncEnumSetting[OrientationCubePosition],
                     default=OrientationCubePosition.TOP_RIGHT)
 
 

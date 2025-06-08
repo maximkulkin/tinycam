@@ -1,9 +1,7 @@
 import dataclasses
-import math
 import pyparsing as pp
 import pyparsing.exceptions
 import shapely
-import shapely.affinity
 from typing import Tuple
 from tinycam.geometry import Geometry, Shape
 

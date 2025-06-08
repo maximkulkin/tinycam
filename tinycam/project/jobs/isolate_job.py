@@ -8,17 +8,19 @@ from tinycam.project.jobs.job import CncJob
 import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
+from tinycam.tools import CncTool
 from tinycam.ui.utils import schedule
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
     S.register('spindle_speed', s.CncIntegerSetting, default=1000, minimum=0, maximum=100000, suffix='rpm')
     S.register('cut_depth', s.CncFloatSetting, default=0.1, suffix='{units}')
-    S.register('cut_speed', s.CncFloatSetting, default=120.0, suffix='{units}/s')
+    S.register('cut_speed', s.CncFloatSetting, default=120.0, suffix='{units}/min')
     S.register('travel_height', s.CncFloatSetting, default=2.0, suffix='{units}')
+    S.register('travel_speed', s.CncFloatSetting, default=300.0, suffix='{units}/min')
     S.register('pass_count', s.CncIntegerSetting, minimum=1, default=1)
     S.register('pass_overlap', s.CncIntegerSetting,
-               minimum=0, maximum=100, default=10, suffix='%')
+               minimum=0, maximum=99, default=10, suffix='%')
 
 
 class CncIsolateJob(CncJob):
@@ -30,6 +32,7 @@ class CncIsolateJob(CncJob):
                  cut_depth: float | None = None,
                  cut_speed: float | None = None,
                  travel_height: float | None = None,
+                 travel_speed: float | None = None,
                  pass_count: int | None = None,
                  pass_overlap: int | None = None):
         super().__init__(
@@ -49,6 +52,7 @@ class CncIsolateJob(CncJob):
         self._pass_overlap = pass_overlap or defaults['pass_overlap'].value
         self._spindle_speed = spindle_speed or defaults['spindle_speed'].value
         self._travel_height = travel_height or defaults['travel_height'].value
+        self._travel_speed = travel_speed or defaults['travel_speed'].value
         self._show_outline = True
         self._show_path = True
 
@@ -65,15 +69,44 @@ class CncIsolateJob(CncJob):
         self._update_geometry()
         self._signal_changed()
 
-    tool_diameter = p.Property[float](on_update=_update)
-    pass_count = p.Property[int](on_update=_update)
-    pass_overlap = p.Property[int](on_update=_update, metadata=[p.Suffix(' %')])
-    cut_depth = p.Property[float](on_update=_update)
-    cut_speed = p.Property[float](on_update=_update)
-    spindle_speed = p.Property[int](on_update=_update)
-    travel_height = p.Property[float](on_update=_update)
-    show_outline = p.Property[bool](on_update=_update)
-    show_path = p.Property[bool](on_update=_update)
+    show_outline = p.Property[bool](on_update=_update, metadata=[p.Order(0)])
+    show_path = p.Property[bool](on_update=_update, metadata=[p.Order(1)])
+    tool = p.Property[CncTool](on_update=_update, default=None, metadata=[
+        p.Order(2),
+    ])
+    tool_diameter = p.Property[float](on_update=_update, metadata=[
+        p.Order(3),
+        p.Suffix('{units}'),
+    ])
+    pass_count = p.Property[int](on_update=_update, metadata=[p.Order(4)])
+    pass_overlap = p.Property[int](on_update=_update, metadata=[
+        p.Order(5),
+        p.Suffix(' %'),
+        p.MinValue(0),
+        p.MaxValue(99),
+    ])
+    cut_depth = p.Property[float](on_update=_update, metadata=[
+        p.Order(6),
+        p.Suffix('{units}'),
+    ])
+    cut_speed = p.Property[float](on_update=_update, metadata=[
+        p.Order(7),
+        p.Suffix('{units}/min'),
+    ])
+    spindle_speed = p.Property[int](on_update=_update, metadata=[
+        p.Order(8),
+        p.Suffix('rpm'),
+        p.MinValue(0),
+        p.MaxValue(1000000),
+    ])
+    travel_height = p.Property[float](on_update=_update, metadata=[
+        p.Order(9),
+        p.Suffix('{units}'),
+    ])
+    travel_speed = p.Property[float](on_update=_update, metadata=[
+        p.Order(10),
+        p.Suffix('{units}/min'),
+    ])
 
     def _on_source_item_changed(self, _item):
         self._update()
@@ -152,11 +185,13 @@ class CncIsolateJob(CncJob):
             #     # Shape is open, pick the closest end and start with it
             #     # TODO:
 
-            builder.travel(z=self._travel_height)
+            builder.set_cut_speed(self.travel_speed)
+            builder.travel(z=self.travel_height)
             builder.travel(x=points[0][0], y=points[0][1])
-            builder.cut(z=-self._cut_depth)
+            builder.set_cut_speed(self.cut_speed)
+            builder.cut(z=-self.cut_depth)
 
-            for p in points[1:]:
-                builder.cut(x=p[0], y=p[1])
+            for point in points[1:]:
+                builder.cut(x=point[0], y=point[1])
 
         return builder.build()
