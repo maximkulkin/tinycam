@@ -16,9 +16,10 @@ class TaskManager(QtCore.QObject):
         self._tasks = {}
         self._statusbar = None
         self._progressbar = QtWidgets.QProgressBar()
-        self._progressbar.setFixedWidth(200)
+        self._progressbar.setFixedWidth(100)
         self._task_label = QtWidgets.QLabel()
         layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._task_label)
         layout.addWidget(self._progressbar)
         self._widget = QtWidgets.QWidget()
@@ -56,6 +57,8 @@ class TaskManager(QtCore.QObject):
         task = task_ref()
         if task is None:
             return
+        if self._task_label.text() == task.name:
+            self._task_label.setText('')
         self.unregister_task(task)
 
     def _task_progress(self, task_ref: weakref.ReferenceType, progress: int):
@@ -64,6 +67,7 @@ class TaskManager(QtCore.QObject):
             return
         self._tasks[task].progress = progress
         if len(self._tasks) == 1:
+            self._task_label.setText(task.name)
             self._progressbar.setValue(progress)
 
 
