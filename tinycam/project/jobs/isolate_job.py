@@ -1,3 +1,5 @@
+import math
+
 from PySide6 import QtGui
 
 from tinycam.commands import CncCommandBuilder
@@ -8,7 +10,7 @@ from tinycam.project.jobs.job import CncJob
 import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
-from tinycam.tools import CncTool
+from tinycam.tools import CncTool, CncToolType
 from tinycam.ui.utils import schedule
 
 
@@ -27,7 +29,6 @@ class CncIsolateJob(CncJob):
     def __init__(self,
                  source_item: CncProjectItem,
                  color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
-                 tool_diameter: float = 0.1,
                  spindle_speed: int | None = None,
                  cut_depth: float | None = None,
                  cut_speed: float | None = None,
@@ -45,7 +46,6 @@ class CncIsolateJob(CncJob):
 
         defaults = s.SETTINGS.section('jobs/isolate')
 
-        self._tool_diameter = tool_diameter
         self._cut_depth = cut_depth or defaults['cut_depth'].value
         self._cut_speed = cut_speed or defaults['cut_speed'].value
         self._pass_count = pass_count or defaults['pass_count'].value
@@ -73,10 +73,6 @@ class CncIsolateJob(CncJob):
     show_path = p.Property[bool](on_update=_update, metadata=[p.Order(1)])
     tool = p.Property[CncTool](on_update=_update, default=None, metadata=[
         p.Order(2),
-    ])
-    tool_diameter = p.Property[float](on_update=_update, metadata=[
-        p.Order(3),
-        p.Suffix('{units}'),
     ])
     pass_count = p.Property[int](on_update=_update, metadata=[p.Order(4)])
     pass_overlap = p.Property[int](on_update=_update, metadata=[
@@ -108,6 +104,16 @@ class CncIsolateJob(CncJob):
         p.Suffix('{units}/min'),
     ])
 
+    def get_tool_diameter(self, depth: float):
+        match self.tool.type:
+            case CncToolType.RECTANGULAR:
+                return self.tool.diameter
+            case CncToolType.VSHAPE:
+                return (
+                    self.tool.tip_diameter +
+                    2 * math.tan(math.radians(self.tool.angle)) * depth
+                )
+
     def _on_source_item_changed(self, _item):
         self._update()
 
@@ -119,8 +125,24 @@ class CncIsolateJob(CncJob):
 
         @run_task('Isolate job')
         def work(status):
-            tool_radius = self._tool_diameter * 0.5
-            pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
+            if self.tool is None:
+                self._geometry = None
+                self._updating_geometry = False
+
+                schedule(self._signal_updated)
+                return
+
+            tool_diameter = self.get_tool_diameter(self.cut_depth)
+
+            if tool_diameter <= 0:
+                self._geometry = None
+                self._updating_geometry = False
+
+                schedule(self._signal_updated)
+                return
+
+            tool_radius = tool_diameter * 0.5
+            pass_offset = tool_diameter * (1 - self._pass_overlap / 100.0)
 
             G = GLOBALS.GEOMETRY
             g = G.simplify(

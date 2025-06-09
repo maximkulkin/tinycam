@@ -34,8 +34,9 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
 
     def _update_geometry(self):
         model = self._model
+        tool_diameter = model.get_tool_diameter(model.cut_depth)
 
-        if self._view_geometry is model.geometry and model.tool_diameter == self._tool_diameter:
+        if model.geometry is self._view_geometry and tool_diameter == self._tool_diameter:
             return
 
         self.clear_items()
@@ -50,7 +51,7 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
                         G.points(line),
                         closed=line.is_closed,
                         color=qcolor_to_vec4(self._model.color),
-                        width=model.tool_diameter,
+                        width=tool_diameter,
                     )
                     self.add_item(line_view)
 
@@ -103,4 +104,4 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
                     self.add_item(path_view)
 
             self._view_geometry = self._model.geometry
-            self._tool_diameter = self._model.tool_diameter
+            self._tool_diameter = tool_diameter
