@@ -1,3 +1,5 @@
+from typing import Callable
+
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
@@ -33,8 +35,6 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.menu = QtWidgets.QMenuBar()
         self.file_menu = self.menu.addMenu("File")
-        self.file_menu.addAction('Import Drawing', self._import_file,
-                                 shortcut='Ctrl+o')
 
         undo_action = GLOBALS.APP.undo_stack.createUndoAction(self, "&Undo")
         undo_action.setIcon(QtGui.QIcon(":/icons/undo.png"))
@@ -55,14 +55,37 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.setMenuBar(self.menu)
 
+        import_file_action = self._make_action(
+            'Import File', self._import_file,
+            icon=':/icons/file_import.svg',
+            shortcut='Ctrl+o',
+        )
+
+        zoom_in_action = self._make_action(
+            'Zoom In', self._zoom_in,
+            icon=':/icons/zoom_in.svg',
+            shortcut='Ctrl++',
+        )
+        zoom_out_action = self._make_action(
+            'Zoom Out', self._zoom_out,
+            icon=':/icons/zoom_out.svg',
+            shortcut='Ctrl+-',
+        )
+        zoom_fit_action = self._make_action(
+            'Zoom To Fit', self._zoom_to_fit,
+            icon=':/icons/zoom_fit.svg',
+            shortcut='Ctrl+=',
+        )
+
         self.toolbar = QtWidgets.QToolBar()
         self.toolbar.setObjectName('main_toolbar')
         self.toolbar.setWindowTitle('Toolbar')
         self.addToolBar(self.toolbar)
-        self.toolbar.addAction('Import', self._import_file)
-        self.toolbar.addAction('Zoom In', 'Ctrl++', self._zoom_in)
-        self.toolbar.addAction('Zoom Out', 'Ctrl+-', self._zoom_out)
-        self.toolbar.addAction('Zoom To Fit', 'Ctrl+=', self._zoom_to_fit)
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.toolbar.addAction(import_file_action)
+        self.toolbar.addAction(zoom_in_action)
+        self.toolbar.addAction(zoom_out_action)
+        self.toolbar.addAction(zoom_fit_action)
 
         self.cnc_connection_toolbar = CncConnectionToolbar()
         self.addToolBar(self.cnc_connection_toolbar)
@@ -95,14 +118,30 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+4',
         )
 
+        self.file_menu.addAction(import_file_action)
+
         self.view_menu.addSeparator()
-        self.view_menu.addAction('Zoom In', self._zoom_in, shortcut='Ctrl++')
-        self.view_menu.addAction('Zoom Out', self._zoom_out, shortcut='Ctrl+-')
-        self.view_menu.addAction('Zoom To Fit', self._zoom_to_fit,
-                                 shortcut='Ctrl+=')
+        self.view_menu.addAction(zoom_in_action)
+        self.view_menu.addAction(zoom_out_action)
+        self.view_menu.addAction(zoom_fit_action)
         self.view_menu.addSeparator()
 
         self._load_settings()
+
+    def _make_action(
+        self,
+        label: str,
+        callback: Callable[[], None],
+        icon: str | None = None,
+        shortcut: str | None = None
+    ) -> QtGui.QAction:
+        action = QtGui.QAction(label, self)
+        action.triggered.connect(callback)
+        if icon is not None:
+            action.setIcon(QtGui.QIcon(icon))
+        if shortcut is not None:
+            action.setShortcut(shortcut)
+        return action
 
     def _import_file(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(

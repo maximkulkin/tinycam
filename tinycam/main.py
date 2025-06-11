@@ -3,6 +3,7 @@ import sys
 from PySide6 import QtGui
 import PySide6.QtAsyncio as QtAsyncio
 
+import tinycam.icons_rc
 from tinycam.application import CncApplication
 from tinycam.globals import GLOBALS
 from tinycam.project import GerberItem, ExcellonItem
