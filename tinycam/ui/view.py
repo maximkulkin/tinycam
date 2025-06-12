@@ -329,7 +329,8 @@ class ViewItem:
 
 
 class HasOnClick(Protocol):
-    def on_click(self, tag: object): ...
+    def on_click(self, tag: object):
+        ...
 
 
 def has_on_click(obj: object) -> TypeGuard[HasOnClick]:
