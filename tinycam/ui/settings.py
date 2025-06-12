@@ -178,10 +178,8 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 return widget
             case s.CncIntegerSetting():
                 widget = QtWidgets.QSpinBox()
-                if setting.minimum is not None:
-                    widget.setMinimum(setting.minimum)
-                if setting.maximum is not None:
-                    widget.setMaximum(setting.maximum)
+                widget.setMinimum(setting.minimum or -1000)
+                widget.setMaximum(setting.maximum or 1000)
                 if setting.suffix is not None:
                     widget.setSuffix(format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0)
@@ -191,10 +189,8 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 return widget
             case s.CncFloatSetting():
                 widget = QtWidgets.QDoubleSpinBox()
-                if setting.minimum is not None:
-                    widget.setMinimum(setting.minimum)
-                if setting.maximum is not None:
-                    widget.setMaximum(setting.maximum)
+                widget.setMinimum(setting.minimum or -1000.0)
+                widget.setMaximum(setting.maximum or 1000.0)
                 if setting.suffix is not None:
                     widget.setSuffix(format_suffix(setting.suffix))
                 widget.setValue(self.settings.get(setting) or 0.0)
