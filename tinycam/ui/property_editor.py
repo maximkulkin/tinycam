@@ -344,6 +344,8 @@ class ReferencePropertyEditor(BasePropertyEditor[p.ReferenceType]):
         self._editor.currentIndexChanged.connect(self._on_current_index_changed)
         self._editor.setCurrentIndex(0)
 
+        self._updating = False
+
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._editor)
@@ -356,9 +358,14 @@ class ReferencePropertyEditor(BasePropertyEditor[p.ReferenceType]):
     @override
     def setValue(self, value: object):
         index = self._editor.findData(value)
+        self._updating = True
         self._editor.setCurrentIndex(index)
+        self._updating = False
 
     def _on_current_index_changed(self, index: int):
+        if self._updating:
+            return
+
         value = self._editor.itemData(index)
         self.valueChanged.emit(value)
 
