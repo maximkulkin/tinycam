@@ -36,7 +36,7 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
         model = self._model
         tool_diameter = model.get_tool_diameter(model.cut_depth)
 
-        if model.geometry is self._view_geometry and tool_diameter == self._tool_diameter:
+        if model.geometry is self._geometry and tool_diameter == self._tool_diameter:
             return
 
         self.clear_items()
@@ -103,5 +103,5 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
                     )
                     self.add_item(path_view)
 
-            self._view_geometry = self._model.geometry
+            self._geometry = self._model.geometry
             self._tool_diameter = tool_diameter

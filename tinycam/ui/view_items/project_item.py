@@ -13,14 +13,12 @@ class CncProjectItemView[T: CncProjectItem](Composite):
     priority = 100
 
     def __init__(self, context: Context, model: T):
-        super().__init__(
-            context,
-        )
+        super().__init__(context)
         self._model = model
         self._model.changed.connect(self._on_model_changed)
         self._model.updated.connect(self._on_model_changed)
-        self._view = None
-        self._view_geometry = None
+        self._geometry = None
+        self._geometry_view = None
         self._tool_diameter = None
         self._update_geometry()
 
@@ -30,34 +28,34 @@ class CncProjectItemView[T: CncProjectItem](Composite):
 
     @property
     def bounds(self) -> Box:
-        if self._view_geometry is None:
+        if self._geometry is None:
             return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
-        match self._view_geometry:
+        match self._geometry:
             case s.MultiPolygon():
                 xmin = min(
                     coord[0]
-                    for geom in self._view_geometry.geoms
+                    for geom in self._geometry.geoms
                     for coord in geom.exterior.coords
                 )
                 ymin = min(
                     coord[1]
-                    for geom in self._view_geometry.geoms
+                    for geom in self._geometry.geoms
                     for coord in geom.exterior.coords
                 )
 
                 xmax = max(
                     coord[0]
-                    for geom in self._view_geometry.geoms
+                    for geom in self._geometry.geoms
                     for coord in geom.exterior.coords
                 )
                 ymax = max(
                     coord[1]
-                    for geom in self._view_geometry.geoms
+                    for geom in self._geometry.geoms
                     for coord in geom.exterior.coords
                 )
             case _:
                 G = GLOBALS.GEOMETRY
-                points = G.points(self._view_geometry)
+                points = G.points(self._geometry)
                 xmin = min(float(coord.x) for coord in points)
                 ymin = min(float(coord.y) for coord in points)
 
@@ -68,21 +66,21 @@ class CncProjectItemView[T: CncProjectItem](Composite):
 
     def _update_geometry(self):
         geometry = self._model.geometry
-        if self._view_geometry is geometry:
+        if self._geometry is geometry:
             return
 
-        if self._view is not None:
-            self.remove_item(self._view)
+        if self._geometry_view is not None:
+            self.remove_item(self._geometry_view)
 
         if geometry is not None:
-            self._view = Polygon(
+            self._geometry_view = Polygon(
                 self.context,
                 geometry,
                 model_matrix=self._model_matrix(),
                 color=qcolor_to_vec4(self._model.color),
             )
-            self._view_geometry = geometry
-            self.add_item(self._view)
+            self._geometry = geometry
+            self.add_item(self._geometry_view)
 
     def _model_matrix(self):
         return Matrix44.identity()
