@@ -15,14 +15,19 @@ from tinycam.ui.utils import schedule
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
-    S.register('spindle_speed', s.CncIntegerSetting, default=1000, minimum=0, maximum=100000, suffix='rpm')
-    S.register('cut_depth', s.CncFloatSetting, default=0.1, suffix='{units}')
-    S.register('cut_speed', s.CncFloatSetting, default=120.0, suffix='{units}/min')
+    S.register('spindle_speed', s.CncIntegerSetting,
+               default=1000, minimum=0, maximum=100000, suffix='rpm')
+    S.register('cut_depth', s.CncFloatSetting,
+               default=0.1, minimum=0.0, suffix='{units}')
+    S.register('cut_speed', s.CncFloatSetting,
+               default=120.0, minimum=1.0, suffix='{units}/min')
     S.register('travel_height', s.CncFloatSetting, default=2.0, suffix='{units}')
-    S.register('travel_speed', s.CncFloatSetting, default=300.0, suffix='{units}/min')
-    S.register('pass_count', s.CncIntegerSetting, minimum=1, default=1)
+    S.register('travel_speed', s.CncFloatSetting,
+               default=300.0, minimum=0.0, suffix='{units}/min')
+    S.register('pass_count', s.CncIntegerSetting,
+               default=1, minimum=1)
     S.register('pass_overlap', s.CncIntegerSetting,
-               minimum=0, maximum=99, default=10, suffix='%')
+               default=10, minimum=0, maximum=99, suffix='%')
 
 
 class CncIsolateJob(CncJob):
@@ -74,7 +79,10 @@ class CncIsolateJob(CncJob):
     tool = p.Property[CncTool](on_update=_update, default=None, metadata=[
         p.Order(2),
     ])
-    pass_count = p.Property[int](on_update=_update, metadata=[p.Order(4)])
+    pass_count = p.Property[int](on_update=_update, metadata=[
+        p.Order(4),
+        p.MinValue(1),
+    ])
     pass_overlap = p.Property[int](on_update=_update, metadata=[
         p.Order(5),
         p.Suffix(' %'),
@@ -83,6 +91,7 @@ class CncIsolateJob(CncJob):
     ])
     cut_depth = p.Property[float](on_update=_update, metadata=[
         p.Order(6),
+        p.MinValue(0),
         p.Suffix('{units}'),
     ])
     cut_speed = p.Property[float](on_update=_update, metadata=[
@@ -93,7 +102,7 @@ class CncIsolateJob(CncJob):
         p.Order(8),
         p.Suffix('rpm'),
         p.MinValue(0),
-        p.MaxValue(1000000),
+        p.MaxValue(100000),
     ])
     travel_height = p.Property[float](on_update=_update, metadata=[
         p.Order(9),
@@ -101,6 +110,7 @@ class CncIsolateJob(CncJob):
     ])
     travel_speed = p.Property[float](on_update=_update, metadata=[
         p.Order(10),
+        p.MinValue(0),
         p.Suffix('{units}/min'),
     ])
 
