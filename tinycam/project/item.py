@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from typing import ForwardRef
 
-from tinycam import properties
 from tinycam.signals import Signal
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
@@ -19,7 +18,7 @@ class CncProjectItem:
     # e.g. UI can update item geometry.
     updated = Signal(ForwardRef('CncProjectItem'))
 
-    def __init__(self, name, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
+    def __init__(self, name: str, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
         self._name = name
         self._color = color
         self._visible = True
