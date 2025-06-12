@@ -114,6 +114,9 @@ class CncIsolateJob(CncJob):
     ])
 
     def get_tool_diameter(self, depth: float):
+        if self.tool is None:
+            return 0
+
         match self.tool.type:
             case CncToolType.RECTANGULAR:
                 return self.tool.diameter
