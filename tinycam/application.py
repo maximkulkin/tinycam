@@ -11,6 +11,10 @@ class CncApplication(QtWidgets.QApplication):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setOrganizationDomain('tinycam.com')
+        self.setApplicationName('tinycam')
+        self.setApplicationDisplayName('TinyCAM')
+
         self.project: CncProject = CncProject()
         self.settings: CncSettings = GLOBALS.SETTINGS
         self.undo_stack: QtGui.QUndoStack = QtGui.QUndoStack()
