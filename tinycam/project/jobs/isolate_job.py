@@ -11,7 +11,6 @@ import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
 from tinycam.tools import CncTool, CncToolType
-from tinycam.ui.utils import schedule
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
@@ -133,13 +132,12 @@ class CncIsolateJob(CncJob):
 
         self._updating_geometry = True
 
-        @run_task('Isolate job')
+        @run_task('Isolate job', self._signal_changed)
         def work(status):
             if self.tool is None:
                 self._geometry = None
                 self._updating_geometry = False
 
-                schedule(self._signal_updated)
                 return
 
             tool_diameter = self.get_tool_diameter(self.cut_depth)
@@ -148,7 +146,6 @@ class CncIsolateJob(CncJob):
                 self._geometry = None
                 self._updating_geometry = False
 
-                schedule(self._signal_updated)
                 return
 
             tool_radius = tool_diameter * 0.5
@@ -189,8 +186,6 @@ class CncIsolateJob(CncJob):
 
             self._geometry = geometry
             self._updating_geometry = False
-
-            schedule(self._signal_updated)
 
     def _find_closest(self, lines: list[Line], point) -> int:
         # TODO: implement finding index of nearest line

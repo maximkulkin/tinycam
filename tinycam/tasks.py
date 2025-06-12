@@ -127,9 +127,11 @@ class Task(QtCore.QThread):
         self._f(self._status)
 
 
-def run_task(name: str):
+def run_task(name: str, callback: Callable[[], None] | None = None):
     def wrapper(f):
         task = Task(name, f)
+        if callback is not None:
+            task.finished.connect(callback)
         GLOBALS.APP.task_manager.register_task(task)
         task.start()
     return wrapper

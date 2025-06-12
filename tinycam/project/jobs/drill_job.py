@@ -69,7 +69,7 @@ class CncDrillJob(CncJob):
 
         self._updating_geometry = True
 
-        @run_task('Drill Job')
+        @run_task('Drill Job', self._signal_updated)
         def work(status):
             tool_radius = self._tool_diameter * 0.5
             pass_offset = self._tool_diameter * (1 - self._pass_overlap / 100.0)
@@ -92,7 +92,6 @@ class CncDrillJob(CncJob):
 
             self._geometry = geometry
             self._updating_geometry = False
-            self._signal_updated()
 
     def _find_closest(self, lines, point):
         # TODO: implement finding closest line
