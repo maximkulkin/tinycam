@@ -113,19 +113,6 @@ class CncIsolateJob(CncJob):
         p.Suffix('{units}/min'),
     ])
 
-    def get_tool_diameter(self, depth: float):
-        if self.tool is None:
-            return 0
-
-        match self.tool.type:
-            case CncToolType.RECTANGULAR:
-                return self.tool.diameter
-            case CncToolType.VSHAPE:
-                return (
-                    self.tool.tip_diameter +
-                    2 * math.tan(math.radians(self.tool.angle)) * depth
-                )
-
     def _on_source_item_changed(self, _item):
         self._update()
 
@@ -133,23 +120,15 @@ class CncIsolateJob(CncJob):
         if self._updating_geometry:
             return
 
+        if self.tool is None:
+            self._geometry = None
+            return
+
         self._updating_geometry = True
 
         @run_task('Isolate job', self._signal_changed)
         def work(status):
-            if self.tool is None:
-                self._geometry = None
-                self._updating_geometry = False
-
-                return
-
-            tool_diameter = self.get_tool_diameter(self.cut_depth)
-
-            if tool_diameter <= 0:
-                self._geometry = None
-                self._updating_geometry = False
-
-                return
+            tool_diameter = self.tool.get_diameter(self.cut_depth)
 
             tool_radius = tool_diameter * 0.5
             pass_offset = tool_diameter * (1 - self._pass_overlap / 100.0)

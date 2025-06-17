@@ -14,7 +14,7 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
 
     def _update_geometry(self):
         model = self._model
-        tool_diameter = model.get_tool_diameter(model.cut_depth)
+        tool_diameter = model.tool.get_diameter(model.cut_depth) if model.tool is not None else 0
 
         if model.geometry is self._geometry and tool_diameter == self._tool_diameter:
             return

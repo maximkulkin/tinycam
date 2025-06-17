@@ -1,4 +1,5 @@
 import enum
+import math
 
 import tinycam.properties as p
 import tinycam.settings as s
@@ -37,6 +38,16 @@ class CncTool(p.ReferenceType):
         p.Order(3),
         p.Suffix('{units}'),
     ])
+
+    def get_diameter(self, depth: float) -> float:
+        match self.type:
+            case CncToolType.RECTANGULAR:
+                return self.diameter
+            case CncToolType.VSHAPE:
+                return (
+                    self.tip_diameter +
+                    2 * math.tan(math.radians(self.angle)) * depth
+                )
 
     def __str__(self) -> str:
         match self.type:
