@@ -290,6 +290,7 @@ class ExcellonParser:
         if self._last_mill is None:
             self._last_mill = Mill(tool_id=self._current_tool,
                                    positions=[self._current_position])
+            self._mills.append(self._last_mill)
 
         position = self._eval_position((node.x, node.y))
         self._last_mill.positions.append(position)
