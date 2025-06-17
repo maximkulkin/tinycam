@@ -1,30 +1,10 @@
-from typing import cast
-
-from tinycam.commands import CncPathType, CncPathTracer
 from tinycam.globals import GLOBALS
 from tinycam.project import CncIsolateJob
-from tinycam.types import Vector2, Vector3, Vector4, Matrix44
+from tinycam.types import Matrix44
 from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core.line2d import Line2D
-from tinycam.ui.view_items.core.line3d import Line3D
-from tinycam.ui.view_items.core.direction_markers import DirectionMarkers
+from tinycam.ui.view_items.commands_view import CncCommandsView
 from tinycam.ui.view_items.project_item import CncProjectItemView
-
-
-PATH_COLORS = {
-    CncPathType.TRAVEL: Vector4(0, 0, 1, 1),
-    CncPathType.CUT: Vector4(1, 0, 1, 1),
-}
-
-
-class CncPathView(Line3D):
-    @property
-    def color(self) -> Vector4:
-        return self._color
-
-    @color.setter
-    def color(self, value: Vector4):
-        pass
 
 
 class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
@@ -57,51 +37,8 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
 
             if model.show_path:
                 commands = model.generate_commands()
-                tracer = CncPathTracer()
-                tracer.execute_commands(commands)
-
-                current_path_points: list[Vector3] = []
-                current_path_type = CncPathType.TRAVEL
-                for path in tracer.paths:
-                    if path.type != current_path_type:
-                        if current_path_points:
-                            path_view = CncPathView(
-                                self.context,
-                                current_path_points,
-                                color=PATH_COLORS[current_path_type],
-                            )
-                            self.add_item(path_view)
-
-                            marker_positions = []
-                            marker_directions = []
-                            for p1, p2 in zip(current_path_points, current_path_points[1:]):
-                                v = p2 - p1
-
-                                if v.length > 2.0:
-                                    marker_positions.append(p1 + 0.3 * v)
-                                    marker_directions.append(v)
-
-                            direction_markers = DirectionMarkers(
-                                self.context,
-                                positions=marker_positions,
-                                directions=marker_directions,
-                                size=Vector2(0.5, 0.25),
-                                color=PATH_COLORS[current_path_type],
-                            )
-                            self.add_item(direction_markers)
-
-                        current_path_points = [path.start, path.end]
-                        current_path_type = path.type
-                    else:
-                        current_path_points.append(path.end)
-
-                if current_path_points:
-                    path_view = CncPathView(
-                        self.context,
-                        current_path_points,
-                        color=PATH_COLORS[current_path_type],
-                    )
-                    self.add_item(path_view)
+                commands_view = CncCommandsView(self.context, commands)
+                self.add_item(commands_view)
 
             self._geometry = self._model.geometry
             self._tool_diameter = tool_diameter
