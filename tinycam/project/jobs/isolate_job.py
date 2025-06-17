@@ -211,11 +211,13 @@ class CncIsolateJob(CncJob):
 
             builder.set_cut_speed(self.travel_speed)
             builder.travel(z=self.travel_height)
-            builder.travel(x=points[0][0], y=points[0][1])
+            point = self._transform_point(points[0])
+            builder.travel(x=point[0], y=point[1])
             builder.set_cut_speed(self.cut_speed)
             builder.cut(z=-self.cut_depth)
 
             for point in points[1:]:
+                point = self._transform_point(point)
                 builder.cut(x=point[0], y=point[1])
 
         builder.travel(z=self.travel_height)
@@ -223,3 +225,6 @@ class CncIsolateJob(CncJob):
         builder.travel(z=start_position[2])
 
         return builder.build()
+
+    def _transform_point(self, point: tuple[float, float]) -> tuple[float, float]:
+        return point * self._source_item.scale + self._source_item.offset
