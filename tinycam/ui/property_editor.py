@@ -1,6 +1,7 @@
 import enum
+from dataclasses import dataclass
 from functools import partial
-from typing import override
+from typing import Type, override
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
@@ -481,6 +482,11 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
         self.valueChanged.emit(self._value)
 
 
+@dataclass
+class Editor:
+    editor: Type[BasePropertyEditor]
+
+
 class PropertyEditor(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -495,16 +501,23 @@ class PropertyEditor(QtWidgets.QWidget):
 
     @target.setter
     def target(self, value: object):
+        if self._target is value:
+            return
+
         self._target = value
-        if self._editor is None or self._editor.type != type(self._target):  # noqa
-            if self._editor is not None:
-                self.layout().removeWidget(self._editor)
-                self._editor.setParent(None)
-                self._editor.deleteLater()
-                self._editor = None
+        if self._editor is not None:
+            self.layout().removeWidget(self._editor)
+            self._editor.setParent(None)
+            self._editor.deleteLater()
+            self._editor = None
 
-            if self._target is not None:
-                self._editor = ObjectPropertyEditor(type(self._target))
-                self.layout().addWidget(self._editor)
+        if self._target is not None:
+            target_type = type(self._target)
+            metadata = p.get_metadata(target_type)
 
-                self._editor.setValue(self._target)
+            editor_type = get_editor_for(target_type)
+
+            self._editor = editor_type(target_type, metadata=metadata)
+            self.layout().addWidget(self._editor)
+
+            self._editor.setValue(self._target)
