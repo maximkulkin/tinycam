@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 import weakref
 from PySide6 import QtCore, QtWidgets
+from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from typing import Optional
 
@@ -15,15 +16,29 @@ class TaskManager(QtCore.QObject):
         super().__init__()
         self._tasks = {}
         self._statusbar = None
+
+        self._task_label = QtWidgets.QLabel('Idle')
+        self._task_label.setFixedWidth(100)
+        self._task_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
         self._progressbar = QtWidgets.QProgressBar()
         self._progressbar.setFixedWidth(100)
-        self._task_label = QtWidgets.QLabel()
+        self._progressbar.setStyleSheet(
+            'QProgressBar::chunk { background-color: transparent; }'
+        )
+
         layout = QtWidgets.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 0, 10, 0)
         layout.addWidget(self._task_label)
         layout.addWidget(self._progressbar)
-        self._widget = QtWidgets.QWidget()
+
+        self._widget = QtWidgets.QFrame()
+        self._widget.setFrameStyle(QtWidgets.QFrame.Panel)
         self._widget.setLayout(layout)
+        self._widget.setSizePolicy(
+            QtWidgets.QSizePolicy.Fixed,
+            QtWidgets.QSizePolicy.Expanding,
+        )
 
     @property
     def statusbar(self) -> Optional[QtWidgets.QStatusBar]:
@@ -58,7 +73,7 @@ class TaskManager(QtCore.QObject):
         if task is None:
             return
         if self._task_label.text() == task.name:
-            self._task_label.setText('')
+            self._task_label.setText('Idle')
         self.unregister_task(task)
 
     def _task_progress(self, task_ref: weakref.ReferenceType, progress: int):
