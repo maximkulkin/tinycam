@@ -189,7 +189,8 @@ class CncIsolateJob(CncJob):
 
     def generate_commands(self) -> list[CncCommand]:
         # TODO: allow selecting different starting positions
-        builder = CncCommandBuilder(start_position=(0, 0, 0))
+        start_position = (0, 0, 0)
+        builder = CncCommandBuilder(start_position=start_position)
 
         lines = list(GLOBALS.GEOMETRY.lines(self._geometry))
         while lines:
@@ -216,5 +217,9 @@ class CncIsolateJob(CncJob):
 
             for point in points[1:]:
                 builder.cut(x=point[0], y=point[1])
+
+        builder.travel(z=self.travel_height)
+        builder.travel(x=start_position[0], y=start_position[1])
+        builder.travel(z=start_position[2])
 
         return builder.build()
