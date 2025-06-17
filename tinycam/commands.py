@@ -30,7 +30,7 @@ class CncSetCutSpeed(CncCommand):
 
 @dataclass
 class CncSetSpindleSpeed(CncCommand):
-    speed: float
+    speed: int
 
 
 class CncCommandBuilder:
@@ -39,25 +39,34 @@ class CncCommandBuilder:
         self._position = start_position or Vector3()
 
     @property
-    def current_position(self):
+    def current_position(self) -> Vector3:
         return self._position
 
-    def travel(self, x=None, y=None, z=None):
+    def travel(
+        self, x: float | None = None,
+        y: float | None = None,
+        z: float | None = None,
+    ):
         self._commands.append(CncTravelCommand(x=x, y=y, z=z))
 
-    def cut(self, x=None, y=None, z=None, dx=None, dy=None, dz=None):
+    def cut(
+        self,
+        x: float | None = None,
+        y: float | None = None,
+        z: float | None = None,
+    ):
         self._commands.append(CncCutCommand(x=x, y=y, z=z))
 
-    def set_cut_speed(self, speed):
+    def set_cut_speed(self, speed: float):
         self._commands.append(CncSetCutSpeed(speed))
 
-    def set_spindle_speed(self, speed):
+    def set_spindle_speed(self, speed: int):
         self._commands.append(CncSetSpindleSpeed(speed))
 
-    def append(self, command):
+    def append(self, command: CncCommand):
         self._commands.append(command)
 
-    def build(self):
+    def build(self) -> list[CncCommand]:
         return self._commands
 
 
