@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
+from tinycam.types import Vector2
 from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
@@ -92,6 +93,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self.statusbar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusbar)
+
+        self._coordinate_info = CoordinateInfo()
+        self.statusbar.addPermanentWidget(self._coordinate_info)
+        self.canvas_2d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
+
         GLOBALS.APP.task_manager.statusbar = self.statusbar
 
         self._windows = []
@@ -259,3 +265,32 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.restoreGeometry(settings.value("geometry"))
         self.restoreState(settings.value("windowState"))
         settings.endGroup()
+
+
+class CoordinateInfo(QtWidgets.QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.setFrameStyle(QtWidgets.QFrame.Panel)
+
+        self._x_label = QtWidgets.QLabel('0.00')
+        self._x_label.setFixedWidth(50)
+        self._x_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        self._y_label = QtWidgets.QLabel('0.00')
+        self._y_label.setFixedWidth(50)
+        self._y_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(10, 0, 10, 0)
+        layout.addWidget(QtWidgets.QLabel('X: '))
+        layout.addWidget(self._x_label)
+        layout.addWidget(QtWidgets.QLabel('Y: '))
+        layout.addWidget(self._y_label)
+
+        self.setLayout(layout)
+
+    @QtCore.Slot()
+    def setCoordinates(self, coords: Vector2):
+        self._x_label.setText(f'{coords.x:.2f}')
+        self._y_label.setText(f'{coords.y:.2f}')

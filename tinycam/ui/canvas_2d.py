@@ -11,10 +11,13 @@ from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.tools import CncTool, SelectTool
-from tinycam.types import Vector3
+from tinycam.ui.utils import vector2
+from tinycam.types import Vector2, Vector3
 
 
 class CncCanvas2D(CncView):
+    coordinateChanged = QtCore.Signal(Vector2)
+
     def __init__(self, project: CncProject, *args, **kwargs):
         camera = OrthographicCamera()
         camera.position = Vector3(0, 0, 5)
@@ -60,6 +63,11 @@ class CncCanvas2D(CncView):
 
         if event.isAccepted():
             return True
+
+        if event.type() == QtCore.QEvent.Type.MouseMove:
+            self.coordinateChanged.emit(
+                self.camera.unproject(vector2(event.position()))
+            )
 
         if self.tool.eventFilter(self, event):
             return True
