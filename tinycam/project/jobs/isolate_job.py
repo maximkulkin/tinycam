@@ -2,7 +2,7 @@ import math
 
 from PySide6 import QtGui
 
-from tinycam.commands import CncCommandBuilder
+from tinycam.commands import CncCommand, CncCommandBuilder
 from tinycam.geometry import Line
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
@@ -187,7 +187,7 @@ class CncIsolateJob(CncJob):
         # TODO: implement finding index of nearest line
         return 0
 
-    def generate_commands(self):
+    def generate_commands(self) -> list[CncCommand]:
         # TODO: allow selecting different starting positions
         builder = CncCommandBuilder(start_position=(0, 0, 0))
 
