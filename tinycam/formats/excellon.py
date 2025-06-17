@@ -1,7 +1,6 @@
 import dataclasses
 import pyparsing as pp
 import pyparsing.exceptions
-import shapely
 from typing import Tuple
 from tinycam.geometry import Geometry, Shape
 
@@ -203,10 +202,10 @@ class ExcellonParser:
             used_tools.add(mill.tool_id)
 
         return ExcellonFile(
-            tools = [self._tools[tool_id] for tool_id in used_tools],
-            drills = self._drills,
-            mills = self._mills,
-            geometry = self._shapes,
+            tools=[self._tools[tool_id] for tool_id in used_tools],
+            drills=self._drills,
+            mills=self._mills,
+            geometry=self._shapes,
         )
 
     def _eval_position(self, p):
