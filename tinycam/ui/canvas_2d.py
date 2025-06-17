@@ -1,14 +1,21 @@
 from typing import cast
 
 from PySide6 import QtCore
-from tinycam.project import CncProject, CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
+from tinycam.project import (
+    CncProject, CncProjectItem, GerberItem, ExcellonItem,
+    CncJob, CncIsolateJob, CncDrillJob,
+)
 from tinycam.ui.camera import OrthographicCamera
-from tinycam.ui.camera_controllers import PanAndZoomController, CameraPanAndZoomAnimation
+from tinycam.ui.camera_controllers import (
+    PanAndZoomController,
+    CameraPanAndZoomAnimation,
+)
 from tinycam.ui.view import CncView
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
+from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.tools import CncTool, SelectTool
 from tinycam.ui.utils import vector2
@@ -88,6 +95,8 @@ class CncCanvas2D(CncView):
                 view = ExcellonItemView(self.ctx, item)
             case CncIsolateJob():
                 view = CncIsolateJobView(self.ctx, item)
+            case CncDrillJob():
+                view = CncDrillJobView(self.ctx, item)
             case CncJob():
                 view = CncProjectItemView(self.ctx, item)
             case _:

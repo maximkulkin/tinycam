@@ -1,14 +1,17 @@
 import math
 from typing import cast
 
-from tinycam.project import CncProjectItem, GerberItem, ExcellonItem, CncJob, CncIsolateJob
+from tinycam.project import (
+    CncProjectItem, GerberItem, ExcellonItem,
+    CncJob, CncIsolateJob, CncDrillJob,
+)
 import tinycam.settings as s
-from tinycam.types import Vector2, Vector3
 from tinycam.ui.view import CncView
 from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
+from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
 
@@ -105,6 +108,8 @@ class CncPreview3D(CncView):
         match item:
             case CncIsolateJob():
                 view = CncIsolateJobView(self.ctx, item)
+            case CncDrillJob():
+                view = CncDrillJobView(self.ctx, item)
             case GerberItem() | ExcellonItem() | CncJob():
                 view = CncProjectItemView(self.ctx, item)
             case _:
