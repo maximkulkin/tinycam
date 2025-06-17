@@ -14,25 +14,41 @@ from tinycam.tools import CncTool, CncToolType
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
-    S.register('spindle_speed', s.CncIntegerSetting,
-               default=1000, minimum=0, maximum=100000, suffix='rpm')
-    S.register('cut_depth', s.CncFloatSetting,
-               default=0.1, minimum=0.0, suffix='{units}')
-    S.register('cut_speed', s.CncFloatSetting,
-               default=120.0, minimum=1.0, suffix='{units}/min')
-    S.register('travel_height', s.CncFloatSetting, default=2.0, suffix='{units}')
-    S.register('travel_speed', s.CncFloatSetting,
-               default=300.0, minimum=0.0, suffix='{units}/min')
-    S.register('pass_count', s.CncIntegerSetting,
-               default=1, minimum=1)
-    S.register('pass_overlap', s.CncIntegerSetting,
-               default=10, minimum=0, maximum=99, suffix='%')
+    PASS_COUNT = S.register(
+        'pass_count', s.CncIntegerSetting,
+        default=1, minimum=1,
+    )
+    PASS_OVERLAP = S.register(
+        'pass_overlap', s.CncIntegerSetting,
+        default=10, minimum=0, maximum=99, suffix='%',
+    )
+    CUT_DEPTH = S.register(
+        'cut_depth', s.CncFloatSetting,
+        default=0.1, minimum=0.0, suffix='{units}',
+    )
+    CUT_SPEED = S.register(
+        'cut_speed', s.CncFloatSetting,
+        default=120.0, minimum=1.0, suffix='{units}/min',
+    )
+    TRAVEL_HEIGHT = S.register(
+        'travel_height', s.CncFloatSetting,
+        default=2.0, suffix='{units}',
+    )
+    TRAVEL_SPEED = S.register(
+        'travel_speed', s.CncFloatSetting,
+        default=300.0, minimum=0.0, suffix='{units}/min',
+    )
+    SPINDLE_SPEED = S.register(
+        'spindle_speed', s.CncIntegerSetting,
+        default=1000, minimum=0, maximum=100000, suffix='rpm',
+    )
 
 
 class CncIsolateJob(CncJob):
     def __init__(self,
                  source_item: CncProjectItem,
                  color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
+                 tool: CncTool | None = None,
                  spindle_speed: int | None = None,
                  cut_depth: float | None = None,
                  cut_speed: float | None = None,
@@ -46,19 +62,17 @@ class CncIsolateJob(CncJob):
         )
 
         self._source_item = source_item
-        # self._source_item.changed.connect(self._on_source_item_changed)
 
-        defaults = s.SETTINGS.section('jobs/isolate')
-
-        self._cut_depth = cut_depth or defaults['cut_depth'].value
-        self._cut_speed = cut_speed or defaults['cut_speed'].value
-        self._pass_count = pass_count or defaults['pass_count'].value
-        self._pass_overlap = pass_overlap or defaults['pass_overlap'].value
-        self._spindle_speed = spindle_speed or defaults['spindle_speed'].value
-        self._travel_height = travel_height or defaults['travel_height'].value
-        self._travel_speed = travel_speed or defaults['travel_speed'].value
         self._show_outline = True
         self._show_path = True
+        self._tool = tool
+        self._pass_count = pass_count or PASS_COUNT.value
+        self._pass_overlap = pass_overlap or PASS_OVERLAP.value
+        self._cut_depth = cut_depth or CUT_DEPTH.value
+        self._cut_speed = cut_speed or CUT_SPEED.value
+        self._spindle_speed = spindle_speed or SPINDLE_SPEED.value
+        self._travel_height = travel_height or TRAVEL_HEIGHT.value
+        self._travel_speed = travel_speed or TRAVEL_SPEED.value
 
         self._geometry = None
 
