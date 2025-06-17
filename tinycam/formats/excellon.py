@@ -141,6 +141,9 @@ class Tool:
     id: int
     diameter: float
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
 
 @dataclasses.dataclass
 class Drill:
