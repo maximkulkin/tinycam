@@ -37,11 +37,11 @@ def get_editor_for(type: type) -> type | None:
 class BasePropertyEditor[T](QtWidgets.QWidget):
     valueChanged = QtCore.Signal(object)
 
-    def __init__(self, t: type, metadata: p.PropertyMetadata | None = None, parent=None):
+    def __init__(self, t: type, metadata: p.Metadata | None = None, parent=None):
         super().__init__(parent)
 
         self._type = t
-        self._metadata = metadata or p.PropertyMetadata()
+        self._metadata = metadata or p.Metadata()
 
     @property
     def type(self) -> type:

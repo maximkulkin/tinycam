@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from collections.abc import Callable
 from numbers import Number
-from typing import cast, get_args
+from typing import cast
 
 import tinycam.settings as s
 
 
-METADATA_ATTRIBUTE = '_property_metadata'
+METADATA_ATTRIBUTE = '_cnc_metadata'
 
 
 class ReferenceType:
@@ -16,12 +16,15 @@ class ReferenceType:
         raise NotImplementedError()
 
 
-class PropertyMetadata:
+class Metadata:
     def __init__(self, items: list[object] | None = None):
         self._items = items[:] if items is not None else []
 
     def append(self, metadata: object):
         self._items.append(metadata)
+
+    def extend(self, metadata: list[object]):
+        self._items.extend(metadata)
 
     def has(self, type: type) -> bool:
         return self.find(type) is not None
@@ -44,9 +47,12 @@ class Property[T]:
                  on_update: Callable[[object], None] = lambda _: None):
         self.default = default
         self._on_update: Callable[[object], None] = on_update
-        self._property_metadata = PropertyMetadata(metadata)
+
+        metadata = Metadata(metadata[:])
         if order is not None:
-            self._property_metadata.append(Order(order))
+            metadata.append(Order(order))
+
+        setattr(self, METADATA_ATTRIBUTE, metadata)
 
     def __set_name__(self, objtype, name):
         self._variable_name = f'_{name}'
@@ -86,24 +92,33 @@ def get_all(obj_type: type) -> list[str]:
     return sorted(names, key=order_or_name)
 
 
-def get_metadata(obj: object, property_name: str) -> PropertyMetadata | None:
+def get_metadata(obj: object, property_name: str | None = None) -> Metadata | None:
+    if property_name is None:
+        if not hasattr(obj, METADATA_ATTRIBUTE):
+            return None
+        return getattr(obj, METADATA_ATTRIBUTE)
+
     if not hasattr(obj, property_name):
         return None
     prop = getattr(obj, property_name)
 
     if isinstance(prop, property):
         prop = prop.fget
+
     if not hasattr(prop, METADATA_ATTRIBUTE):
         return None
-    return prop._property_metadata
+
+    return getattr(prop, METADATA_ATTRIBUTE)
 
 
 def extend_metadata(func, metadata: list[object]):
     if isinstance(func, property):
         func = func.fget
     if not hasattr(func, METADATA_ATTRIBUTE):
-        func._property_metadata = PropertyMetadata()
-    func._property_metadata.extend(metadata)
+        setattr(func, METADATA_ATTRIBUTE, Metadata())
+
+    getattr(func, METADATA_ATTRIBUTE).extend(metadata)
+
     return func
 
 
