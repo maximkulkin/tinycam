@@ -34,6 +34,17 @@ class ProjectModel(QAbstractItemModel):
         self._project.items.removed.connect(self._on_item_removed)
         self._project.items.changed.connect(self._on_item_changed)
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        flags = super().flags(index)
+
+        if not index.parent().isValid():
+            return flags
+
+        if index.column() in [0, 1]:
+            flags |= Qt.ItemFlag.ItemIsEditable
+
+        return flags
+
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         if not parent.isValid():
             if row > 0:
@@ -84,7 +95,7 @@ class ProjectModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        if role != Qt.ItemDataRole.DisplayRole:
+        if role not in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]:
             return None
 
         item = cast(CncProjectItem, index.internalPointer())
@@ -100,6 +111,25 @@ class ProjectModel(QAbstractItemModel):
                 case 1: return item.color
                 case 2: return item.visible
                 case _: return None
+
+    def setData(self, index: QModelIndex, value: object, role: Qt.ItemDataRole):
+        if not index.isValid():
+            return
+
+        if role not in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]:
+            return
+
+        item = cast(CncProjectItem, index.internalPointer())
+        if not index.parent().isValid():
+            return
+
+        match index.column():
+            case 0:
+                item.name = value
+            case 1:
+                item.color = value
+            case 2:
+                item.visible = value
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> object:
         return None
@@ -175,50 +205,6 @@ def load_icon(path: str, bg_color: QtGui.QColor = QtGui.QColor('white')) -> QtGu
     return QtGui.QIcon(img)
 
 
-class ItemStyleDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._visible_icon = load_icon('icons/eye-open.svg')
-        self._invisible_icon = load_icon('icons/eye-closed.svg')
-
-    def paint(self, painter: QtGui.QPainter, option, index):
-        if not index.parent().isValid():
-            return super().paint(painter, option, index)
-
-        visible = index.data(Qt.ItemDataRole.DisplayRole)
-
-        if visible:
-            icon = self._visible_icon
-        else:
-            icon = self._invisible_icon
-
-        rect = QtCore.QRect(option.rect)
-        rect.adjust(4, 4, -4, -4)
-
-        icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter)
-
-    def createEditor(self, parent, option, index):
-        return None
-
-    def editorEvent(self, event, model, option, index):
-        if (event.type() == QEvent.Type.MouseButtonPress and
-                cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
-            model.setData(
-                index,
-                not index.data(Qt.ItemDataRole.DisplayRole),
-                Qt.ItemDataRole.DisplayRole,
-            )
-            model.dataChanged.emit(index, index)
-            return True
-        return False
-
-    def helpEvent(self, event, view, option, index):
-        if event.type() == QEvent.Type.ToolTip:
-            QtWidgets.QToolTip.showText(event.globalPos(), 'Show / Hide', view)
-            return True
-        return super().helpEvent(event, view, option, index)
-
-
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -226,6 +212,14 @@ class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
         self._invisible_icon = load_icon('icons/eye-closed.svg')
 
     def paint(self, painter: QtGui.QPainter, option, index):
+        if not index.parent().isValid():
+            # Root
+            super().paint(painter, option, index)
+            return
+
+        if option.state & QtWidgets.QStyle.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+
         visible = index.data(Qt.ItemDataRole.DisplayRole)
 
         if visible:
@@ -256,40 +250,6 @@ class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
     def helpEvent(self, event, view, option, index):
         if event.type() == QEvent.Type.ToolTip:
             QtWidgets.QToolTip.showText(event.globalPos(), 'Show / Hide', view)
-            return True
-        return super().helpEvent(event, view, option, index)
-
-
-class DebugStyleDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._debug_enabled_icon = load_icon('icons/debug-view.svg')
-        self._debug_disabled_icon = load_icon('icons/debug-view.svg', QtGui.QColor('grey'))
-
-    def paint(self, painter, option, index):
-        debug = index.data(Qt.ItemDataRole.DisplayRole)
-
-        icon = self._debug_enabled_icon if debug else self._debug_disabled_icon
-
-        rect = QtCore.QRect(option.rect)
-        rect.adjust(4, 4, -4, -4)
-
-        icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter)
-
-    def createEditor(self, parent, option, index):
-        return None
-
-    def editorEvent(self, event, model, option, index):
-        if (event.type() == QEvent.Type.MouseButtonPress and
-                cast(QMouseEvent, event).button() == Qt.MouseButton.LeftButton):
-            model.setData(index, not index.data(Qt.ItemDataRole.DisplayRole), Qt.ItemDataRole.DisplayRole)
-            model.dataChanged.emit(index, index)
-            return True
-        return False
-
-    def helpEvent(self, event, view, option, index):
-        if event.type() == QEvent.Type.ToolTip:
-            QtWidgets.QToolTip.showText(event.globalPos(), 'Debug view', view)
             return True
         return super().helpEvent(event, view, option, index)
 
@@ -384,6 +344,13 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
         return super().helpEvent(event, view, option, index)
 
     def paint(self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        if not index.parent().isValid():
+            super().paint(painter, option, index)
+            return
+
+        if option.state & QtWidgets.QStyle.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+
         color = index.data(Qt.ItemDataRole.DisplayRole)
         color = QtGui.QColor(color)
         color.setAlphaF(1.0)
@@ -409,21 +376,18 @@ class CncProjectWindow(CncWindow):
         self._updating_selection = False
 
         self._model = ProjectModel(self.project)
-        # self._model.setHorizontalHeaderLabels(['', '', '', 'Name'])
 
         self._view = QtWidgets.QTreeView()
         self._view.setModel(self._model)
-        # self._view.setColumnWidth(0, 25)
+
         self._view.header().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
         self._view.header().setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
         self._view.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
-        self._view.header().resizeSection(0, 200)
-        self._view.header().resizeSection(1, 60)
-        self._view.header().resizeSection(2, 25)
+        self._view.header().setStretchLastSection(False)
+        self._view.header().hide()
 
-        # self._view.setColumnWidth(2, 25)
-        # self._view.header().hide()
-        # self._view.header().setStretchLastSection(True)
+        self._view.setColumnWidth(1, 60)
+        self._view.setColumnWidth(2, 25)
 
         self._view.setSelectionBehavior(
             QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
@@ -440,16 +404,16 @@ class CncProjectWindow(CncWindow):
         self._view.setRootIsDecorated(True)
 
         self._view_visible_delegate = VisibleStyleDelegate()
-        self._view_debug_delegate = DebugStyleDelegate()
+        # self._view_debug_delegate = DebugStyleDelegate()
         self._view_color_delegate = ColorBoxStyleDelegate(self._view)
-        # self._view.setItemDelegateForColumn(0, self._view_visible_delegate)
+        self._view.setItemDelegateForColumn(1, self._view_color_delegate)
+        self._view.setItemDelegateForColumn(2, self._view_visible_delegate)
         # self._view.setItemDelegateForColumn(1, self._view_debug_delegate)
-        # self._view.setItemDelegateForColumn(2, self._view_color_delegate)
 
-        # self._view.setEditTriggers(
-        #       QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
-        #     | QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed
-        # )
+        self._view.setEditTriggers(
+              QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
+            | QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed
+        )
         self._view.selectionModel().selectionChanged.connect(
             self._on_view_selection_changed
         )
