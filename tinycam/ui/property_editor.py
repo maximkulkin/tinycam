@@ -496,7 +496,11 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
         self._layout.setRowStretch(self._layout.rowCount(), 1)
 
     def _on_property_value_changed(self, name: str, value: object):
-        setattr(self._value, name, value)
+        from tinycam.globals import GLOBALS
+        from tinycam.ui.commands.update_items import UpdateItemsCommand
+        GLOBALS.APP.undo_stack.push(
+            UpdateItemsCommand([self._value], {name: value})
+        )
         self._populate_props()
         self.valueChanged.emit(self._value)
 
