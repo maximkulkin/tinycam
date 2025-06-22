@@ -1,7 +1,7 @@
 import moderngl as mgl
 import numpy as np
 from tinycam.ui.view import Context, ViewItem, RenderState
-from tinycam.types import Vector2, Vector4
+from tinycam.types import Vector2
 
 
 class CanvasItem(ViewItem):
