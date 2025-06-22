@@ -112,7 +112,7 @@ class IntPropertyEditor(BasePropertyEditor[int]):
         super().__init__(*args, **kwargs)
 
         self._editor = QtWidgets.QSpinBox(self)
-        self._editor.valueChanged.connect(self.valueChanged.emit)
+        self._editor.editingFinished.connect(self._on_editing_finished)
         self._editor.setReadOnly(self._metadata.has(p.ReadOnly))
 
         min_value = self._metadata.find(p.MinValue)
@@ -138,6 +138,9 @@ class IntPropertyEditor(BasePropertyEditor[int]):
     def setValue(self, value: int):
         self._editor.setValue(value)
 
+    def _on_editing_finished(self):
+        self.valueChanged.emit(self._editor.value())
+
 
 @editor_for(float)
 class FloatPropertyEditor(BasePropertyEditor[float]):
@@ -146,7 +149,7 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
         super().__init__(*args, **kwargs)
 
         self._editor = QtWidgets.QDoubleSpinBox(self)
-        self._editor.valueChanged.connect(self.valueChanged.emit)
+        self._editor.editingFinished.connect(self._on_editing_finished)
         self._editor.setReadOnly(self._metadata.has(p.ReadOnly))
 
         min_value = self._metadata.find(p.MinValue)
@@ -172,6 +175,9 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
     def setValue(self, value: float):
         self._editor.setValue(value)
 
+    def _on_editing_finished(self):
+        self.valueChanged.emit(self._editor.value())
+
 
 @editor_for(Vector2)
 class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
@@ -185,13 +191,13 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         self._x_editor.setMinimum(-10000.0)
         self._x_editor.setMaximum(10000.0)
         self._x_editor.setReadOnly(readonly)
-        self._x_editor.valueChanged.connect(self._on_value_changed)
+        self._x_editor.editingFinished.connect(self._on_editing_finished)
 
         self._y_editor = QtWidgets.QDoubleSpinBox(self)
         self._y_editor.setMinimum(-10000.0)
         self._y_editor.setMaximum(10000.0)
         self._y_editor.setReadOnly(readonly)
-        self._y_editor.valueChanged.connect(self._on_value_changed)
+        self._y_editor.editingFinished.connect(self._on_editing_finished)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -219,7 +225,7 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         self._x_editor.setValue(value[0])
         self._y_editor.setValue(value[1])
 
-    def _on_value_changed(self, _: float):
+    def _on_editing_finished(self):
         value = Vector2((
             self._x_editor.value(),
             self._y_editor.value(),
@@ -239,19 +245,19 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         self._x_editor.setMinimum(-10000.0)
         self._x_editor.setMaximum(10000.0)
         self._x_editor.setReadOnly(readonly)
-        self._x_editor.valueChanged.connect(self._on_value_changed)
+        self._x_editor.editingFinished.connect(self._on_editing_finished)
 
         self._y_editor = QtWidgets.QDoubleSpinBox(self)
         self._y_editor.setMinimum(-10000.0)
         self._y_editor.setMaximum(10000.0)
         self._y_editor.setReadOnly(readonly)
-        self._y_editor.valueChanged.connect(self._on_value_changed)
+        self._y_editor.editingFinished.connect(self._on_editing_finished)
 
         self._z_editor = QtWidgets.QDoubleSpinBox(self)
         self._z_editor.setMinimum(-10000.0)
         self._z_editor.setMaximum(10000.0)
         self._z_editor.setReadOnly(readonly)
-        self._z_editor.valueChanged.connect(self._on_value_changed)
+        self._z_editor.editingFinished.connect(self._on_editing_finished)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -290,7 +296,7 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         self._y_editor.setValue(value[1])
         self._z_editor.setValue(value[2])
 
-    def _on_value_changed(self, _: float):
+    def _on_editing_finished(self):
         value = Vector3(
             self._x_editor.value(),
             self._y_editor.value(),
