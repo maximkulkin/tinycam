@@ -4,9 +4,44 @@ from numbers import Number
 from typing import cast
 
 import tinycam.settings as s
+from tinycam.signals import Signal
 
 
 METADATA_ATTRIBUTE = '_cnc_metadata'
+
+
+class EditableObject:
+    changed = Signal(object)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._updating = False
+        self._updated = False
+
+    def __enter__(self):
+        """A context to withhold update events for an item if multiple updates are planned
+
+        Example:
+
+            with item:
+                item.color = color1
+                item.visible = True
+
+        """
+        self._updating = True
+        self._updated = False
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._updating = False
+        if self._updated:
+            self.changed.emit(self)
+
+    def _signal_changed(self):
+        if self._updating:
+            self._updated = True
+        else:
+            self.changed.emit(self)
 
 
 class ReferenceType:

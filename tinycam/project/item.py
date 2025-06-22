@@ -3,6 +3,7 @@ import enum
 from typing import ForwardRef
 
 from tinycam.signals import Signal
+import tinycam.properties as p
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
 
@@ -31,10 +32,7 @@ class Origin(enum.Enum):
             case self.BOTTOM_RIGHT: return 'Bottom Right'
 
 
-class CncProjectItem:
-    # Signal whenever any property of an item has changed
-    changed = Signal(ForwardRef('CncProjectItem'))
-
+class CncProjectItem(p.EditableObject):
     # Signal used to signal when asynchronous operation on the item has finished
     #
     # E.g. if changing parameter of a job that causes expensive computations,
@@ -44,6 +42,7 @@ class CncProjectItem:
     updated = Signal(ForwardRef('CncProjectItem'))
 
     def __init__(self, name: str, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
+        super().__init__()
         self._name = name
         self._color = color
         self._visible = True
@@ -51,9 +50,6 @@ class CncProjectItem:
         self._selected = False
         self._parent = None
         self._children = CncProjectItemCollection(self)
-
-        self._updating = False
-        self._updated = False
 
     def _update(self):
         pass
@@ -64,31 +60,6 @@ class CncProjectItem:
         clone.selected = self.selected
         # TODO: clone children?
         return clone
-
-    def __enter__(self):
-        """A context to withhold update events for an item if multiple updates are planned
-
-        Example:
-
-            with item:
-                item.color = color1
-                item.visible = True
-
-        """
-        self._updating = True
-        self._updated = False
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self._updating = False
-        if self._updated:
-            self.changed.emit(self)
-
-    def _signal_changed(self):
-        if self._updating:
-            self._updated = True
-        else:
-            self.changed.emit(self)
 
     def _signal_updated(self):
         self.updated.emit(self)
