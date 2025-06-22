@@ -419,20 +419,33 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
 
     @override
     def setValue(self, value: object):
-        self._value = value
-        self._populate_props(self._value)
+        if value is self._value:
+            return
 
-    def _populate_props(self, target: object):
+        if self._value is not None:
+            self._value.changed.disconnect(self._on_value_changed)
+
+        self._value = value
+        if self._value is not None:
+            self._value.changed.connect(self._on_value_changed)
+
+        self._populate_props()
+
+    def _on_value_changed(self, _: object):
+        for name, editor in self._editors.items():
+            editor.setValue(getattr(self._value, name))
+
+    def _populate_props(self):
         # TODO: reuse previous editors
         for row in range(self._layout.rowCount()):
             self._layout.setRowStretch(row, 0)
         clear_layout(self._layout)
         self._editors = {}
 
-        if target is None:
+        if self._value is None:
             return
 
-        target_type = type(target)
+        target_type = type(self._value)
         property_names = p.get_all(target_type)
 
         for name in property_names:
@@ -450,7 +463,7 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
                 continue
 
             visible_if = metadata.find(p.VisibleIf)
-            if visible_if is not None and not visible_if.condition(target):
+            if visible_if is not None and not visible_if.condition(self._value):
                 continue
 
             label_metadata = metadata.find(p.Label)
@@ -462,7 +475,7 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
             editor = editor_type(prop_type, metadata=metadata)
             self._editors[name] = editor
 
-            editor.setValue(getattr(target, name))
+            editor.setValue(getattr(self._value, name))
             editor.valueChanged.connect(partial(self._on_property_value_changed, name))
 
             row = self._layout.rowCount()
@@ -484,7 +497,7 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
 
     def _on_property_value_changed(self, name: str, value: object):
         setattr(self._value, name, value)
-        self._populate_props(self._value)
+        self._populate_props()
         self.valueChanged.emit(self._value)
 
 
@@ -513,6 +526,7 @@ class PropertyEditor(QtWidgets.QWidget):
         self._target = value
         if self._editor is not None:
             self.layout().removeWidget(self._editor)
+            self._editor.setValue(None)
             self._editor.setParent(None)
             self._editor.deleteLater()
             self._editor = None
