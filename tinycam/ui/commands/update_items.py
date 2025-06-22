@@ -14,13 +14,15 @@ class UpdateItemsCommand(QtGui.QUndoCommand):
             for item in self._items
         }
         for item in self._items:
-            for k, v in self._updates.items():
-                setattr(item, k, v)
+            with item:
+                for k, v in self._updates.items():
+                    setattr(item, k, v)
 
     def undo(self):
         for item in self._items:
-            for k, v in self._previous_values[item].items():
-                setattr(item, k, v)
+            with item:
+                for k, v in self._previous_values[item].items():
+                    setattr(item, k, v)
         self._previous_values = {}
 
 
