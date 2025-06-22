@@ -18,7 +18,7 @@ class GerberItem(CncProjectItem):
 
     def _update(self):
         self._update_geometry()
-        self._signal_updated()
+        self._signal_changed()
 
     offset = p.Property[Vector2](on_update=_update, default=Vector2(0, 0))
     scale = p.Property[Vector2](on_update=_update, default=Vector2(1, 1))
