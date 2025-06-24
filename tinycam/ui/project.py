@@ -40,7 +40,7 @@ class ProjectModel(QAbstractItemModel):
         if not index.parent().isValid():
             return flags
 
-        if index.column() in [0, 1]:
+        if index.column() in [0, 2]:
             flags |= Qt.ItemFlag.ItemIsEditable
 
         return flags
@@ -107,9 +107,9 @@ class ProjectModel(QAbstractItemModel):
             return None
         else:
             match index.column():
-                case 0: return item.name
-                case 1: return item.color
-                case 2: return item.visible
+                case 0: return item.color
+                case 1: return item.visible
+                case 2: return item.name
                 case _: return None
 
     def setData(self, index: QModelIndex, value: object, role: Qt.ItemDataRole):
@@ -125,11 +125,11 @@ class ProjectModel(QAbstractItemModel):
 
         match index.column():
             case 0:
-                item.name = value
-            case 1:
                 item.color = value
-            case 2:
+            case 1:
                 item.visible = value
+            case 2:
+                item.name = value
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> object:
         return None
@@ -380,14 +380,15 @@ class CncProjectWindow(CncWindow):
         self._view = QtWidgets.QTreeView()
         self._view.setModel(self._model)
 
-        self._view.header().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        self._view.header().setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
         self._view.header().setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        self._view.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
+        self._view.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
         self._view.header().setStretchLastSection(False)
         self._view.header().hide()
 
-        self._view.setColumnWidth(1, 60)
-        self._view.setColumnWidth(2, 25)
+        self._view.setColumnWidth(0, 60)
+        self._view.setColumnWidth(1, 25)
+        self._view.setFirstColumnSpanned(0, QModelIndex(), True)
 
         self._view.setSelectionBehavior(
             QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
@@ -404,11 +405,9 @@ class CncProjectWindow(CncWindow):
         self._view.setRootIsDecorated(True)
 
         self._view_visible_delegate = VisibleStyleDelegate()
-        # self._view_debug_delegate = DebugStyleDelegate()
         self._view_color_delegate = ColorBoxStyleDelegate(self._view)
-        self._view.setItemDelegateForColumn(1, self._view_color_delegate)
-        self._view.setItemDelegateForColumn(2, self._view_visible_delegate)
-        # self._view.setItemDelegateForColumn(1, self._view_debug_delegate)
+        self._view.setItemDelegateForColumn(0, self._view_color_delegate)
+        self._view.setItemDelegateForColumn(1, self._view_visible_delegate)
 
         self._view.setEditTriggers(
               QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked
@@ -456,12 +455,11 @@ class CncProjectWindow(CncWindow):
 
         for i in range(top_left.row(), bottom_right.row() + 1):
             item = self.project.items[i]
-            item.visible = get_value(i, 0)
-            item.debug = get_value(i, 1)
+            item.visible = get_value(i, 1)
 
             updates = {
-                'color': get_value(i, 2),
-                'name': get_value(i, 3),
+                'color': get_value(i, 0),
+                'name': get_value(i, 2),
             }
             updates = {
                 k: v
