@@ -14,6 +14,7 @@ from tinycam.ui.commands import (
     DeleteItemsCommand,
     UpdateItemsCommand,
 )
+from tinycam.ui.utils import load_icon
 
 
 ITEM_COLORS = [
@@ -192,17 +193,6 @@ class ProjectModel(QAbstractItemModel):
         if idx >= 0:
             index = self.createIndex(idx, 0, item)
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
-
-
-def load_icon(path: str, bg_color: QtGui.QColor = QtGui.QColor('white')) -> QtGui.QIcon:
-    img = QtGui.QPixmap(path)
-    painter = QtGui.QPainter(img)
-    painter.setCompositionMode(
-        QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
-    )
-    painter.fillRect(img.rect(), bg_color)
-    painter.end()
-    return QtGui.QIcon(img)
 
 
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):

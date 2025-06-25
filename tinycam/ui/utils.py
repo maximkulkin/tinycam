@@ -43,3 +43,14 @@ def clear_layout(layout):
 
 def schedule(callback: Callable[[], None]):
     QtCore.QTimer.singleShot(0, callback)
+
+
+def load_icon(path: str, bg_color: QtGui.QColor = QtGui.QColor('white')) -> QtGui.QIcon:
+    img = QtGui.QPixmap(path)
+    painter = QtGui.QPainter(img)
+    painter.setCompositionMode(
+        QtGui.QPainter.CompositionMode.CompositionMode_SourceIn
+    )
+    painter.fillRect(img.rect(), bg_color)
+    painter.end()
+    return QtGui.QIcon(img)

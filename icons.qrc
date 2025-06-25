@@ -5,5 +5,7 @@
     <file>icons/zoom_in.svg</file>
     <file>icons/zoom_out.svg</file>
     <file>icons/zoom_fit.svg</file>
+    <file>icons/mouse.svg</file>
+    <file>icons/touchpad.svg</file>
   </qresource>
 </RCC>

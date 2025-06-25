@@ -184,7 +184,6 @@ class Serializer[T]:
         cls._all_serializers.append(cls)
 
 
-
 class StringSerializer(Serializer[str]):
     type = str
 
@@ -564,7 +563,7 @@ class CncListSetting[I](CncSetting[list[I]]):
     @override
     def validate(self, data: object) -> str | None:
         if not isinstance(data, list):
-            return f'Value is not a list'
+            return 'Value is not a list'
         return None
 
     @override

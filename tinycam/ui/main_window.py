@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
+from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2
 from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.canvas_2d import CncCanvas2D
@@ -14,6 +15,7 @@ from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
 from tinycam.ui.cnc_controller import CncControllerWindow, CncControllerConsoleWindow, CncConnectionToolbar
 from tinycam.ui.settings import CncSettingsDialog
+from tinycam.ui.utils import load_icon
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -95,7 +97,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.setStatusBar(self.statusbar)
 
         self._coordinate_info = CoordinateInfo()
+        self._control_type_info = ControlTypeInfo()
         self.statusbar.addPermanentWidget(self._coordinate_info)
+        self.statusbar.addPermanentWidget(self._control_type_info)
         self.canvas_2d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
 
         GLOBALS.APP.task_manager.statusbar = self.statusbar
@@ -294,3 +298,43 @@ class CoordinateInfo(QtWidgets.QFrame):
     def setCoordinates(self, coords: Vector2):
         self._x_label.setText(f'{coords.x:.2f}')
         self._y_label.setText(f'{coords.y:.2f}')
+
+
+class ControlTypeInfo(QtWidgets.QFrame):
+    def __init__(self, parent: QtWidgets.QWidget | None = None):
+        super().__init__(parent=parent)
+
+        self.setFrameStyle(QtWidgets.QFrame.Panel)
+
+        self._mouse_icon = load_icon('icons/mouse.svg')
+        self._touchpad_icon = load_icon('icons/touchpad.svg')
+
+        self._button = QtWidgets.QToolButton()
+        self._button.clicked.connect(self._on_button_clicked)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._button)
+
+        self.setLayout(layout)
+
+        setting = SETTINGS['general/control_type']
+        setting.changed.connect(self._on_control_type_changed)
+        self._on_control_type_changed(setting.value)
+
+    def _on_control_type_changed(self, value: ControlType):
+        match value:
+            case ControlType.MOUSE:
+                self._button.setIcon(self._mouse_icon)
+                self._button.setToolTip('Control with mouse')
+            case ControlType.TOUCHPAD:
+                self._button.setIcon(self._touchpad_icon)
+                self._button.setToolTip('Control with touchpad')
+
+    def _on_button_clicked(self):
+        setting = SETTINGS['general/control_type']
+        match setting.value:
+            case ControlType.MOUSE:
+                setting.value = ControlType.TOUCHPAD
+            case ControlType.TOUCHPAD:
+                setting.value = ControlType.MOUSE
