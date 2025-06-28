@@ -136,16 +136,16 @@ class GridXY(ViewItem):
         self._program['mvp_matrix'].write(mvp)
         match state.camera:
             case PerspectiveCamera():
-                d = Vector3.dot(state.camera.rotation * state.camera.FORWARD, Vector3(0, 0, 1))
+                d = Vector3.dot(state.camera.rotation * state.camera.FORWARD, Vector3(0, 0, -1))
                 if d != 0:
                     d = state.camera.position.z / d
-                self._program['scale'] = pow(10, int(math.log(abs(d), 10)))
-                scale_fraction, _ = math.modf(math.log(abs(d), 10))
+                scale_fraction, scale_integer = math.modf(math.log(abs(d), 10) + 1.0)
+                self._program['scale'] = pow(10, 2.0 - scale_integer)
                 self._program['subscale'] = 1.0 - scale_fraction
             case OrthographicCamera():
-                d = math.log(state.camera.zoom, 10)
-                scale_fraction, scale_integer = math.modf(d - 0.8)
-                self._program['scale'] = pow(10, scale_integer)
+                d = math.log(state.camera.zoom, 10) + 1.0
+                scale_fraction, scale_integer = math.modf(d)
+                self._program['scale'] = pow(10, scale_integer - 2.0)
                 self._program['subscale'] = scale_fraction
 
         self._program['screen_size'] = state.camera.pixel_size
