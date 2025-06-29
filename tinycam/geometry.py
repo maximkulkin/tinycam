@@ -1,6 +1,7 @@
 import math
 from collections.abc import Sequence
 from functools import reduce
+from itertools import chain
 from typing import overload
 
 import numpy as np
@@ -130,12 +131,16 @@ class Geometry:
     def points(self, shape: AnyShape) -> Sequence[Vector2]:
         match shape:
             case shapely.MultiLineString() | shapely.MultiPolygon():
-                return [
-                    Vector2(coord[0], coord[1])
+                return chain(*[
+                    self.points(geom)
                     for geom in shape.geoms
-                    for coord in geom.coords
-                ]
-            case shapely.LineString() | shapely.LinearRing() | shapely.Polygon():
+                ])
+            case shapely.Polygon():
+                return chain(*[
+                    self.points(geom)
+                    for geom in chain([shape.exterior], shape.interiors)
+                ])
+            case shapely.LineString() | shapely.LinearRing() | shapely.LinearRing():
                 return [
                     Vector2(coord[0], coord[1])
                     for coord in shape.coords
