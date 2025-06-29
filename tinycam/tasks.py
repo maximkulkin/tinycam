@@ -19,7 +19,10 @@ class TaskManager(QtCore.QObject):
 
         self._task_label = QtWidgets.QLabel('Idle')
         self._task_label.setFixedWidth(100)
-        self._task_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._task_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft |
+            Qt.AlignmentFlag.AlignVCenter
+        )
 
         self._progressbar = QtWidgets.QProgressBar()
         self._progressbar.setFixedWidth(100)
