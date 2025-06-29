@@ -51,10 +51,10 @@ class GridXY(ViewItem):
                 const float axes_width = 1.0;
                 const vec4 x_axis_color = vec4(1.0, 0.0, 0.0, 0.5);
                 const vec4 y_axis_color = vec4(0.0, 1.0, 0.0, 0.5);
-                const float grid_major_width = 1.5;
+                const float grid_major_width = 2.0;
                 const float grid_minor_width = 1.0;
-                const vec4 grid_major_color = vec4(0.2, 0.2, 0.2, 1.0);
-                const vec4 grid_minor_color = vec4(0.2, 0.2, 0.2, 1.0);
+                const vec4 grid_major_color = vec4(0.2, 0.2, 0.2, 0.3);
+                const vec4 grid_minor_color = vec4(0.2, 0.2, 0.2, 0.3);
 
                 vec4 normalize(vec4 v) {
                     return v / max(v.w, 1e-6);
@@ -89,7 +89,7 @@ class GridXY(ViewItem):
                     if (grid(fragPos, 0.1 * scale) <= grid_major_width) {
                         fragColor = grid_major_color;
                     } else if(grid(fragPos, 1.0 * scale) <= grid_minor_width) {
-                        fragColor = vec4(grid_minor_color.xyz, subscale);
+                        fragColor = vec4(grid_minor_color.xyz, grid_minor_color.a * subscale);
                     }
 
                     if (abs(fragPos.x) < abs(fragPos.y)) {
