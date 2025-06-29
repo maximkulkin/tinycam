@@ -30,39 +30,13 @@ class CncProjectItemView[T: CncProjectItem](Composite):
     def bounds(self) -> Box:
         if self._geometry is None:
             return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
-        match self._geometry:
-            case s.MultiPolygon():
-                xmin = min(
-                    coord[0]
-                    for geom in self._geometry.geoms
-                    for coord in geom.exterior.coords
-                )
-                ymin = min(
-                    coord[1]
-                    for geom in self._geometry.geoms
-                    for coord in geom.exterior.coords
-                )
 
-                xmax = max(
-                    coord[0]
-                    for geom in self._geometry.geoms
-                    for coord in geom.exterior.coords
-                )
-                ymax = max(
-                    coord[1]
-                    for geom in self._geometry.geoms
-                    for coord in geom.exterior.coords
-                )
-            case _:
-                G = GLOBALS.GEOMETRY
-                points = G.points(self._geometry)
-                xmin = min(float(coord.x) for coord in points)
-                ymin = min(float(coord.y) for coord in points)
-
-                xmax = max(float(coord.x) for coord in points)
-                ymax = max(float(coord.y) for coord in points)
-
-        return Box.from_coords(xmin, ymin, -0.5, xmax, ymax, 0.5)
+        G = GLOBALS.GEOMETRY
+        bounds = G.bounds(self._geometry)
+        return Box.from_coords(
+            bounds.xmin, bounds.ymin, -0.5,
+            bounds.xmax, bounds.ymax, 0.5,
+        )
 
     def _update_geometry(self):
         geometry = self._model.geometry
