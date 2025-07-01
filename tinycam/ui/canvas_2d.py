@@ -118,7 +118,11 @@ class CncCanvas2D(CncView):
         self._pan_and_zoom_controller.zoom(-1.0, duration=0.2)
 
     def zoom_to_fit(self):
-        items = [item for item in self.items if isinstance(item, CncProjectItemView)]
+        items = [
+            item
+            for item in self.items
+            if isinstance(item, CncProjectItemView) and item.visible
+        ]
         if not items:
             return
 

@@ -27,6 +27,10 @@ class CncProjectItemView[T: CncProjectItem](Composite):
         return self._model
 
     @property
+    def visible(self) -> bool:
+        return self.model.visible
+
+    @property
     def bounds(self) -> Box:
         if self._geometry is None:
             return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
