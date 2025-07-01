@@ -11,7 +11,7 @@ import tinycam.properties as p
 
 class ExcellonItem(CncProjectItem):
     def __init__(self, name: str, excellon_file: excellon.ExcellonFile):
-        super().__init__(name, color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6))
+        super().__init__(name, color=QtGui.QColor.fromRgbF(0.6, 0.0, 0.0, 0.6))
         self._excellon_file = excellon_file
         self._geometry = self._excellon_file.geometry
 
