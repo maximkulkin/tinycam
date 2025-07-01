@@ -399,6 +399,15 @@ class Rect(np.ndarray):
             self.ymax + dy,
         )
 
+    def translated(self, offset: Vector2) -> 'Rect':
+        return Rect(self.x + offset.x, self.y + offset.y, self.width, self.height)
+
+    def scaled(self, scale: Vector2) -> 'Rect':
+        return Rect(
+            self.x, self.y,
+            self.width * scale.x, self.height * scale.y,
+        )
+
     def __str__(self) -> str:
         return f'Rect(x={self.x}, y={self.y}, width={self.width}, height={self.height})'
 
