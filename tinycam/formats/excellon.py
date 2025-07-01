@@ -61,6 +61,11 @@ unit_mode = (
     | L('INCH')('units')
 ).set_parse_action(make_node('unit_mode'))
 
+format_mode = (
+    pp.Suppress(L('FMAT')) + pp.Suppress(L(',')) +
+    (L('1') | L('2'))('version')
+).set_parse_action(make_node('format'))
+
 tool_definition = (
     L('T') + pp.Regex(r'[0-9]+')('id') +
     L('C') + unsigned_decimal('diameter')
@@ -72,6 +77,7 @@ header = (
     header_start +
     pp.ZeroOrMore(
           unit_mode
+        | format_mode
         | tool_definition,
         stop_on=header_end
     ) +
@@ -246,6 +252,10 @@ class ExcellonParser:
                 self._units_scale = 25.4
             case _:
                 raise ExcellonError(node.location, 'Unknown units %s' % node.units)
+
+    def _process_format(self, node):
+        # Don't do anything with format
+        pass
 
     def _process_absolute_positioning(self, node):
         self._relative_positioning = False
