@@ -187,8 +187,15 @@ class ExcellonParser:
     def parse_string(self, s):
         self._reset()
 
+        normalized_s = '\n'.join([
+            line.strip()
+            for _line in s.split('\n')
+            for line in [_line.strip()]
+            if not line.startswith(';')
+        ])
+
         try:
-            nodes = excellon_file.parse_string(s)
+            nodes = excellon_file.parse_string(normalized_s)
         except pyparsing.exceptions.ParseException as e:
             raise ExcellonError(None, 'Error parsing excellon: %s' % e)
 
