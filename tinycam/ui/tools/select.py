@@ -7,6 +7,7 @@ from PySide6.QtGui import QMouseEvent, QKeyEvent
 from PySide6.QtWidgets import QWidget
 
 from tinycam.globals import GLOBALS
+from tinycam.project import CncProjectItem
 from tinycam.types import Vector2, Vector4, Rect
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.canvas import Rectangle
@@ -116,25 +117,9 @@ class SelectTool(CncTool):
         else:
             item = None
 
-        if item is not None:
-            match modifiers:
-                case SelectionModifier.ADDITIVE:
-                    project.selection.add(item)
-                case SelectionModifier.TOGGLE:
-                    if item in project.selection:
-                        project.selection.remove(item)
-                    else:
-                        project.selection.add(item)
-                case _:
-                    project.selection.set([item])
-        else:
-            match modifiers:
-                case SelectionModifier.ADDITIVE | SelectionModifier.TOGGLE:
-                    pass
-                case _:
-                    project.selection.clear()
+        self._select_with_modifiers([item] if item is not None else [], modifiers)
 
-    def _select_items_in_box(self, p1: Vector2, p2: Vector2, _modifiers: SelectionModifier):
+    def _select_items_in_box(self, p1: Vector2, p2: Vector2, modifiers: SelectionModifier):
         if not self.project.items:
             return
 
@@ -144,13 +129,40 @@ class SelectTool(CncTool):
         rect = Rect.from_coords(wp1.x, wp1.y, wp2.x, wp2.y)
 
         selection = []
-        for item in self.project.items:
-            bounds = GLOBALS.GEOMETRY.bounds(item.geometry)
+        for item in self.view.items:
+            if not isinstance(item, CncProjectItemView):
+                continue
+
+            if not item.visible:
+                continue
+
+            bounds = item.bounds.xy
 
             if rect.contains(bounds):
-                selection.append(item)
+                selection.append(item.model)
 
-        self.project.selection.set(selection)
+        self._select_with_modifiers(selection, modifiers)
+
+    def _select_with_modifiers(self, items: list[CncProjectItem], modifiers: SelectionModifier):
+        project = GLOBALS.APP.project
+
+        if items:
+            match modifiers:
+                case SelectionModifier.NONE:
+                    project.selection.set(items)
+                case SelectionModifier.ADDITIVE:
+                    project.selection.add_all(items)
+                case SelectionModifier.TOGGLE:
+                    if len(items) == 1 and items[0] in project.selection:
+                        project.selection.remove(items[0])
+                    else:
+                        project.selection.add(items[0])
+        else:
+            match modifiers:
+                case SelectionModifier.NONE:
+                    project.selection.clear()
+                case SelectionModifier.ADDITIVE | SelectionModifier.TOGGLE:
+                    pass
 
     def _make_selection_modifiers(
         self,
