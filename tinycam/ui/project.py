@@ -15,6 +15,7 @@ from tinycam.ui.commands import (
     UpdateItemsCommand,
 )
 from tinycam.ui.utils import load_icon
+from tinycam.utils import index_if
 
 
 ITEM_COLORS = [
@@ -263,11 +264,174 @@ class ColorComboBoxDelegate(QtWidgets.QStyledItemDelegate):
             )
 
 
-class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, table_view, *args, **kwargs):
+class ColorBox(QtWidgets.QWidget):
+
+    def __init__(self, color: QtGui.QColor, **kwargs):
+        super().__init__(**kwargs)
+
+        self._color = color
+        self._checked = False
+
+    def paintEvent(self, event: QtGui.QPaintEvent):
+        painter = QtGui.QPainter(self)
+
+        rect = QtCore.QRectF(2, 2, self.width() - 4, self.height() - 4)
+        painter.fillRect(rect, self._color)
+
+        painter.end()
+
+    @property
+    def color(self) -> QtGui.QColor:
+        return self._color
+
+    @color.setter
+    def color(self, value: QtGui.QColor):
+        self._color = value
+        self.update()
+
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(40, 20)
+
+
+class ColorBoxItem(ColorBox):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._table_view = table_view
-        self._delegate = None
+
+        self._checked = False
+        self._active = False
+
+    @property
+    def checked(self) -> bool:
+        return self._checked
+
+    @checked.setter
+    def checked(self, value: bool):
+        self._checked = value
+        self.update()
+
+    @property
+    def active(self) -> bool:
+        return self._active
+
+    @active.setter
+    def active(self, value: bool):
+        self._active = value
+        self.update()
+
+    def paintEvent(self, event: QtGui.QPaintEvent):
+        painter = QtGui.QPainter(self)
+        palette = self.palette()
+        bg_color = palette.window() if not self.active else palette.highlight()
+        rect = QtCore.QRectF(0, 0, self.width(), self.height())
+        painter.fillRect(rect, bg_color)
+        painter.end()
+
+        super().paintEvent(event)
+
+        if not self.checked:
+            return
+
+        painter = QtGui.QPainter(self)
+
+        size = min(self.width() - 8, self.height() - 8)
+        opt = QtWidgets.QStyleOptionButton()
+        opt.state = QtWidgets.QStyle.StateFlag.State_On
+        opt.rect = QtCore.QRect(
+            (self.width() - size) // 2, (self.height() - size) // 2,
+            size, size,
+        )
+
+        self.style().drawPrimitive(QtWidgets.QStyle.PrimitiveElement.PE_IndicatorMenuCheckMark, opt, painter, self)
+
+        painter.end()
+
+
+class ColorBoxEditor(ColorBox):
+    colorChanged = QtCore.Signal(QtGui.QColor)
+    closed = QtCore.Signal()
+
+    def __init__(self, parent: QtWidgets.QWidget | None = None):
+        super().__init__(color=QtGui.QColor('black'), parent=parent)
+
+        self._popup = QtWidgets.QMenu(self)
+        self._popup.setStyleSheet("""
+            QMenu {
+                padding: 0px;
+                margin: 0px;
+            }
+            QMenu::item {
+                padding: 2px 10px;
+                margin: 0px;
+            }
+        """)
+
+        self._popup.aboutToHide.connect(self.closed.emit)
+
+        self.reset()
+
+    def reset(self):
+        self._popup.clear()
+        for color in ITEM_COLORS:
+            self._popup.addAction(self._make_action(color))
+
+        self._custom_color_action = QtGui.QAction('Custom', self._popup)
+        self._custom_color_action.triggered.connect(self._pick_color)
+        self._popup.addAction(self._custom_color_action)
+
+    @property
+    def color(self) -> QtGui.QColor:
+        return self._color
+
+    @color.setter
+    def color(self, value: QtGui.QColor):
+        self._color = value
+
+        idx = index_if(ITEM_COLORS, lambda c: c == self._color)
+        if idx == -1:
+            action = self._make_action(self._color)
+            self._popup.insertAction(self._custom_color_action, action)
+        else:
+            action = self._popup.actions()[idx]
+
+        action.defaultWidget().checked = True
+        self._popup.setActiveAction(action)
+
+    def popup(self, pos: QtCore.QPointF):
+        self._popup.exec(pos)
+
+    def _set_color(self, color: QtGui.QColor):
+        self._color = color
+        self.colorChanged.emit(self._color)
+
+    def _make_action(self, color: QtGui.QColor) -> QtWidgets.QWidgetAction:
+        action = QtWidgets.QWidgetAction(self._popup)
+        action.setDefaultWidget(ColorBoxItem(color))
+        action.triggered.connect(lambda: self._set_color(color))
+        return action
+
+    def _pick_color(self):
+        original_color = self._color
+
+        self._custom_color_dialog = QtWidgets.QColorDialog()
+        self._custom_color_dialog.setCurrentColor(original_color)
+
+        def reject():
+            self._set_color(original_color)
+            self._custom_color_dialog.close()
+
+        self._custom_color_dialog.currentColorChanged.connect(self._set_color)
+        self._custom_color_dialog.rejected.connect(reject)
+
+        QtCore.QTimer.singleShot(0, self._custom_color_dialog.open)
+
+
+class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self):
+        super().__init__()
+
+        self._editor = ColorBoxEditor()
+        self._editor.colorChanged.connect(lambda _: self._on_color_changed())
+        self._editor.closed.connect(self._on_closed)
 
     def createEditor(
         self,
@@ -275,57 +439,33 @@ class ColorBoxStyleDelegate(QtWidgets.QStyledItemDelegate):
         option: QStyleOptionViewItem,
         index: QModelIndex,
     ):
-        if self._delegate is None:
-            self._delegate = ColorComboBoxDelegate(self)
+        self._editor.reset()
+        self._editor_index = index
 
-        editor = QtWidgets.QComboBox(parent)
-        editor.setItemDelegate(self._delegate)
-        for color in ITEM_COLORS:
-            editor.addItem('', color)
-        editor.addItem('Custom', None)
-        editor.activated.connect(lambda _: self._on_item_changed(editor, index))
-        QtCore.QTimer.singleShot(100, editor.showPopup)
-        return editor
+        pos = parent.mapToGlobal(option.rect.topLeft())
+
+        QtCore.QTimer.singleShot(0, lambda: self._editor.popup(pos))
+
+        return self._editor
+
+    def destroyEditor(self, editor: QWidget, index: QModelIndex):
+        # Do not destroy editor, reuse it
+        pass
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
-        color = index.data(Qt.ItemDataRole.DisplayRole)
-        idx = editor.findData(color)
-        if idx == -1:
-            editor.insertItem(len(ITEM_COLORS), '', color)
-            editor.setCurrentIndex(editor.findData(color))
-        else:
-            editor.setCurrentIndex(idx)
+        color_editor = cast(ColorBoxEditor, editor)
+        color_editor.color = index.data(Qt.ItemDataRole.DisplayRole)
 
-    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex):
-        color = editor.currentData()
-        if color is not None:
-            model.setData(index, color, Qt.ItemDataRole.DisplayRole)
+    def setModelData(self, editor, model: QAbstractItemModel, index: QModelIndex):
+        color_editor = cast(ColorBoxEditor, editor)
+        index.model().setData(index, color_editor.color, Qt.ItemDataRole.DisplayRole)
 
-    def updateEditorGeometry(self, editor, option, index):
-        editor.setGeometry(option.rect)
+    def _on_color_changed(self):
+        self._editor_index.model().setData(self._editor_index, self._editor.color, Qt.ItemDataRole.DisplayRole)
+        self.closeEditor.emit(self._editor, QtWidgets.QItemDelegate.EndEditHint.NoHint)
 
-    def _on_item_changed(self, editor, index):
-        if editor.currentIndex() == editor.count() - 1:
-            # QtWidgets.QColorDialog.getColor()
-            original_color = index.data(Qt.ItemDataRole.DisplayRole)
-
-            def set_color(color: QtGui.QColor):
-                index.model().setData(index, color, Qt.ItemDataRole.DisplayRole)
-
-            self._custom_color_dialog = QtWidgets.QColorDialog()
-            self._custom_color_dialog.setCurrentColor(original_color)
-            self._custom_color_dialog.currentColorChanged.connect(set_color)
-
-            def reject():
-                set_color(original_color)
-                self._custom_color_dialog.close()
-
-            self._custom_color_dialog.rejected.connect(reject)
-            self._custom_color_dialog.open()
-            return
-
-        self._table_view.commitData(editor)
-        self._table_view.closeEditor(editor, QtWidgets.QItemDelegate.EndEditHint.NoHint)
+    def _on_closed(self):
+        self.closeEditor.emit(self._editor, QtWidgets.QItemDelegate.EndEditHint.NoHint)
 
     def helpEvent(self, event, view, option, index):
         if event.type() == QEvent.Type.ToolTip:
@@ -395,7 +535,7 @@ class CncProjectWindow(CncWindow):
         self._view.setRootIsDecorated(True)
 
         self._view_visible_delegate = VisibleStyleDelegate()
-        self._view_color_delegate = ColorBoxStyleDelegate(self._view)
+        self._view_color_delegate = ColorBoxStyleDelegate()
         self._view.setItemDelegateForColumn(0, self._view_color_delegate)
         self._view.setItemDelegateForColumn(1, self._view_visible_delegate)
 
