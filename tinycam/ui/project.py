@@ -116,22 +116,24 @@ class ProjectModel(QAbstractItemModel):
 
     def setData(self, index: QModelIndex, value: object, role: Qt.ItemDataRole):
         if not index.isValid():
-            return
+            return False
 
         if role not in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]:
-            return
+            return False
 
         item = cast(CncProjectItem, index.internalPointer())
         if not index.parent().isValid():
-            return
+            return False
 
         match index.column():
             case 0:
-                item.color = value
+                GLOBALS.APP.undo_stack.push(UpdateItemsCommand([item], {'color': value}))
             case 1:
                 item.visible = value
             case 2:
-                item.name = value
+                GLOBALS.APP.undo_stack.push(UpdateItemsCommand([item], {'name': value}))
+
+        return True
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> object:
         return None
@@ -192,8 +194,9 @@ class ProjectModel(QAbstractItemModel):
             idx = parent.children.index(item)
 
         if idx >= 0:
-            index = self.createIndex(idx, 0, item)
-            self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
+            index_start = self.createIndex(idx, 0, item)
+            index_end = self.createIndex(idx, 3, item)
+            self.dataChanged.emit(index_start, index_end, [Qt.ItemDataRole.DisplayRole])
 
 
 class VisibleStyleDelegate(QtWidgets.QStyledItemDelegate):
@@ -578,26 +581,6 @@ class CncProjectWindow(CncWindow):
             for index in self._view.selectedIndexes()
             if index.parent().isValid()
         ])
-
-    def _on_model_data_changed(self, top_left, bottom_right, _roles):
-        def get_value(row, col):
-            return self._model.data(self._model.index(row, col), Qt.ItemDataRole.DisplayRole)
-
-        for i in range(top_left.row(), bottom_right.row() + 1):
-            item = self.project.items[i]
-            item.visible = get_value(i, 1)
-
-            updates = {
-                'color': get_value(i, 0),
-                'name': get_value(i, 2),
-            }
-            updates = {
-                k: v
-                for k, v in updates.items()
-                if getattr(item, k) != v
-            }
-            if updates:
-                GLOBALS.APP.undo_stack.push(UpdateItemsCommand([item], updates))
 
     def _on_context_menu(self, position: QtCore.QPoint):
         if self._view.currentIndex() is None:
