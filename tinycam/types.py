@@ -515,6 +515,18 @@ class Box(np.ndarray):
     box_size = Vector3Proxy((3, 4, 5))
 
     @property
+    def xy(self) -> Rect:
+        return Rect(self.xmin, self.ymin, self.width, self.height)
+
+    @property
+    def xz(self) -> Rect:
+        return Rect(self.xmin, self.zmin, self.width, self.depth)
+
+    @property
+    def yz(self) -> Rect:
+        return Rect(self.ymin, self.zmin, self.height, self.depth)
+
+    @property
     def corners(self) -> list[Vector3]:
         return [
             Vector3(x, y, z)
