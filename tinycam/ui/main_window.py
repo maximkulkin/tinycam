@@ -55,6 +55,14 @@ class CncMainWindow(QtWidgets.QMainWindow):
                                  shortcut='Ctrl+,')
 
         self.view_menu = self.menu.addMenu("View")
+        self.view_menu.addAction(
+            '2D', lambda: self.tabs.setCurrentIndex(0),
+            shortcut='Ctrl+1',
+        )
+        self.view_menu.addAction(
+            '3D', lambda: self.tabs.setCurrentIndex(1),
+            shortcut='Ctrl+2',
+        )
 
         self.setMenuBar(self.menu)
 
@@ -110,22 +118,22 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._add_dock_window(
             CncProjectWindow(self.project),
             Qt.DockWidgetArea.LeftDockWidgetArea,
-            shortcut='Ctrl+1',
+            shortcut='Ctrl+3',
         )
         self._add_dock_window(
             CncToolOptionsWindow(self.project),
             Qt.DockWidgetArea.RightDockWidgetArea,
-            shortcut='Ctrl+2',
+            shortcut='Ctrl+4',
         )
         self._add_dock_window(
             CncControllerWindow(self.project),
             Qt.DockWidgetArea.RightDockWidgetArea,
-            shortcut='Ctrl+3',
+            shortcut='Ctrl+5',
         )
         self._add_dock_window(
             CncControllerConsoleWindow(self.project),
             Qt.DockWidgetArea.BottomDockWidgetArea,
-            shortcut='Ctrl+4',
+            shortcut='Ctrl+6',
         )
 
         self.file_menu.addAction(import_file_action)
