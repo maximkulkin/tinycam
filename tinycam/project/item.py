@@ -4,6 +4,7 @@ from typing import ForwardRef
 
 from tinycam.signals import Signal
 import tinycam.properties as p
+from tinycam.utils import index_if
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
 
@@ -186,7 +187,7 @@ class CncProjectItemCollection:
             del self[i]
 
     def index(self, item: CncProjectItem) -> int:
-        return self._items.index(item)
+        return index_if(self._items, lambda i: i is item, -1)
 
     def __iter__(self):
         yield from self._items
