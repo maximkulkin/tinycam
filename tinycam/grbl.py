@@ -1,8 +1,11 @@
 import asyncio
 import enum
-from typing import Tuple, Callable
+import traceback
 
-from blinker import Signal
+import serial_asyncio
+
+from tinycam.signals import Signal
+from tinycam.types import Vector3
 
 
 __all__ = [
@@ -15,7 +18,7 @@ __all__ = [
 ]
 
 
-Coordinates = Tuple[float, float, float]
+Coordinates = Vector3
 
 
 class Alarm(enum.Enum):
@@ -177,51 +180,61 @@ class Units(enum.Enum):
 
 
 class Controller:
-    ready_changed = Signal('ready: bool')
-    status_changed = Signal('status: Status')
-    positioning_changed = Signal('positioning: Positioning')
-    units_changed = Signal('units: Units')
-    plane_changed = Signal('plane: Plane')
-    feedrate_changed = Signal('feedrate: float')
-    spindle_speed_changed = Signal('spindle_speed: float')
+    connected_changed = Signal(bool)
+    ready_changed = Signal(bool)
+    status_changed = Signal(Status)
+    positioning_changed = Signal(Positioning)
+    units_changed = Signal(Units)
+    plane_changed = Signal(Plane)
+    feedrate_changed = Signal(float)
+    spindle_speed_changed = Signal(float)
+    machine_coordinates_changed = Signal(Vector3)
+    workspace_coordinates_changed = Signal(Vector3)
 
-    line_sent = Signal('line: str')
-    line_received = Signal('line: str')
+    feedrate_override_changed = Signal(int)
+    rapids_override_changed = Signal(int)
+    spindle_override_changed = Signal(int)
 
-    def __init__(self, reader, writer):
-        self._reader = reader
-        self._writer = writer
+    line_sent = Signal(str)
+    line_received = Signal(str)
+
+    def __init__(self):
+        self._reader = None
+        self._writer = None
 
         self.status_poll_interval = 1.0
         self.max_commands = 10
 
+        self._connected = False
         self._ready = False
 
         self._commands = asyncio.Queue()
         self._command_results = asyncio.Queue(self.max_commands)
         self._command_response = []
 
-        self._status = Status.ALARM
-        self._modal_command = 'G0'
-        self._positioning = Positioning.ABSOLUTE
-        self._units = Units.IN
-        self._plane = Plane.XY
-        self._feedrate = 0
-        self._spindle_speed = 0
-        self._settings = {}
+        self._reader_task = None
+        self._command_sender_task = None
+        self._state_poller_task = None
 
-        self._ref_position1 = (0., 0., 0.)
-        self._ref_position2 = (0., 0., 0.)
-        self._workspace_offsets = [(0., 0., 0.) for _ in range(6)]
-        self._current_workspace = 0
-        self._machine_coordinates = (0., 0., 0.)
-        self._workspace_coordinates = (0., 0., 0.)
+        self._reset()
+
+    async def connect(self, port: str, baud: int = 115200):
+        self._reader, self._writer = await serial_asyncio.open_serial_connection(
+            url=port,
+            baudrate=baud,
+            timeout=10,  # 10 second timeout
+        )
+
+        self._reset()
 
         self._reader_task = asyncio.create_task(self._reader_run())
         self._command_sender_task = asyncio.create_task(self._command_sender_run())
         self._state_poller_task = asyncio.create_task(self._state_poller_run())
 
-    async def shutdown(self) -> None:
+        self._connected = True
+        self.connected_changed.emit(self._connected)
+
+    async def disconnect(self) -> None:
         self._reader_task.cancel()
         self._command_sender_task.cancel()
         self._state_poller_task.cancel()
@@ -244,59 +257,138 @@ class Controller:
         self._writer.close()
         await self._writer.wait_closed()
 
+        self._connected = False
+        self.connected_changed.emit(self._connected)
+
+    def _reset(self):
+        self._status = Status.ALARM
+        self._modal_command = 'G0'
+        self._positioning = Positioning.ABSOLUTE
+        self._units = Units.IN
+        self._plane = Plane.XY
+        self._feedrate = 0
+        self._spindle_speed = 0
+        self._settings = {}
+
+        self._feedrate_override = 100
+        self._rapids_override = 100
+        self._spindle_override = 100
+
+        self._ref_position1 = Coordinates(0., 0., 0.)
+        self._ref_position2 = Coordinates(0., 0., 0.)
+        self._workspace_offsets = [Coordinates(0., 0., 0.) for _ in range(6)]
+        self._current_workspace = 0
+        self._machine_coordinates = Coordinates(0., 0., 0.)
+        self._workspace_coordinates = Coordinates(0., 0., 0.)
+        self._tlo = 0
+
     async def _reader_run(self) -> None:
-        while True:
-            line = (await self._reader.readline()).decode('utf-8').replace('\r\n', '')
-            await self._process_line(line)
+        try:
+            while True:
+                line = (await self._reader.readline()).decode('utf-8').replace('\r\n', '')
+                await self._process_line(line)
+        except Exception as e:
+            print('GRBL Controller reader task error:', e)
+            print(traceback.format_exc())
 
     async def _state_poller_run(self) -> None:
-        while True:
-            if self.ready:
-                await self.status_report()
-            await asyncio.sleep(self.status_poll_interval)
+        try:
+            while True:
+                if self.ready:
+                    await self.status_report()
+                await asyncio.sleep(self.status_poll_interval)
+        except Exception as e:
+            print('GRBL Controller poller task error:', e)
+            print(traceback.format_exc())
 
     async def _command_sender_run(self) -> None:
-        while True:
-            command, future = await self._commands.get()
+        try:
+            while True:
+                command, future = await self._commands.get()
 
-            if isinstance(command, str):
-                command = command.encode('utf-8')
+                if isinstance(command, str):
+                    command = command.encode('utf-8')
 
-            await self._command_results.put(future)
-            self.send_nowait(command + b'\n')
+                await self._command_results.put(future)
+                self.send_nowait(command + b'\n')
+        except Exception as e:
+            print('GRBL Controller sender task error:', e)
+            print(traceback.format_exc())
 
     def _parse_coordinates(self, s: str) -> Coordinates:
-        return tuple(float(v) for v in s.split(','))
+        return Coordinates([float(v) for v in s.split(',')])
 
     def _set_status(self, new_status: Status):
         changed = self._status != new_status
         self._status = new_status
         if changed:
-            self.status_changed.send(new_status)
+            self.status_changed.emit(new_status)
 
     def _set_plane(self, new_plane: Plane):
         changed = self._plane != new_plane
         self._plane = new_plane
         if changed:
-            self.plane_changed.send(new_plane)
+            self.plane_changed.emit(new_plane)
 
     def _set_positioning(self, new_positioning: Positioning):
         changed = self._positioning != new_positioning
         self._positioning = new_positioning
         if changed:
-            self.positioning_changed.send(new_positioning)
+            self.positioning_changed.emit(new_positioning)
 
     def _set_units(self, new_units: Units):
         changed = self._units != new_units
         self._units = new_units
         if changed:
-            self.units_changed.send(new_units)
+            self.units_changed.emit(new_units)
+
+    def _set_machine_coordinates(self, new_coordinates: Coordinates):
+        changed = self._machine_coordinates != new_coordinates
+        self._machine_coordinates = new_coordinates
+        if changed:
+            self.machine_coordinates_changed.emit(new_coordinates)
+
+    def _set_workspace_coordinates(self, new_coordinates: Coordinates):
+        changed = self._workspace_coordinates != new_coordinates
+        self._workspace_coordinates = new_coordinates
+        if changed:
+            self.workspace_coordinates_changed.emit(new_coordinates)
+
+    def _set_feedrate(self, new_feedrate: float):
+        changed = self._feedrate != new_feedrate
+        self._feedrate = new_feedrate
+        if changed:
+            self.feedrate_changed.emit(new_feedrate)
+
+    def _set_spindle_speed(self, new_spindle_speed: float):
+        changed = self._spindle_speed != new_spindle_speed
+        self._spindle_speed = new_spindle_speed
+        if changed:
+            self._spindle_speed_changed.emit(new_spindle_speed)
+
+    def _set_feedrate_override(self, new_feedrate_override: int):
+        changed = self._feedrate_override != new_feedrate_override
+        self._feedrate_override = new_feedrate_override
+        if changed:
+            self.feedrate_override_changed.emit(new_feedrate_override)
+
+    def _set_rapids_override(self, new_rapids_override: int):
+        changed = self._rapids_override != new_rapids_override
+        self._rapids_override = new_rapids_override
+        if changed:
+            self.rapids_override_changed.emit(new_rapids_override)
+
+    def _set_spindle_override(self, new_spindle_override: int):
+        changed = self._spindle_override != new_spindle_override
+        self._spindle_override = new_spindle_override
+        if changed:
+            self.spindle_override_changed.emit(new_spindle_override)
 
     async def _process_line(self, line):
         l = line.strip()
         if l.startswith('Grbl '):
             self._ready = True
-            self.ready_changed.send(True)
+            self.ready_changed.emit(True)
             self.send_command('$$')
             self.send_command('$G')
             self.send_command('$#')
@@ -333,12 +425,13 @@ class Controller:
                     self._ref_position1 = self._parse_coordinates(l)
                 case 'G30':
                     self._ref_position2 = self._parse_coordinates(l)
-                    pass
                 case 'G92':
+                    # TODO:
                     pass
                 case 'TLO':
-                    pass
+                    self._tlo = float(l)
                 case 'PRB':
+                    # TODO:
                     pass
         elif l.startswith('<') and l.endswith('>'):
             l = l[1:-1]
@@ -363,7 +456,27 @@ class Controller:
                         print(f'Unknown state: {parts[0]}')
 
                 for part in parts[1:]:
-                    pass
+                    ps = part.split(':', 1)
+                    if len(ps) < 2:
+                        continue
+
+                    match ps[0]:
+                        case 'MPos':
+                            self._set_machine_coordinates(self._parse_coordinates(ps[1]))
+                        case 'WPos':
+                            self._set_workspace_coordinates(self._parse_coordinates(ps[1]))
+                        case 'FS':
+                            values = ps[1].split(',')
+                            if len(values) != 2:
+                                continue
+                            self._set_feedrate(float(values[0]))
+                            self._set_spindle_speed(float(values[1]))
+                        case 'Ov':
+                            values = [int(value) for value in ps[1].split(',')]
+                            self._set_feedrate_override(values[0])
+                            self._set_rapids_override(values[1])
+                            self._set_spindle_override(values[2])
+
         elif l.startswith('$'):
             l = l[1:]
             if '=' in l:
@@ -384,14 +497,14 @@ class Controller:
             if not self._command_results.empty():
                 self._command_response.append(l)
 
-        self.line_received.send(line)
+        self.line_received.emit(line)
 
     def send_nowait(self, data: str | bytes, echo: bool = True):
         if isinstance(data, str):
             data = data.encode('utf-8')
         self._writer.write(data)
         if echo:
-            self.line_sent.send(data.decode('utf-8'))
+            self.line_sent.emit(data.decode('utf-8'))
 
     async def send(self, data: str | bytes, echo: bool = True):
         self.send_nowait(data, echo=echo)
@@ -413,7 +526,7 @@ class Controller:
     async def soft_reset(self) -> None:
         await self.send(b'\x18', echo=False)
         self._ready = False
-        self.ready_changed.send(True)
+        self.ready_changed.emit(True)
 
     async def status_report(self) -> None:
         await self.send(b'?', echo=False)
@@ -477,6 +590,10 @@ class Controller:
         await self.send(b'\xA1', echo=False)
 
     @property
+    def connected(self) -> bool:
+        return self._connected
+
+    @property
     def ready(self) -> bool:
         return self._ready
 
@@ -498,19 +615,22 @@ class Controller:
     def positioning(self) -> Positioning:
         return self._positioning
 
-    def set_positioning(self, value: Positioning) -> None:
+    @positioning.setter
+    def positioning(self, value: Positioning) -> None:
+        self._positioning = value
         match value:
             case Positioning.ABSOLUTE:
                 self.send_command('G90')
             case Positioning.RELATIVE:
                 self.send_command('G91')
-        self._positioning = value
 
     @property
     def plane(self) -> Plane:
         return self._plane
 
-    def set_plane(self, value: Plane) -> None:
+    @plane.setter
+    def plane(self, value: Plane) -> None:
+        self._plane = value
         match value:
             case Plane.XY:
                 self.send_command('G17')
@@ -518,13 +638,14 @@ class Controller:
                 self.send_command('G18')
             case Plane.YZ:
                 self.send_command('G19')
-        self._plane = value
 
     @property
     def units(self) -> Units:
         return self._units
 
-    def set_units(self, value: Units) -> None:
+    @units.setter
+    def units(self, value: Units) -> None:
+        self._units = value
         match value:
             case Units.IN:
                 self.send_command('G20')
@@ -535,19 +656,33 @@ class Controller:
     def feedrate(self) -> float:
         return self._feedrate
 
-    def set_feedrate(self, value: float) -> None:
-        self.send_command(f'F{value}')
+    @feedrate.setter
+    def feedrate(self, value: float) -> None:
         self._feedrate = value
-        self.feedrate_changed.send(value)
+        self.send_command(f'F{value}')
+        self.feedrate_changed.emit(value)
 
     @property
     def spindle_speed(self) -> float:
         return self._spindle_speed
 
-    def set_spindle_speed(self, value: float) -> None:
-        self.send_command(f'S{value}')
+    @spindle_speed.setter
+    def spindle_speed(self, value: float) -> None:
         self._spindle_speed = value
-        self.spindle_speed_changed.send(value)
+        self.send_command(f'S{value}')
+        self.spindle_speed_changed.emit(value)
+
+    @property
+    def feedrate_override(self) -> int:
+        return self._feedrate_override
+
+    @property
+    def rapids_override(self) -> int:
+        return self._rapids_override
+
+    @property
+    def spindle_override(self) -> int:
+        return self._spindle_override
 
     @property
     def reference_position1(self) -> Coordinates:
@@ -562,15 +697,19 @@ class Controller:
         return self._machine_coordinates
 
     @property
-    def coordinates(self) -> Coordinates:
+    def workspace_coordinates(self) -> Coordinates:
         if self._current_workspace == 0:
             return self._machine_coordinates
 
         return self._machine_coordinates + self._workspace_offsets[self._current_workspace]
 
+    @property
+    def coordinates(self) -> Coordinates:
+        return self.workspace_coordinates
+
     def get_workspace_offset(self, idx: int) -> Coordinates:
         if idx < 1 or idx > len(self._workspace_offsets):
-            raise ArgumentError('Invalid work coordinates index')
+            raise ValueError('Invalid work coordinates index')
         return self._workspace_offsets[idx]
 
     async def jog(

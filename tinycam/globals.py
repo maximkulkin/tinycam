@@ -1,4 +1,4 @@
-from tinycam.cnc_controller import CncController
+from tinycam import grbl
 from tinycam.geometry import Geometry
 from tinycam.settings import SETTINGS, CncSettings
 from typing import TYPE_CHECKING
@@ -15,7 +15,7 @@ class CncGlobals:
     GEOMETRY: Geometry = Geometry()
     APP: 'CncApplication'
     SETTINGS: CncSettings = SETTINGS
-    CNC_CONTROLLER: CncController = CncController()
+    CNC_CONTROLLER: grbl.Controller = grbl.Controller()
 
 
 GLOBALS = CncGlobals
