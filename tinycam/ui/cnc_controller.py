@@ -1,3 +1,5 @@
+from typing import cast
+
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 from qasync import asyncSlot
@@ -158,6 +160,25 @@ class CncConnectionToolbar(QtWidgets.QToolBar):
 
 
 class CncControllerConsoleWindow(CncWindow):
+    MAX_COMMAND_HISTORY = 100
+
+    class ArrowKeyFilter(QtCore.QObject):
+        up_pressed = QtCore.Signal()
+        down_pressed = QtCore.Signal()
+
+        def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent):
+            if event.type() == QtCore.QEvent.KeyPress:
+                key_event = cast(QtGui.QKeyEvent, event)
+                match key_event.key():
+                    case Qt.Key_Up:
+                        self.up_pressed.emit()
+                        return True
+                    case Qt.Key_Down:
+                        self.down_pressed.emit()
+                        return True
+
+            return super().eventFilter(obj, event)
+
     def __init__(self, project, *args, **kwargs):
         super().__init__(project, *args, **kwargs)
 
@@ -171,9 +192,18 @@ class CncControllerConsoleWindow(CncWindow):
         self._log_view = QtWidgets.QTextEdit()
         self._log_view.setReadOnly(True)
 
+        self._command_history = []
+        self._command_history_idx = 0
+
         self._command_edit = QtWidgets.QLineEdit()
         self._command_edit.textChanged.connect(self._on_command_changed)
         self._command_edit.textChanged.connect(self._on_command_changed)
+        self._command_edit.returnPressed.connect(self._on_command_return_pressed)
+
+        self._key_filter = self.ArrowKeyFilter()
+        self._key_filter.up_pressed.connect(self._on_command_history_prev)
+        self._key_filter.down_pressed.connect(self._on_command_history_next)
+        self._command_edit.installEventFilter(self._key_filter)
 
         self._command_send_button = QtWidgets.QPushButton('Send')
         self._command_send_button.setEnabled(False)
@@ -227,9 +257,31 @@ class CncControllerConsoleWindow(CncWindow):
             await self.controller.send_command(command)
 
     @asyncSlot()
+    async def _on_command_return_pressed(self):
+        await self._send_command(self._command_edit.text())
+        self._command_edit.clear()
+
+    @asyncSlot()
     async def _on_command_send_button_clicked(self):
         await self._send_command(self._command_edit.text())
         self._command_edit.clear()
+
+    def _on_command_history_prev(self):
+        if self._command_history_idx >= len(self._command_history):
+            return
+
+        self._command_history_idx += 1
+        self._command_edit.setText(self._command_history[-self._command_history_idx])
+
+    def _on_command_history_next(self):
+        if self._command_history_idx <= 0:
+            return
+
+        self._command_history_idx -= 1
+        if self._command_history_idx == 0:
+            self._command_edit.clear()
+        else:
+            self._command_edit.setText(self._command_history[-self._command_history_idx])
 
 
 class CncCoordinateDisplay(QtWidgets.QWidget):
