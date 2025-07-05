@@ -7,6 +7,7 @@ import serial.tools.list_ports
 
 from tinycam.globals import GLOBALS
 from tinycam import grbl
+from tinycam.types import Vector3
 from tinycam.ui.window import CncWindow
 
 
@@ -297,17 +298,21 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         )
         self._label.setFont(font)
 
-        self._value = QtWidgets.QLabel('0')
-        self._value.setAlignment(
+        self._value_display = QtWidgets.QLabel('0')
+        self._value_display.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
-        self._value.setFont(font)
+        self._value_display.setFont(font)
 
         layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._label)
-        layout.addWidget(self._value)
+        layout.addWidget(self._value_display)
 
         self.setLayout(layout)
+
+    def setValue(self, value: float):
+        return self._value_display.setText(str(value))
 
 
 class CncControllerWindow(CncWindow):
@@ -316,6 +321,8 @@ class CncControllerWindow(CncWindow):
 
         self.setObjectName("cnc_controller")
         self.setWindowTitle("CNC controller")
+
+        self.controller.workspace_coordinates_changed.connect(self._on_workspace_coordinates_changed)
 
         self._x_readout = CncCoordinateDisplay('X')
         self._y_readout = CncCoordinateDisplay('Y')
@@ -331,3 +338,12 @@ class CncControllerWindow(CncWindow):
         main_widget = QtWidgets.QWidget(self)
         main_widget.setLayout(layout)
         self.setWidget(main_widget)
+
+    @property
+    def controller(self) -> grbl.Controller:
+        return GLOBALS.CNC_CONTROLLER
+
+    def _on_workspace_coordinates_changed(self, coords: Vector3):
+        self._x_readout.setValue(coords.x)
+        self._y_readout.setValue(coords.y)
+        self._z_readout.setValue(coords.z)
