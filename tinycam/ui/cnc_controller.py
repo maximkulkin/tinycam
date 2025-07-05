@@ -315,6 +315,54 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         return self._value_display.setText(str(value))
 
 
+class CncJogControls(QtWidgets.QFrame):
+    def __init__(self, parent: QtWidgets.QWidget | None = None):
+        super().__init__(parent=parent)
+
+        self.setFrameShape(QtWidgets.QFrame.Shape.Panel)
+
+        self._x_neg_button = QtWidgets.QPushButton("-X")
+        self._x_neg_button.pressed.connect(self._on_x_neg_pressed)
+        self._x_neg_button.released.connect(self._on_x_neg_released)
+        self._x_pos_button = QtWidgets.QPushButton("+X")
+        self._y_neg_button = QtWidgets.QPushButton("-Y")
+        self._y_pos_button = QtWidgets.QPushButton("+Y")
+        self._z_neg_button = QtWidgets.QPushButton("-Z")
+        self._z_pos_button = QtWidgets.QPushButton("+Z")
+        self._home_xy_button = QtWidgets.QPushButton("Home XY")
+        self._home_xy_button.clicked.connect(self._on_home_xy_clicked)
+        self._home_z_button = QtWidgets.QPushButton("Home Z")
+
+        layout = QtWidgets.QGridLayout()
+        layout.addWidget(self._y_pos_button, 0, 1)
+        layout.addWidget(self._x_neg_button, 1, 0)
+        layout.addWidget(self._home_xy_button, 1, 1)
+        layout.addWidget(self._x_pos_button, 1, 2)
+        layout.addWidget(self._y_neg_button, 2, 1)
+
+        layout.addWidget(self._z_pos_button, 0, 3)
+        layout.addWidget(self._home_z_button, 1, 3)
+        layout.addWidget(self._z_neg_button, 2, 3)
+
+        self.setLayout(layout)
+
+    @property
+    def controller(self) -> grbl.Controller:
+        return GLOBALS.CNC_CONTROLLER
+
+    @asyncSlot()
+    async def _on_x_neg_pressed(self):
+        pass
+
+    @asyncSlot()
+    async def _on_x_neg_released(self):
+        pass
+
+    @asyncSlot()
+    async def _on_home_xy_clicked(self):
+        await self.controller.run_homing_cycle()
+
+
 class CncControllerWindow(CncWindow):
     def __init__(self, project, *args, **kwargs):
         super().__init__(project, *args, **kwargs)
@@ -327,12 +375,14 @@ class CncControllerWindow(CncWindow):
         self._x_readout = CncCoordinateDisplay('X')
         self._y_readout = CncCoordinateDisplay('Y')
         self._z_readout = CncCoordinateDisplay('Z')
+        self._jog_controls = CncJogControls()
 
         layout = QtWidgets.QVBoxLayout()
         layout.setSpacing(10)
         layout.addWidget(self._x_readout)
         layout.addWidget(self._y_readout)
         layout.addWidget(self._z_readout)
+        layout.addWidget(self._jog_controls)
         layout.addStretch()
 
         main_widget = QtWidgets.QWidget(self)
