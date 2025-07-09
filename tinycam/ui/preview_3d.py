@@ -1,11 +1,14 @@
 import math
 from typing import cast
 
+from PySide6 import QtCore
+
 from tinycam.project import (
     CncProjectItem, GerberItem, ExcellonItem,
     CncJob, CncIsolateJob, CncDrillJob,
 )
 import tinycam.settings as s
+from tinycam.types import Vector2
 from tinycam.ui.view import CncView
 from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
@@ -14,6 +17,7 @@ from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
+from tinycam.ui.utils import vector2
 
 
 s.SETTINGS.register('3D/orientation_cube_position',
@@ -22,6 +26,8 @@ s.SETTINGS.register('3D/orientation_cube_position',
 
 
 class CncPreview3D(CncView):
+    coordinateChanged = QtCore.Signal(Vector2)
+
     def __init__(self, project, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -123,6 +129,19 @@ class CncPreview3D(CncView):
                 self.remove_item(view)
                 self.update()
                 break
+
+    def event(self, event: QtCore.QEvent) -> bool:
+        super().event(event)
+
+        if event.isAccepted():
+            return True
+
+        if event.type() == QtCore.QEvent.Type.MouseMove:
+            self.coordinateChanged.emit(
+                self.camera.unproject(vector2(event.position()))
+            )
+
+        return False
 
     def zoom_in(self):
         self._pan_and_zoom_controller.zoom(1.0, duration=0.2)

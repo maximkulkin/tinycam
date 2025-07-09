@@ -118,6 +118,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.statusbar.addPermanentWidget(self._coordinate_info)
         self.statusbar.addPermanentWidget(self._control_type_info)
         self.canvas_2d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
+        self.preview_3d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
 
         GLOBALS.APP.task_manager.statusbar = self.statusbar
 
