@@ -7,6 +7,9 @@ import serial.tools.list_ports
 
 from tinycam.globals import GLOBALS
 from tinycam import grbl
+from tinycam.project import CncProject
+from tinycam.properties import format_suffix
+import tinycam.settings as s
 from tinycam.types import Vector3
 from tinycam.ui.window import CncWindow
 
@@ -315,85 +318,184 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         return self._value_display.setText(str(value))
 
 
-class CncJogControls(QtWidgets.QFrame):
-    def __init__(self, parent: QtWidgets.QWidget | None = None):
-        super().__init__(parent=parent)
+class CncControllerStateDisplayWindow(CncWindow):
+    def __init__(self, project: CncProject, controller: grbl.Controller, *args, **kwargs):
+        super().__init__(project=project, *args, **kwargs)
 
-        self.setFrameShape(QtWidgets.QFrame.Shape.Panel)
+        self.setObjectName("cnc_state")
+        self.setWindowTitle("CNC State")
 
-        self._x_neg_button = QtWidgets.QPushButton("-X")
-        self._x_neg_button.pressed.connect(self._on_x_neg_pressed)
-        self._x_neg_button.released.connect(self._on_x_neg_released)
-        self._x_pos_button = QtWidgets.QPushButton("+X")
-        self._y_neg_button = QtWidgets.QPushButton("-Y")
-        self._y_pos_button = QtWidgets.QPushButton("+Y")
-        self._z_neg_button = QtWidgets.QPushButton("-Z")
-        self._z_pos_button = QtWidgets.QPushButton("+Z")
-        self._home_xy_button = QtWidgets.QPushButton("Home XY")
-        self._home_xy_button.clicked.connect(self._on_home_xy_clicked)
-        self._home_z_button = QtWidgets.QPushButton("Home Z")
-
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self._y_pos_button, 0, 1)
-        layout.addWidget(self._x_neg_button, 1, 0)
-        layout.addWidget(self._home_xy_button, 1, 1)
-        layout.addWidget(self._x_pos_button, 1, 2)
-        layout.addWidget(self._y_neg_button, 2, 1)
-
-        layout.addWidget(self._z_pos_button, 0, 3)
-        layout.addWidget(self._home_z_button, 1, 3)
-        layout.addWidget(self._z_neg_button, 2, 3)
-
-        self.setLayout(layout)
-
-    @property
-    def controller(self) -> grbl.Controller:
-        return GLOBALS.CNC_CONTROLLER
-
-    @asyncSlot()
-    async def _on_x_neg_pressed(self):
-        pass
-
-    @asyncSlot()
-    async def _on_x_neg_released(self):
-        pass
-
-    @asyncSlot()
-    async def _on_home_xy_clicked(self):
-        await self.controller.run_homing_cycle()
-
-
-class CncControllerWindow(CncWindow):
-    def __init__(self, project, *args, **kwargs):
-        super().__init__(project, *args, **kwargs)
-
-        self.setObjectName("cnc_controller")
-        self.setWindowTitle("CNC controller")
-
-        self.controller.workspace_coordinates_changed.connect(self._on_workspace_coordinates_changed)
+        controller.workspace_coordinates_changed.connect(
+            self._on_workspace_coordinates_changed,
+        )
 
         self._x_readout = CncCoordinateDisplay('X')
         self._y_readout = CncCoordinateDisplay('Y')
         self._z_readout = CncCoordinateDisplay('Z')
-        self._jog_controls = CncJogControls()
+
+        font = QtGui.QFont()
+        font.setPointSize(24)
+
+        self._feedrate_label = QtWidgets.QLabel("Feedrate:")
+        self._feedrate_label.setFont(font)
+        self._feedrate_display = QtWidgets.QLabel("0")
+        self._feedrate_display.setFont(font)
+        self._spindle_label = QtWidgets.QLabel("Spindle: ")
+        self._spindle_label.setFont(font)
+        self._spindle_display = QtWidgets.QLabel("0")
+        self._spindle_display.setFont(font)
+
+        additional_layout = QtWidgets.QGridLayout()
+        additional_layout.addWidget(self._feedrate_label, 0, 0, Qt.AlignmentFlag.AlignRight)
+        additional_layout.addWidget(self._feedrate_display, 0, 1, Qt.AlignmentFlag.AlignLeft)
+        additional_layout.addWidget(self._spindle_label, 1, 0, Qt.AlignmentFlag.AlignRight)
+        additional_layout.addWidget(self._spindle_display, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout()
-        layout.setSpacing(10)
         layout.addWidget(self._x_readout)
         layout.addWidget(self._y_readout)
         layout.addWidget(self._z_readout)
-        layout.addWidget(self._jog_controls)
+        layout.addLayout(additional_layout)
         layout.addStretch()
 
         main_widget = QtWidgets.QWidget(self)
         main_widget.setLayout(layout)
         self.setWidget(main_widget)
 
-    @property
-    def controller(self) -> grbl.Controller:
-        return GLOBALS.CNC_CONTROLLER
-
     def _on_workspace_coordinates_changed(self, coords: Vector3):
         self._x_readout.setValue(coords.x)
         self._y_readout.setValue(coords.y)
         self._z_readout.setValue(coords.z)
+
+
+class CncControllerJogControlsWindow(CncWindow):
+    def __init__(self, project: CncProject, controller: grbl.Controller, *args, **kwargs):
+        super().__init__(project=project, *args, **kwargs)
+
+        self.setObjectName("cnc_jog_controls")
+        self.setWindowTitle("CNC Jog Controls")
+
+        self._controller = controller
+
+        self._x_neg_button = QtWidgets.QPushButton("-X")
+        self._x_neg_button.clicked.connect(self._on_x_neg_clicked)
+        self._x_pos_button = QtWidgets.QPushButton("+X")
+        self._x_pos_button.clicked.connect(self._on_x_pos_clicked)
+        self._y_neg_button = QtWidgets.QPushButton("-Y")
+        self._y_neg_button.clicked.connect(self._on_y_neg_clicked)
+        self._y_pos_button = QtWidgets.QPushButton("+Y")
+        self._y_pos_button.clicked.connect(self._on_y_pos_clicked)
+        self._z_neg_button = QtWidgets.QPushButton("-Z")
+        self._z_neg_button.clicked.connect(self._on_z_neg_clicked)
+        self._z_pos_button = QtWidgets.QPushButton("+Z")
+        self._z_pos_button.clicked.connect(self._on_z_pos_clicked)
+
+        self._xy_step_edit = QtWidgets.QDoubleSpinBox()
+        self._xy_step_edit.setMinimum(0.001)
+        self._xy_step_edit.setMaximum(1000.0)
+        self._xy_step_edit.setValue(1.0)
+
+        self._z_step_edit = QtWidgets.QDoubleSpinBox()
+        self._z_step_edit.setMinimum(0.001)
+        self._z_step_edit.setMaximum(1000.0)
+        self._z_step_edit.setValue(1.0)
+
+        self._feedrate_edit = QtWidgets.QDoubleSpinBox()
+        self._feedrate_edit.setMinimum(0.001)
+        self._feedrate_edit.setMaximum(1000.0)
+        self._feedrate_edit.setValue(100.0)
+
+        movement_layout = QtWidgets.QGridLayout()
+        movement_layout.addWidget(self._y_pos_button, 0, 1)
+        movement_layout.addWidget(self._x_neg_button, 1, 0)
+        movement_layout.addWidget(self._x_pos_button, 1, 2)
+        movement_layout.addWidget(self._y_neg_button, 2, 1)
+
+        movement_layout.addWidget(self._z_pos_button, 0, 2)
+        movement_layout.addWidget(self._z_neg_button, 2, 2)
+
+        settings_layout = QtWidgets.QGridLayout()
+        settings_layout.addWidget(QtWidgets.QLabel('XY step:'), 0, 0, Qt.AlignmentFlag.AlignRight)
+        settings_layout.addWidget(self._xy_step_edit, 0, 1)
+
+        settings_layout.addWidget(QtWidgets.QLabel('Z step:'), 1, 0, Qt.AlignmentFlag.AlignRight)
+        settings_layout.addWidget(self._z_step_edit, 1, 1)
+
+        settings_layout.addWidget(QtWidgets.QLabel('Feedrate:'), 2, 0, Qt.AlignmentFlag.AlignRight)
+        settings_layout.addWidget(self._feedrate_edit, 2, 1)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addLayout(movement_layout)
+        layout.addLayout(settings_layout)
+        layout.addStretch()
+
+        main_widget = QtWidgets.QWidget(self)
+        main_widget.setLayout(layout)
+        self.setWidget(main_widget)
+
+        s.SETTINGS['general/units'].changed.connect(self._on_units_changed)
+        self._on_units_changed(s.SETTINGS.get('general/units'))
+
+        self._controller.ready_changed.connect(self._on_ready_changed)
+        self._on_ready_changed(self._controller.ready)
+
+    @asyncSlot()
+    async def _on_x_neg_clicked(self):
+        await self._controller.jog(
+            feedrate=self._xy_feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            x=-self._xy_step_edit.value(),
+        )
+
+    @asyncSlot()
+    async def _on_x_pos_clicked(self):
+        await self._controller.jog(
+            feedrate=self._feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            x=self._xy_step_edit.value(),
+        )
+
+    @asyncSlot()
+    async def _on_y_neg_clicked(self):
+        await self._controller.jog(
+            feedrate=self._feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            y=-self._xy_step_edit.value(),
+        )
+
+    @asyncSlot()
+    async def _on_y_pos_clicked(self):
+        await self._controller.jog(
+            feedrate=self._feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            y=self._xy_step_edit.value(),
+        )
+
+    @asyncSlot()
+    async def _on_z_neg_clicked(self):
+        await self._controller.jog(
+            feedrate=self._feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            z=-self._z_step_edit.value(),
+        )
+
+    @asyncSlot()
+    async def _on_z_pos_clicked(self):
+        await self._controller.jog(
+            feedrate=self._feedrate_edit.value(),
+            units=s.SETTINGS.get('general/units'),
+            z=self._z_step_edit.value(),
+        )
+
+    def _on_ready_changed(self, ready: bool):
+        self._x_neg_button.setEnabled(ready)
+        self._x_pos_button.setEnabled(ready)
+        self._y_neg_button.setEnabled(ready)
+        self._y_pos_button.setEnabled(ready)
+        self._z_neg_button.setEnabled(ready)
+        self._z_pos_button.setEnabled(ready)
+
+    def _on_units_changed(self, _: s.Units):
+        self._xy_step_edit.setSuffix(format_suffix('{units}'))
+        self._z_step_edit.setSuffix(format_suffix('{units}'))
+        self._feedrate_edit.setSuffix(format_suffix('{units}/min'))

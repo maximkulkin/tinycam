@@ -13,7 +13,10 @@ from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tool_options import CncToolOptionsWindow
-from tinycam.ui.cnc_controller import CncControllerWindow, CncControllerConsoleWindow, CncConnectionToolbar
+from tinycam.ui.cnc_controller import (
+    CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
+    CncControllerConsoleWindow, CncConnectionToolbar,
+)
 from tinycam.ui.settings import CncSettingsDialog
 from tinycam.ui.utils import load_icon
 
@@ -126,14 +129,16 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+4',
         )
         self._add_dock_window(
-            CncControllerWindow(self.project),
+            CncControllerStateDisplayWindow(self.project, GLOBALS.CNC_CONTROLLER),
             Qt.DockWidgetArea.RightDockWidgetArea,
-            shortcut='Ctrl+5',
+        )
+        self._add_dock_window(
+            CncControllerJogControlsWindow(self.project, GLOBALS.CNC_CONTROLLER),
+            Qt.DockWidgetArea.RightDockWidgetArea,
         )
         self._add_dock_window(
             CncControllerConsoleWindow(self.project),
             Qt.DockWidgetArea.BottomDockWidgetArea,
-            shortcut='Ctrl+6',
         )
 
         self.file_menu.addAction(import_file_action)
