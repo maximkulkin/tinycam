@@ -97,9 +97,15 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.addToolBar(self.toolbar)
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.toolbar.addAction(import_file_action)
-        self.toolbar.addAction(zoom_in_action)
-        self.toolbar.addAction(zoom_out_action)
-        self.toolbar.addAction(zoom_fit_action)
+
+        self.zoom_toolbar = QtWidgets.QToolBar()
+        self.zoom_toolbar.setObjectName('zoom_toolbar')
+        self.zoom_toolbar.setWindowTitle('Zoom Toolbar')
+        self.zoom_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.addToolBar(self.zoom_toolbar)
+        self.zoom_toolbar.addAction(zoom_in_action)
+        self.zoom_toolbar.addAction(zoom_out_action)
+        self.zoom_toolbar.addAction(zoom_fit_action)
 
         self.cnc_connection_toolbar = CncConnectionToolbar()
         self.addToolBar(self.cnc_connection_toolbar)
