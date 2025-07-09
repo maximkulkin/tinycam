@@ -429,9 +429,9 @@ class CncControllerJogControlsWindow(CncWindow):
         layout.addLayout(settings_layout)
         layout.addStretch()
 
-        main_widget = QtWidgets.QWidget(self)
-        main_widget.setLayout(layout)
-        self.setWidget(main_widget)
+        self._main_widget = QtWidgets.QWidget(self)
+        self._main_widget.setLayout(layout)
+        self.setWidget(self._main_widget)
 
         s.SETTINGS['general/units'].changed.connect(self._on_units_changed)
         self._on_units_changed(s.SETTINGS.get('general/units'))
@@ -488,12 +488,7 @@ class CncControllerJogControlsWindow(CncWindow):
         )
 
     def _on_ready_changed(self, ready: bool):
-        self._x_neg_button.setEnabled(ready)
-        self._x_pos_button.setEnabled(ready)
-        self._y_neg_button.setEnabled(ready)
-        self._y_pos_button.setEnabled(ready)
-        self._z_neg_button.setEnabled(ready)
-        self._z_pos_button.setEnabled(ready)
+        self._main_widget.setEnabled(ready)
 
     def _on_units_changed(self, _: s.Units):
         self._xy_step_edit.setSuffix(format_suffix('{units}'))
