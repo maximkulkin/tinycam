@@ -15,6 +15,11 @@ from tinycam.utils import get_property_type
 TYPE_EDITORS = {}
 
 
+@dataclass
+class Editor:
+    editor: 'Type[BasePropertyEditor]'
+
+
 def editor_for(type: type):
     def decorator(klass):
         TYPE_EDITORS[type] = klass
@@ -22,17 +27,25 @@ def editor_for(type: type):
     return decorator
 
 
-def get_editor_for(type: type) -> type | None:
-    def score(editor_type: type) -> int:
-        if not issubclass(type, editor_type):
-            return 1000
-        return type.__mro__.index(editor_type)
+def get_editor_for(subject_type: type, metadata: p.Metadata | None = None) -> type | None:
+    if metadata is not None:
+        editor_metadata = metadata.find(Editor)
+        if editor_metadata is not None:
+            return editor_metadata.editor
 
-    editor_type = min(TYPE_EDITORS.keys(), key=score)
-    if not issubclass(type, editor_type):
+    if hasattr(subject_type, '__origin__'):
+        subject_type = subject_type.__origin__
+
+    def score(editor_target_type: type) -> int:
+        if not issubclass(subject_type, editor_target_type):
+            return 1000
+        return subject_type.__mro__.index(editor_target_type)
+
+    editor_target_type = min(TYPE_EDITORS.keys(), key=score)
+    if not issubclass(subject_type, editor_target_type):
         return None
 
-    return TYPE_EDITORS[editor_type]
+    return TYPE_EDITORS[editor_target_type]
 
 
 class BasePropertyEditor[T](QtWidgets.QWidget):
@@ -452,11 +465,6 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
             prop = getattr(target_type, name)
             prop_type = get_property_type(prop)
 
-            editor_type = get_editor_for(prop_type)
-            if editor_type is None:
-                print(f'No editor for type {prop_type}')
-                continue
-
             metadata = p.get_metadata(target_type, name)
             if metadata is None:
                 print(f'No property metadata for {name!r}')
@@ -471,6 +479,11 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
                 label = label_metadata.label
             else:
                 label = name.replace('_', ' ').capitalize()
+
+            editor_type = get_editor_for(prop_type, metadata)
+            if editor_type is None:
+                print(f'No editor for type {prop_type}')
+                continue
 
             editor = editor_type(prop_type, metadata=metadata)
             self._editors[name] = editor
@@ -505,11 +518,6 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
         self.valueChanged.emit(self._value)
 
 
-@dataclass
-class Editor:
-    editor: Type[BasePropertyEditor]
-
-
 class PropertyEditor(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -539,9 +547,9 @@ class PropertyEditor(QtWidgets.QWidget):
             target_type = type(self._target)
             metadata = p.get_metadata(target_type)
 
-            editor_type = get_editor_for(target_type)
+            editor_type = get_editor_for(target_type, metadata)
+            if editor_type is not None:
+                self._editor = editor_type(target_type, metadata=metadata)
+                self.layout().addWidget(self._editor)
 
-            self._editor = editor_type(target_type, metadata=metadata)
-            self.layout().addWidget(self._editor)
-
-            self._editor.setValue(self._target)
+                self._editor.setValue(self._target)
