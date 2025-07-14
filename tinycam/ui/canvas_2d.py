@@ -65,6 +65,12 @@ class CncCanvas2D(CncView):
     def tool(self) -> CncTool:
         return self._tool
 
+    @tool.setter
+    def tool(self, value: CncTool):
+        self._tool.deactivate()
+        self._tool = value
+        self._tool.activate()
+
     def event(self, event: QtCore.QEvent) -> bool:
         super().event(event)
 

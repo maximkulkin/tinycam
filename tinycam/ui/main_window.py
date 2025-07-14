@@ -12,6 +12,7 @@ from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
+from tinycam.ui.tools import CncTool, SelectTool
 from tinycam.ui.tool_options import CncToolOptionsWindow
 from tinycam.ui.cnc_controller import (
     CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
@@ -106,6 +107,18 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.zoom_toolbar.addAction(zoom_in_action)
         self.zoom_toolbar.addAction(zoom_out_action)
         self.zoom_toolbar.addAction(zoom_fit_action)
+
+        self._select_tool = SelectTool(self.project, self.canvas_2d)
+        select_tool_action = self._make_action(
+            'Select Tool', lambda: self._activate_tool(self._select_tool),
+            icon=':/icons/select_tool.svg',
+        )
+
+        self.tools_toolbar = QtWidgets.QToolBar()
+        self.tools_toolbar.setObjectName('tools_toolbar')
+        self.tools_toolbar.setWindowTitle('Tools Toolbar')
+        self.addToolBar(self.tools_toolbar)
+        self.tools_toolbar.addAction(select_tool_action)
 
         self.cnc_connection_toolbar = CncConnectionToolbar()
         self.addToolBar(self.cnc_connection_toolbar)
@@ -243,6 +256,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
                 self.canvas_2d.zoom_to_fit()
             case 1:
                 self.preview_3d.zoom_to_fit()
+
+    def _activate_tool(self, tool: CncTool):
+        self.canvas_2d.tool = tool
 
     def _edit_settings(self):
         settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)
