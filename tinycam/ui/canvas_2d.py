@@ -38,6 +38,8 @@ class CncCanvas2D(CncView):
 
         self._animation = None
 
+        self._tool = None
+
     def initializeGL(self):
         super().initializeGL()
 
@@ -53,8 +55,8 @@ class CncCanvas2D(CncView):
         for item in self.project.items:
             self._on_project_item_added(item)
 
-        self._tool = SelectTool(self.project, self)
-        self._tool.activate()
+        if self.tool is not None:
+            self.tool.activate()
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)
@@ -67,9 +69,11 @@ class CncCanvas2D(CncView):
 
     @tool.setter
     def tool(self, value: CncTool):
-        self._tool.deactivate()
+        if self._tool is not None:
+            self._tool.deactivate()
         self._tool = value
-        self._tool.activate()
+        if self.ctx is not None:
+            self._tool.activate()
 
     def event(self, event: QtCore.QEvent) -> bool:
         super().event(event)
@@ -82,7 +86,7 @@ class CncCanvas2D(CncView):
                 self.camera.unproject(vector2(event.position()))
             )
 
-        if self.tool.eventFilter(self, event):
+        if self.tool is not None and self.tool.eventFilter(self, event):
             return True
 
         return False
