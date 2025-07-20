@@ -1,26 +1,40 @@
+from copy import copy
+
 from PySide6 import QtGui
 
-from tinycam.globals import GLOBALS
+from tinycam.project import CncProjectItem
 from tinycam.types import Vector2
 
 
 class ScaleItemsCommand(QtGui.QUndoCommand):
-    def __init__(self, items, scale: float, offset=Vector2(0.0, 0.0), parent=None):
-        super().__init__('Scale', parent=parent)
+    def __init__(
+        self,
+        items: list[CncProjectItem],
+        scale: Vector2,
+        pivot: Vector2 | None = None,
+    ):
+        super().__init__('Scale')
         self._items = items
         self._scale = scale
-        self._offset = offset
+        self._pivot = pivot
+        self._original_values = None
 
     def redo(self):
+        self._original_values = [
+            (copy(item.offset), copy(item.scale))
+            for item in self._items
+        ]
+
         for item in self._items:
-            item.geometry = GLOBALS.GEOMETRY.translate(
-                GLOBALS.GEOMETRY.scale(item.geometry, self._scale),
-                self._offset
-            )
+            with item:
+                item.scale *= self._scale
+
+                if self._pivot is not None:
+                    v = self._pivot - item.offset
+                    item.offset += v - v * self._scale
 
     def undo(self):
-        for item in self._items:
-            item.geometry = GLOBALS.GEOMETRY.scale(
-                GLOBALS.GEOMETRY.translate(item.geometry, -self._offset),
-                1.0 / self._scale
-            )
+        for item, (offset, scale) in zip(self._items, self._original_values):
+            with item:
+                item.scale = scale
+                item.offset = offset

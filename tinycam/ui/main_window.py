@@ -12,7 +12,7 @@ from tinycam.ui.commands import ImportFileCommand
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
-from tinycam.ui.tools import CncTool, SelectTool
+from tinycam.ui.tools import CncTool, SelectTool, TransformTool
 from tinycam.ui.tool_options import CncToolOptionsWindow
 from tinycam.ui.cnc_controller import (
     CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
@@ -117,11 +117,21 @@ class CncMainWindow(QtWidgets.QMainWindow):
         select_tool_action.setCheckable(True)
         self._select_tool.action = select_tool_action
 
+        self._transform_tool = TransformTool(self.project, self.canvas_2d)
+        transform_tool_action = self._make_action(
+            'Transform Tool', lambda: self._activate_tool(self._transform_tool),
+            icon=':/icons/transform_tool.svg',
+            shortcut='e',
+        )
+        transform_tool_action.setCheckable(True)
+        self._transform_tool.action = transform_tool_action
+
         self.tools_toolbar = QtWidgets.QToolBar()
         self.tools_toolbar.setObjectName('tools_toolbar')
         self.tools_toolbar.setWindowTitle('Tools Toolbar')
         self.addToolBar(self.tools_toolbar)
         self.tools_toolbar.addAction(select_tool_action)
+        self.tools_toolbar.addAction(transform_tool_action)
 
         self._activate_tool(self._select_tool)
 
