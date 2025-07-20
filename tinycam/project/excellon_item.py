@@ -37,16 +37,19 @@ class ExcellonItem(CncProjectItem):
     def geometry(self) -> Shape:
         return self._excellon_file.geometry
 
-    @geometry.setter
-    def geometry(self, value: Shape):
-        self._geometry = value
-
-    def _update_geometry(self):
-        pass
-
     @staticmethod
     def from_file(path) -> 'ExcellonItem':
         with open(path, 'rt') as f:
-            excellon_file = excellon.parse_excellon(f.read(), geometry=GLOBALS.GEOMETRY)
+            G = GLOBALS.GEOMETRY
+            excellon_file = excellon.parse_excellon(f.read(), geometry=G)
             name = os.path.basename(path)
-            return ExcellonItem(name, excellon_file)
+            bounds = G.bounds(excellon_file.geometry)
+            for drill in excellon_file.drills:
+                drill.position -= bounds.center
+            for mill in excellon_file.mills:
+                for i in range(len(mill.positions)):
+                    mill.positions[i] -= bounds.center
+            excellon_file.geometry = G.translate(excellon_file.geometry, -bounds.center)
+            item = ExcellonItem(name, excellon_file)
+            item.offset = bounds.center
+            return item
