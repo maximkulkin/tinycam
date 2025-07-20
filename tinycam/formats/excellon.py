@@ -1,8 +1,9 @@
 import dataclasses
 import pyparsing as pp
 import pyparsing.exceptions
-from typing import Tuple
+
 from tinycam.geometry import Geometry, Shape
+from tinycam.types import Vector2
 
 
 class Node:
@@ -153,13 +154,13 @@ class Tool:
 @dataclasses.dataclass
 class Drill:
     tool_id: int
-    position: Tuple[float, float]
+    position: Vector2
 
 
 @dataclasses.dataclass
 class Mill:
     tool_id: int
-    positions: list[Tuple[float, float]]
+    positions: list[Vector2]
 
 
 @dataclasses.dataclass
@@ -182,7 +183,7 @@ class ExcellonParser:
 
         self._tools = {'0': Tool(id='0', diameter=0.0)}
         self._current_tool = None
-        self._current_position = (0.0, 0.0)
+        self._current_position = Vector2()
 
         self._drills = []
         self._mills = []
@@ -221,10 +222,9 @@ class ExcellonParser:
             geometry=self._shapes,
         )
 
-    def _eval_position(self, p):
+    def _eval_position(self, p: Vector2) -> Vector2:
         if self._relative_positioning:
-            return (p[0] + self._current_position[0],
-                    p[1] + self._current_position[1])
+            return p + self._current_position
         return p
 
     def _process_node(self, node):
@@ -280,7 +280,7 @@ class ExcellonParser:
         if self._current_tool is None:
             raise ExcellonError(node.location, 'Drill command without tool selected')
 
-        position = self._eval_position((node.x, node.y))
+        position = self._eval_position(Vector2(node.x, node.y))
         self._drills.append(Drill(self._current_tool, position))
 
         self._shapes = self._geometry.union(
@@ -294,7 +294,7 @@ class ExcellonParser:
         self._last_mill = None
 
     def _process_move(self, node):
-        self._current_position = self._eval_position((node.x, node.y))
+        self._current_position = self._eval_position(Vector2(node.x, node.y))
         self._last_mill = None
 
     def _process_mill(self, node):
@@ -311,7 +311,7 @@ class ExcellonParser:
                                    positions=[self._current_position])
             self._mills.append(self._last_mill)
 
-        position = self._eval_position((node.x, node.y))
+        position = self._eval_position(Vector2(node.x, node.y))
         self._last_mill.positions.append(position)
         self._shapes = self._geometry.union(
             self._shapes,
