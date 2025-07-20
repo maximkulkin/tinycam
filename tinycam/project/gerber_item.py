@@ -27,7 +27,11 @@ class GerberItem(CncProjectItem):
     @staticmethod
     def from_file(path) -> 'GerberItem':
         with open(path, 'rt') as f:
-            geometry = gerber.parse_gerber(f.read(), geometry=GLOBALS.GEOMETRY)
-            # name, ext = os.path.splitext(os.path.basename(path))
+            G = GLOBALS.GEOMETRY
+            geometry = gerber.parse_gerber(f.read(), geometry=G)
             name = os.path.basename(path)
-            return GerberItem(name, geometry)
+            bounds = G.bounds(geometry)
+            geometry = G.translate(geometry, -bounds.center)
+            item = GerberItem(name, geometry)
+            item.offset = bounds.center
+            return item
