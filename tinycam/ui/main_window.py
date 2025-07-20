@@ -13,7 +13,7 @@ from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tools import CncTool, SelectTool, TransformTool
-from tinycam.ui.tool_options import CncToolOptionsWindow
+from tinycam.ui.item_properties import CncProjectItemPropertiesWindow
 from tinycam.ui.cnc_controller import (
     CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
     CncControllerConsoleWindow, CncConnectionToolbar,
@@ -159,7 +159,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='Ctrl+3',
         )
         self._add_dock_window(
-            CncToolOptionsWindow(self.project),
+            CncProjectItemPropertiesWindow(self.project),
             Qt.DockWidgetArea.RightDockWidgetArea,
             shortcut='Ctrl+4',
         )

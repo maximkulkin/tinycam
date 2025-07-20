@@ -3,12 +3,12 @@ from tinycam.ui.window import CncWindow
 from tinycam.ui.property_editor import PropertyEditor
 
 
-class CncToolOptionsWindow(CncWindow):
+class CncProjectItemPropertiesWindow(CncWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setObjectName("tool_options_window")
-        self.setWindowTitle("Tool options")
+        self.setObjectName("project_item_properties_window")
+        self.setWindowTitle("Item properties")
 
         self._property_editor = PropertyEditor()
         self.setWidget(self._property_editor)
