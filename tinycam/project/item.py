@@ -2,11 +2,14 @@ from collections.abc import Sequence
 import enum
 from typing import ForwardRef
 
-from tinycam.signals import Signal
-import tinycam.properties as p
-from tinycam.utils import index_if
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
+
+from tinycam.globals import GLOBALS
+from tinycam.signals import Signal
+from tinycam.types import Vector2, Rect
+import tinycam.properties as p
+from tinycam.utils import index_if
 
 
 class Origin(enum.Enum):
@@ -53,7 +56,18 @@ class CncProjectItem(p.EditableObject):
         self._children = CncProjectItemCollection(self)
 
     def _update(self):
-        pass
+        self._signal_changed()
+
+    offset = p.Property[Vector2](on_update=_update, default=Vector2(0, 0))
+    scale = p.Property[Vector2](on_update=_update, default=Vector2(1, 1))
+
+    @property
+    def bounds(self) -> Rect:
+        return (
+            GLOBALS.GEOMETRY.bounds(self.geometry)
+            .scaled(self.scale)
+            .translated(self.offset)
+        )
 
     def clone(self) -> 'CncProjectItem':
         clone = self.__class__(self.name, self.color)

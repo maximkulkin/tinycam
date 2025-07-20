@@ -35,13 +35,7 @@ class CncProjectItemView[T: CncProjectItem](Composite):
         if self._geometry is None:
             return Box(0, 0, 0, 0, 0, 0).extend(0.2, 0.2, 0.2)
 
-        bounds = GLOBALS.GEOMETRY.bounds(self._geometry)
-
-        if hasattr(self.model, 'scale'):
-            bounds = bounds.scaled(self.model.scale)
-
-        if hasattr(self.model, 'offset'):
-            bounds = bounds.translated(self.model.offset)
+        bounds = self.model.bounds
 
         return Box.from_coords(
             bounds.xmin, bounds.ymin, -0.5,
