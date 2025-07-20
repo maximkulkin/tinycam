@@ -385,8 +385,16 @@ class Rect(np.ndarray):
         return self[1] + self[3]
 
     @property
+    def xmid(self) -> float:
+        return self.x + self.width * 0.5
+
+    @property
+    def ymid(self) -> float:
+        return self.y + self.height * 0.5
+
+    @property
     def center(self) -> Vector2:
-        return Vector2(self.x + self.width * 0.5, self.y + self.height * 0.5)
+        return Vector2(self.xmid, self.ymid)
 
     point = Vector2Proxy((0, 1))
     rect_size = Vector2Proxy((2, 3))
@@ -404,7 +412,7 @@ class Rect(np.ndarray):
 
     def scaled(self, scale: Vector2) -> 'Rect':
         return Rect(
-            self.x, self.y,
+            self.x * scale.x, self.y * scale.y,
             self.width * scale.x, self.height * scale.y,
         )
 
