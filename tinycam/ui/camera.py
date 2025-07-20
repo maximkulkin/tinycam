@@ -1,5 +1,6 @@
 from typing import cast
 
+from tinycam.signals import Signal
 from tinycam.types import Vector2, Vector3, Vector4, Quaternion, Matrix44
 
 
@@ -10,6 +11,8 @@ class Camera:
     BACKWARD = Vector3(0, 0, 1)
     RIGHT = Vector3(1, 0, 0)
     LEFT = Vector3(-1, 0, 0)
+
+    changed = Signal()
 
     def __init__(
         self,
@@ -37,6 +40,7 @@ class Camera:
     def position(self, value: Vector3) -> None:
         self._position = value
         self._invalidate_matrixes()
+        self.changed.emit()
 
     @property
     def rotation(self) -> Quaternion:
@@ -46,6 +50,7 @@ class Camera:
     def rotation(self, value: Quaternion) -> None:
         self._rotation = value
         self._invalidate_matrixes()
+        self.changed.emit()
 
     @property
     def pixel_size(self) -> Vector2:
@@ -54,6 +59,7 @@ class Camera:
     @pixel_size.setter
     def pixel_size(self, value: Vector2):
         self._pixel_size = value
+        self.changed.emit()
 
     @property
     def pixel_center(self) -> Vector2:
@@ -79,6 +85,7 @@ class Camera:
     @device_pixel_ratio.setter
     def device_pixel_ratio(self, value: float):
         self._device_pixel_ratio = value
+        self.changed.emit()
 
     @property
     def near(self) -> float:
@@ -88,6 +95,7 @@ class Camera:
     def near(self, value: float):
         self._near = value
         self._invalidate_projection_matrix
+        self.changed.emit()
 
     @property
     def far(self) -> float:
@@ -97,6 +105,7 @@ class Camera:
     def far(self, value: float):
         self._far = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     def _invalidate_matrixes(self) -> None:
         self._world_matrix = None
@@ -178,6 +187,7 @@ class PerspectiveCamera(Camera):
     def fov(self, value: float) -> None:
         self._fov = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     @property
     def aspect(self) -> float:
@@ -187,6 +197,7 @@ class PerspectiveCamera(Camera):
     def aspect(self, value: float) -> None:
         self._aspect = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     @property
     def pixel_size(self) -> Vector2:
@@ -240,6 +251,7 @@ class OrthographicCamera(Camera):
     def width(self, value: float):
         self._width = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     @property
     def height(self) -> float:
@@ -249,6 +261,7 @@ class OrthographicCamera(Camera):
     def height(self, value: float):
         self._height = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     @property
     def zoom(self) -> float:
@@ -258,6 +271,7 @@ class OrthographicCamera(Camera):
     def zoom(self, value: float):
         self._zoom = value
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     def resize(self, width: float, height: float, keep_aspect: bool = True):
         if keep_aspect:
@@ -266,6 +280,7 @@ class OrthographicCamera(Camera):
         self._width = width
         self._height = height
         self._invalidate_projection_matrix()
+        self.changed.emit()
 
     def _calculate_projection_matrix(self) -> Matrix44:
         w = self.width * 0.5 / self.zoom
