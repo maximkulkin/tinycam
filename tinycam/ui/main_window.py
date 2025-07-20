@@ -112,13 +112,18 @@ class CncMainWindow(QtWidgets.QMainWindow):
         select_tool_action = self._make_action(
             'Select Tool', lambda: self._activate_tool(self._select_tool),
             icon=':/icons/select_tool.svg',
+            shortcut='v',
         )
+        select_tool_action.setCheckable(True)
+        self._select_tool.action = select_tool_action
 
         self.tools_toolbar = QtWidgets.QToolBar()
         self.tools_toolbar.setObjectName('tools_toolbar')
         self.tools_toolbar.setWindowTitle('Tools Toolbar')
         self.addToolBar(self.tools_toolbar)
         self.tools_toolbar.addAction(select_tool_action)
+
+        self._activate_tool(self._select_tool)
 
         self.cnc_connection_toolbar = CncConnectionToolbar()
         self.addToolBar(self.cnc_connection_toolbar)
