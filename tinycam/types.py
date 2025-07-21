@@ -93,6 +93,12 @@ class Vector2(np.ndarray):
     def __truediv__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__truediv__(other).view(Vector2)
 
+    def __eq__(self, other: 'Vector2') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Vector2') -> bool:
+        return not np.array_equal(self, other)
+
     def __str__(self) -> str:
         return f'Vector2({self.x}, {self.y})'
 
@@ -157,6 +163,12 @@ class Vector3(pyrr.Vector3):
     def __truediv__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__truediv__(other).view(Vector3)
 
+    def __eq__(self, other: 'Vector3') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Vector3') -> bool:
+        return not np.array_equal(self, other)
+
     def __str__(self) -> str:
         return f'Vector3({self.x}, {self.y}, {self.z})'
 
@@ -212,6 +224,12 @@ class Vector4(pyrr.Vector4):
     def __truediv__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__truediv__(other).view(Vector4)
 
+    def __eq__(self, other: 'Vector4') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Vector4') -> bool:
+        return not np.array_equal(self, other)
+
     def __str__(self) -> str:
         return f'Vector4({self.x}, {self.y}, {self.z}, {self.w})'
 
@@ -234,6 +252,12 @@ class Quaternion(pyrr.Quaternion):
 
     def __mul__(self, other):
         return super().__mul__(other).view(other.__class__)
+
+    def __eq__(self, other: 'Quaternion') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Quaternion') -> bool:
+        return not np.array_equal(self, other)
 
     def __str__(self) -> str:
         return f'Quaternion({self[0]}, {self[1]}, {self[2]}, {self[3]})'
@@ -416,6 +440,12 @@ class Rect(np.ndarray):
             self.width * scale.x, self.height * scale.y,
         )
 
+    def __eq__(self, other: 'Rect') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Rect') -> bool:
+        return not self == other
+
     def __str__(self) -> str:
         return f'Rect(x={self.x}, y={self.y}, width={self.width}, height={self.height})'
 
@@ -553,6 +583,12 @@ class Box(np.ndarray):
             self.zmax + dz,
         )
 
+    def __eq__(self, other: 'Box') -> bool:
+        return np.array_equal(self, other)
+
+    def __ne__(self, other: 'Box') -> bool:
+        return not self == other
+
     def __str__(self) -> str:
         return f'Box(x={self.x}, y={self.y}, z={self.z}, width={self.width}, height={self.height}, depth={self.depth})'
 
@@ -631,4 +667,5 @@ __all__ = [
     'Quaternion',
     'Matrix44',
     'Rect',
+    'Box',
 ]
