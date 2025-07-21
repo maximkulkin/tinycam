@@ -199,6 +199,7 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         super().__init__(*args, **kwargs)
 
         readonly = self._metadata.has(p.ReadOnly)
+        self._value = Vector2()
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -228,6 +229,7 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         layout.addLayout(row1)
         layout.addLayout(row2)
         self.setLayout(layout)
+        self.setTabOrder(self._x_editor, self._y_editor)
 
     @override
     def value(self) -> Vector2:
@@ -235,6 +237,7 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
 
     @override
     def setValue(self, value: Vector2):
+        self._value = value
         self._x_editor.setValue(value[0])
         self._y_editor.setValue(value[1])
 
@@ -243,6 +246,10 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
             self._x_editor.value(),
             self._y_editor.value(),
         ))
+
+        if value == self._value:
+            return
+
         self.valueChanged.emit(value)
 
 
@@ -253,6 +260,7 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         super().__init__(*args, **kwargs)
 
         readonly = self._metadata.has(p.ReadOnly)
+        self._value = Vector3()
 
         self._x_editor = QtWidgets.QDoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
@@ -294,6 +302,8 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         layout.addLayout(row2)
         layout.addLayout(row3)
         self.setLayout(layout)
+        self.setTabOrder(self._x_editor, self._y_editor)
+        self.setTabOrder(self._y_editor, self._z_editor)
 
     @override
     def value(self) -> Vector3:
@@ -305,6 +315,7 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
 
     @override
     def setValue(self, value: Vector3):
+        self._value = value
         self._x_editor.setValue(value[0])
         self._y_editor.setValue(value[1])
         self._z_editor.setValue(value[2])
@@ -315,6 +326,9 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
             self._y_editor.value(),
             self._z_editor.value(),
         )
+        if value == self._value:
+            return
+
         self.valueChanged.emit(value)
 
 
