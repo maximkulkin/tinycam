@@ -12,6 +12,7 @@ from tinycam.ui.commands import (
     CreateIsolateJobCommand,
     CreateDrillJobCommand,
     DeleteItemsCommand,
+    DuplicateItemCommand,
     UpdateItemsCommand,
 )
 from tinycam.ui.utils import load_icon
@@ -590,6 +591,8 @@ class CncProjectWindow(CncWindow):
 
         popup = QtWidgets.QMenu(self)
 
+        popup.addAction('Duplicate',
+                        lambda: self._duplicate_item(item))
         popup.addAction('Delete', self._delete_items)
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
@@ -599,6 +602,9 @@ class CncProjectWindow(CncWindow):
             popup.addAction('Export G-code', self._export_gcode)
 
         popup.exec(self.mapToGlobal(position))
+
+    def _duplicate_item(self, item: CncProjectItem):
+        GLOBALS.APP.undo_stack.push(DuplicateItemCommand(item))
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(list(self.project.selection)))
