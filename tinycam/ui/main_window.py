@@ -8,7 +8,7 @@ from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2
-from tinycam.ui.commands import ImportFileCommand
+from tinycam.ui.commands import ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
@@ -126,12 +126,23 @@ class CncMainWindow(QtWidgets.QMainWindow):
         transform_tool_action.setCheckable(True)
         self._transform_tool.action = transform_tool_action
 
+        self._flip_horizontally_action = self._make_action(
+            'Flip Horizontally', self._flip_horizontally,
+            icon=':/icons/flip_horizontally.svg',
+        )
+        self._flip_vertically_action = self._make_action(
+            'Flip Vertically', self._flip_vertically,
+            icon=':/icons/flip_vertically.svg',
+        )
+
         self.tools_toolbar = QtWidgets.QToolBar()
         self.tools_toolbar.setObjectName('tools_toolbar')
         self.tools_toolbar.setWindowTitle('Tools Toolbar')
         self.addToolBar(self.tools_toolbar)
         self.tools_toolbar.addAction(select_tool_action)
         self.tools_toolbar.addAction(transform_tool_action)
+        self.tools_toolbar.addAction(self._flip_horizontally_action)
+        self.tools_toolbar.addAction(self._flip_vertically_action)
 
         self._activate_tool(self._select_tool)
 
@@ -274,6 +285,16 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
     def _activate_tool(self, tool: CncTool):
         self.canvas_2d.tool = tool
+
+    def _flip_horizontally(self):
+        GLOBALS.APP.undo_stack.push(FlipHorizontallyCommand(
+            list(self.project.selection),
+        ))
+
+    def _flip_vertically(self):
+        GLOBALS.APP.undo_stack.push(FlipVerticallyCommand(
+            list(self.project.selection),
+        ))
 
     def _edit_settings(self):
         settings_dialog = CncSettingsDialog(GLOBALS.APP.settings, self)

@@ -9,5 +9,7 @@
     <file>icons/touchpad.svg</file>
     <file>icons/select_tool.svg</file>
     <file>icons/transform_tool.svg</file>
+    <file>icons/flip_horizontally.svg</file>
+    <file>icons/flip_vertically.svg</file>
   </qresource>
 </RCC>
