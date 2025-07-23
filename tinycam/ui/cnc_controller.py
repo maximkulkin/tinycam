@@ -293,7 +293,7 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         super().__init__()
 
         font = QtGui.QFont()
-        font.setPointSize(48)
+        font.setPointSize(24)
 
         self._label = QtWidgets.QLabel(label)
         self._label.setAlignment(
@@ -305,12 +305,14 @@ class CncCoordinateDisplay(QtWidgets.QWidget):
         self._value_display.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
+        self._value_display.setStyleSheet("background-color: black; padding: 5; margin: 5;")
         self._value_display.setFont(font)
 
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._label)
         layout.addWidget(self._value_display)
+        layout.setStretch(1, 1)
 
         self.setLayout(layout)
 
@@ -334,24 +336,26 @@ class CncControllerStateDisplayWindow(CncWindow):
         self._z_readout = CncCoordinateDisplay('Z')
 
         font = QtGui.QFont()
-        font.setPointSize(24)
+        font.setPointSize(16)
 
-        self._feedrate_label = QtWidgets.QLabel("Feedrate:")
+        self._feedrate_label = QtWidgets.QLabel("Feedrate:  ")
         self._feedrate_label.setFont(font)
         self._feedrate_display = QtWidgets.QLabel("0")
         self._feedrate_display.setFont(font)
-        self._spindle_label = QtWidgets.QLabel("Spindle: ")
+        self._spindle_label = QtWidgets.QLabel("Spindle:  ")
         self._spindle_label.setFont(font)
         self._spindle_display = QtWidgets.QLabel("0")
         self._spindle_display.setFont(font)
 
         additional_layout = QtWidgets.QGridLayout()
+        additional_layout.setSpacing(5)
         additional_layout.addWidget(self._feedrate_label, 0, 0, Qt.AlignmentFlag.AlignRight)
         additional_layout.addWidget(self._feedrate_display, 0, 1, Qt.AlignmentFlag.AlignLeft)
         additional_layout.addWidget(self._spindle_label, 1, 0, Qt.AlignmentFlag.AlignRight)
         additional_layout.addWidget(self._spindle_display, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(0)
         layout.addWidget(self._x_readout)
         layout.addWidget(self._y_readout)
         layout.addWidget(self._z_readout)
@@ -494,3 +498,158 @@ class CncControllerJogControlsWindow(CncWindow):
         self._xy_step_edit.setSuffix(format_suffix('{units}'))
         self._z_step_edit.setSuffix(format_suffix('{units}'))
         self._feedrate_edit.setSuffix(format_suffix('{units}/min'))
+
+
+class OverrideSlider(QtWidgets.QWidget):
+    valueChanged = QtCore.Signal(int)
+
+    def __init__(self):
+        super().__init__()
+
+        self._slider = QtWidgets.QSlider(Qt.Horizontal)
+        self._slider.setMinimum(1)
+        self._slider.setMaximum(200)
+        self._slider.setValue(100)
+        self._slider.setTickInterval(10)
+        self._slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        self._slider.valueChanged.connect(self._on_slider_value_changed)
+
+        self._value_edit = QtWidgets.QSpinBox()
+        self._value_edit.setMinimum(1)
+        self._value_edit.setMaximum(1000)
+        self._value_edit.setValue(100)
+        self._value_edit.setSuffix(' %')
+        self._value_edit.editingFinished.connect(self._on_value_edit_changed)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._slider)
+        layout.addWidget(self._value_edit)
+        self.setLayout(layout)
+
+    @property
+    def value(self) -> int:
+        return self._value_edit.value()
+
+    @value.setter
+    def value(self, new_value: int):
+        self._slider.setValue(new_value)
+        self._value_edit.setValue(new_value)
+
+    def _on_slider_value_changed(self, value: int):
+        self._value_edit.setValue(value)
+        self.valueChanged.emit(value)
+
+    def _on_value_edit_changed(self):
+        value = self._value_edit.value()
+        self._slider.setValue(value)
+        self.valueChanged.emit(value)
+
+
+class CncControllerControlsWindow(CncWindow):
+
+    def __init__(self, project: CncProject, controller: grbl.Controller, *args, **kwargs):
+        super().__init__(project, *args, **kwargs)
+
+        self.setObjectName('cnc_controller_controls')
+        self.setWindowTitle('CNC controls')
+
+        self._controller = controller
+
+        self._home_xy_button = QtWidgets.QPushButton('Home XY')
+        self._home_xy_button.clicked.connect(self._on_home_xy_clicked)
+
+        self._home_z_button = QtWidgets.QPushButton('Home Z')
+        self._home_z_button.clicked.connect(self._on_home_z_clicked)
+
+        self._zero_xy_button = QtWidgets.QPushButton('Zero XY')
+        self._zero_xy_button.clicked.connect(self._on_zero_xy_clicked)
+
+        self._zero_z_button = QtWidgets.QPushButton('Zero Z')
+        self._zero_z_button.clicked.connect(self._on_zero_z_clicked)
+
+        self._reset_button = QtWidgets.QPushButton('Reset')
+        self._reset_button.clicked.connect(self._on_reset_clicked)
+
+        self._unlock_button = QtWidgets.QPushButton('Unlock')
+        self._unlock_button.clicked.connect(self._on_unlock_clicked)
+
+        self._feedrate_override = OverrideSlider()
+        self._feedrate_override.value = 100
+        self._feedrate_override.valueChanged.connect(self._on_feedrate_override_changed)
+
+        self._travel_override = OverrideSlider()
+        self._travel_override.value = 100
+        self._travel_override.valueChanged.connect(self._on_travel_override_changed)
+
+        self._spindle_override = OverrideSlider()
+        self._spindle_override.value = 100
+        self._spindle_override.valueChanged.connect(self._on_spindle_override_changed)
+
+        controls_layout = QtWidgets.QGridLayout()
+        # controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.addWidget(self._home_xy_button, 0, 0)
+        controls_layout.addWidget(self._home_z_button, 0, 1)
+        controls_layout.addWidget(self._zero_xy_button, 0, 2)
+        controls_layout.addWidget(self._zero_z_button, 0, 3)
+        controls_layout.addWidget(self._reset_button, 1, 2)
+        controls_layout.addWidget(self._unlock_button, 1, 3)
+
+        controls_widget = QtWidgets.QGroupBox('Controls')
+        controls_widget.setLayout(controls_layout)
+
+        overrides_layout = QtWidgets.QGridLayout()
+        overrides_layout.setContentsMargins(10, 0, 0, 0)
+        overrides_layout.setSpacing(0)
+        overrides_layout.addWidget(QtWidgets.QLabel('Feed Rate:'), 0, 0)
+        overrides_layout.addWidget(self._feedrate_override, 0, 1)
+        overrides_layout.addWidget(QtWidgets.QLabel('Travel Speed:'), 1, 0)
+        overrides_layout.addWidget(self._travel_override, 1, 1)
+        overrides_layout.addWidget(QtWidgets.QLabel('Spindle Speed:'), 2, 0)
+        overrides_layout.addWidget(self._spindle_override, 2, 1)
+
+        overrides_widget = QtWidgets.QGroupBox('Overrides')
+        overrides_widget.setLayout(overrides_layout)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(20)
+        layout.addWidget(controls_widget)
+        layout.addWidget(overrides_widget)
+        layout.addStretch()
+
+        self._main_widget = QtWidgets.QWidget(self)
+        self._main_widget.setLayout(layout)
+        self.setWidget(self._main_widget)
+
+        self._controller.ready_changed.connect(self._on_ready_changed)
+        self._on_ready_changed(self._controller.ready)
+
+    def _on_ready_changed(self, ready: bool):
+        # self._main_widget.setEnabled(ready)
+        self._main_widget.setEnabled(True)
+
+    def _on_home_xy_clicked(self):
+        pass
+
+    def _on_home_z_clicked(self):
+        pass
+
+    def _on_zero_xy_clicked(self):
+        pass
+
+    def _on_zero_z_clicked(self):
+        pass
+
+    def _on_reset_clicked(self):
+        pass
+
+    def _on_unlock_clicked(self):
+        pass
+
+    def _on_feedrate_override_changed(self, value: int):
+        pass
+
+    def _on_travel_override_changed(self, value: int):
+        pass
+
+    def _on_spindle_override_changed(self, value: int):
+        pass

@@ -16,7 +16,8 @@ from tinycam.ui.tools import CncTool, SelectTool, TransformTool
 from tinycam.ui.item_properties import CncProjectItemPropertiesWindow
 from tinycam.ui.cnc_controller import (
     CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
-    CncControllerConsoleWindow, CncConnectionToolbar,
+    CncControllerControlsWindow, CncControllerConsoleWindow,
+    CncConnectionToolbar,
 )
 from tinycam.ui.settings import CncSettingsDialog
 from tinycam.ui.utils import load_icon
@@ -180,6 +181,10 @@ class CncMainWindow(QtWidgets.QMainWindow):
         )
         self._add_dock_window(
             CncControllerJogControlsWindow(self.project, GLOBALS.CNC_CONTROLLER),
+            Qt.DockWidgetArea.RightDockWidgetArea,
+        )
+        self._add_dock_window(
+            CncControllerControlsWindow(self.project, GLOBALS.CNC_CONTROLLER),
             Qt.DockWidgetArea.RightDockWidgetArea,
         )
         self._add_dock_window(
