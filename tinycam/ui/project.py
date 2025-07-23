@@ -591,6 +591,8 @@ class CncProjectWindow(CncWindow):
 
         popup = QtWidgets.QMenu(self)
 
+        popup.addAction('Hide' if item.visible else 'Show',
+                        lambda: self._toggle_item_visibility(item))
         popup.addAction('Duplicate',
                         lambda: self._duplicate_item(item))
         popup.addAction('Delete', self._delete_items)
@@ -602,6 +604,11 @@ class CncProjectWindow(CncWindow):
             popup.addAction('Export G-code', self._export_gcode)
 
         popup.exec(self.mapToGlobal(position))
+
+    def _toggle_item_visibility(self, item: CncProjectItem):
+        GLOBALS.APP.undo_stack.push(
+            UpdateItemsCommand([item], {'visible': not item.visible})
+        )
 
     def _duplicate_item(self, item: CncProjectItem):
         GLOBALS.APP.undo_stack.push(DuplicateItemCommand(item))
