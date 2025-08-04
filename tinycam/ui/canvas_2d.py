@@ -17,7 +17,7 @@ from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
-from tinycam.ui.tools import CncTool, SelectTool
+from tinycam.ui.tools import CncTool, DummyTool
 from tinycam.ui.utils import vector2
 from tinycam.types import Vector2, Vector3
 
@@ -38,7 +38,8 @@ class CncCanvas2D(CncView):
 
         self._animation = None
 
-        self._tool = None
+        self._default_tool = DummyTool(self.project, self)
+        self._tool = self._default_tool
 
     def initializeGL(self):
         super().initializeGL()
@@ -70,10 +71,26 @@ class CncCanvas2D(CncView):
     @tool.setter
     def tool(self, value: CncTool):
         if self._tool is not None:
+            self._tool.deactivated.disconnect(self._on_tool_deactivated)
             self._tool.deactivate()
         self._tool = value
         if self.ctx is not None:
+            self.tool.deactivated.connect(self._on_tool_deactivated)
             self._tool.activate()
+
+    @property
+    def default_tool(self) -> CncTool:
+        return self._default_tool
+
+    @default_tool.setter
+    def default_tool(self, value: CncTool):
+        self._default_tool.deactivate()
+        self._default_tool = value
+        self._default_tool.activate()
+
+    def _on_tool_deactivated(self):
+        self._tool = self._default_tool
+        self._tool.activate()
 
     def event(self, event: QtCore.QEvent) -> bool:
         super().event(event)

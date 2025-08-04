@@ -109,23 +109,21 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.zoom_toolbar.addAction(zoom_out_action)
         self.zoom_toolbar.addAction(zoom_fit_action)
 
+        # Tools
         self._select_tool = SelectTool(self.project, self.canvas_2d)
-        select_tool_action = self._make_action(
-            'Select Tool', lambda: self._activate_tool(self._select_tool),
+        self._transform_tool = TransformTool(self.project, self.canvas_2d)
+
+        select_tool_action = self._make_tool_action(
+            'Select Tool', self._select_tool,
             icon=':/icons/select_tool.svg',
             shortcut='v',
         )
-        select_tool_action.setCheckable(True)
-        self._select_tool.action = select_tool_action
 
-        self._transform_tool = TransformTool(self.project, self.canvas_2d)
-        transform_tool_action = self._make_action(
-            'Transform Tool', lambda: self._activate_tool(self._transform_tool),
+        transform_tool_action = self._make_tool_action(
+            'Transform Tool', self._transform_tool,
             icon=':/icons/transform_tool.svg',
             shortcut='e',
         )
-        transform_tool_action.setCheckable(True)
-        self._transform_tool.action = transform_tool_action
 
         self._flip_horizontally_action = self._make_action(
             'Flip Horizontally', self._flip_horizontally,
@@ -145,6 +143,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.tools_toolbar.addAction(self._flip_horizontally_action)
         self.tools_toolbar.addAction(self._flip_vertically_action)
 
+        self.canvas_2d.default_tool = self._select_tool
         self._activate_tool(self._select_tool)
 
         self.cnc_connection_toolbar = CncConnectionToolbar()
@@ -207,7 +206,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
         label: str,
         callback: Callable[[], None],
         icon: str | None = None,
-        shortcut: str | None = None
+        shortcut: str | None = None,
+        checkable: bool = False,
     ) -> QtGui.QAction:
         action = QtGui.QAction(label, self)
         action.triggered.connect(callback)
@@ -215,6 +215,25 @@ class CncMainWindow(QtWidgets.QMainWindow):
             action.setIcon(QtGui.QIcon(icon))
         if shortcut is not None:
             action.setShortcut(shortcut)
+        action.setCheckable(checkable)
+        return action
+
+    def _make_tool_action(
+        self,
+        label: str,
+        tool: CncTool,
+        icon: str | None = None,
+        shortcut: str | None = None,
+    ) -> QtGui.QAction:
+        action = self._make_action(
+            label,
+            lambda: self._activate_tool(tool),
+            icon=icon,
+            shortcut=shortcut,
+            checkable=True,
+        )
+        tool.activated.connect(lambda: action.setChecked(True))
+        tool.deactivated.connect(lambda: action.setChecked(False))
         return action
 
     def _import_file(self):
