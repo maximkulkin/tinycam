@@ -1,10 +1,11 @@
 import moderngl as mgl
 import numpy as np
 from tinycam.types import Vector2, Vector3, Vector4
-from tinycam.ui.view import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, RenderState
+from tinycam.ui.view_items.core import Node3D
 
 
-class DirectionMarkers(ViewItem):
+class DirectionMarkers(Node3D):
     def __init__(
         self,
         context: Context,

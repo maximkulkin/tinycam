@@ -342,6 +342,8 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         super().__init__(*args, **kwargs)
         self.setMouseTracking(True)
 
+        self.ctx = None
+
         self._items: list[ViewItem] = []
         if camera is None:
             camera = PerspectiveCamera()

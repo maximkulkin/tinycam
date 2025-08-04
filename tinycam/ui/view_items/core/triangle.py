@@ -1,21 +1,18 @@
 import moderngl
 import numpy as np
-from tinycam.types import Vector3, Vector4, Quaternion, Matrix44
-from tinycam.ui.view import Context, ViewItem, RenderState
+from tinycam.types import Vector4, Matrix44
+from tinycam.ui.view import Context, RenderState
+from tinycam.ui.view_items.core import Node3D
 
 
-class Triangle(ViewItem):
+class Triangle(Node3D):
     def __init__(
         self,
         context: Context,
-        position: Vector3 = Vector3(),
-        rotation: Quaternion = Quaternion(),
         color: Vector4 = Vector4(1, 1, 1, 1),
     ):
         super().__init__(context)
 
-        self._position = position
-        self._rotation = rotation
         self._program = self.context.program(
             vertex_shader='''
                 #version 410 core
@@ -53,14 +50,9 @@ class Triangle(ViewItem):
         self._program['color'] = color
 
     def render(self, state: RenderState):
-        model_matrix = (
-            Matrix44.from_translation(self._position) *
-            Matrix44.from_quaternion(self._rotation)
-        )
-
         camera = state.camera
         self._program['mvp'] = (
-            (camera.projection_matrix * camera.view_matrix * model_matrix)
+            (camera.projection_matrix * camera.view_matrix * self.world_matrix)
         )
 
         with self.context.scope(enable=moderngl.DEPTH_TEST):

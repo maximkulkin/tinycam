@@ -3,13 +3,14 @@ import moderngl as mgl
 import numpy as np
 from typing import Optional
 from tinycam.types import Vector2, Vector4
-from tinycam.ui.view import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, RenderState
+from tinycam.ui.view_items.core import Node3D
 
 
 type Point2 = Vector2
 
 
-class Line2D(ViewItem):
+class Line2D(Node3D):
     def __init__(
         self,
         context: Context,
@@ -120,8 +121,9 @@ class Line2D(ViewItem):
         self._program['color'].write(self._color.astype('f4').tobytes())
 
     def render(self, state: RenderState):
+        camera = state.camera
         self._program['mvp'].write(
-            (state.camera.projection_matrix * state.camera.view_matrix).astype('f4').tobytes()
+            camera.projection_matrix * camera.view_matrix * self.world_matrix
         )
 
         self._vao.render()

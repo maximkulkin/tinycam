@@ -2,7 +2,7 @@ from tinycam.commands import CncPathType
 from tinycam.types import Vector2, Vector3, Vector4
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.direction_markers import DirectionMarkers
-from tinycam.ui.view_items.core.composite import Composite
+from tinycam.ui.view_items.core import Node3D
 from tinycam.ui.view_items.core.line3d import Line3D
 
 
@@ -12,7 +12,7 @@ PATH_COLORS = {
 }
 
 
-class CncPathView(Composite):
+class CncPathView(Node3D):
     def __init__(
         self,
         context: Context,
@@ -33,7 +33,7 @@ class CncPathView(Composite):
                 width=width,
                 color=self._color,
             )
-            self.add_item(self._line)
+            self.add_child(self._line)
 
         marker_positions = []
         marker_directions = []
@@ -52,7 +52,7 @@ class CncPathView(Composite):
                 size=Vector2(0.5, 0.25),
                 color=self._color,
             )
-            self.add_item(self._markers)
+            self.add_child(self._markers)
 
     @property
     def color(self) -> Vector4:

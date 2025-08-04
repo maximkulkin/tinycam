@@ -9,9 +9,6 @@ from tinycam.ui.view_items.commands_view import CncCommandsView
 
 class CncDrillJobView(CncProjectItemView[CncDrillJob]):
 
-    def _model_matrix(self):
-        return Matrix44.identity()
-
     def _update_geometry(self):
         model = self._model
         tool_diameter = model.tool.get_diameter(model.cut_depth) if model.tool is not None else 0

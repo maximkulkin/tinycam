@@ -2,17 +2,15 @@ import moderngl
 import numpy as np
 from typing import Optional
 from tinycam.types import Vector3, Vector4
-from tinycam.ui.view import Context, ViewItem, RenderState
+from tinycam.ui.view import Context, RenderState
+from tinycam.ui.view_items.core import Node3D
 
 
-type Point3 = Vector3
-
-
-class Line3D(ViewItem):
+class Line3D(Node3D):
     def __init__(
         self,
         context: Context,
-        points: list[Point3],
+        points: list[Vector3],
         closed: bool = False,
         color: Vector4 = Vector4(0.8, 0.8, 0.8, 1.0),
         width: Optional[float] = None,

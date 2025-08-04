@@ -1,15 +1,13 @@
 import moderngl as mgl
-import shapely as s
-from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
-from tinycam.types import Vector4, Matrix44, Box
+from tinycam.types import Vector3, Vector4, Box
 from tinycam.ui.view import Context, RenderState
-from tinycam.ui.view_items.core.composite import Composite
+from tinycam.ui.view_items.core import Node3D
 from tinycam.ui.view_items.core.polygon import Polygon
 from tinycam.ui.utils import qcolor_to_vec4
 
 
-class CncProjectItemView[T: CncProjectItem](Composite):
+class CncProjectItemView[T: CncProjectItem](Node3D):
     priority = 100
 
     def __init__(self, context: Context, model: T):
@@ -21,6 +19,9 @@ class CncProjectItemView[T: CncProjectItem](Composite):
         self._geometry_view = None
         self._tool_diameter = None
         self._update_geometry()
+
+        # self.position = Vector3.from_vector2(self.model.offset)
+        # self.scale = Vector3.from_vector2(self.model.scale, z=1.0)
 
     @property
     def model(self) -> T:
@@ -48,26 +49,19 @@ class CncProjectItemView[T: CncProjectItem](Composite):
             return
 
         if self._geometry_view is not None:
-            self.remove_item(self._geometry_view)
+            self.remove_child(self._geometry_view)
 
         if geometry is not None:
             self._geometry_view = Polygon(
                 self.context,
                 geometry,
-                model_matrix=self._model_matrix(),
                 color=qcolor_to_vec4(self._model.color),
             )
             self._geometry = geometry
-            self.add_item(self._geometry_view)
-
-    def _model_matrix(self):
-        return Matrix44.identity()
+            self.add_child(self._geometry_view)
 
     def _on_model_changed(self, model: T):
         self._update_geometry()
-
-        for item in self.items:
-            item.model_matrix = self._model_matrix()
 
     def render(self, state: RenderState):
         if not self._model.visible:
@@ -75,15 +69,20 @@ class CncProjectItemView[T: CncProjectItem](Composite):
 
         if state.picking:
             color = state.register_pickable(self)
-            color = Vector4(float(color[0]) / 255.0, float(color[1]) / 255.0, float(color[2]) / 255.0, float(color[3]) / 255.0)
+            color = Vector4(
+                float(color[0]) / 255.0,
+                float(color[1]) / 255.0,
+                float(color[2]) / 255.0,
+                float(color[3]) / 255.0,
+            )
         else:
             color = self._model.color
             if self._model.selected:
                 color = color.lighter(150)
             color = qcolor_to_vec4(color)
 
-        for item in self.items:
-            item.color = color
+        if self._geometry_view is not None:
+            self._geometry_view.color = color
 
         with self.context.scope(disable=mgl.DEPTH_TEST, wireframe=self._model.debug, depth_func='<='):
             super().render(state)

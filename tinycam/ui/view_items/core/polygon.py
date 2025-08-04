@@ -2,17 +2,16 @@ import moderngl as mgl
 import numpy as np
 import shapely
 import shapely.geometry as sg
-from tinycam.types import Vector4, Matrix44
-from tinycam.ui.view import Context, ViewItem, RenderState
-from typing import Union, Optional
+from tinycam.types import Vector4
+from tinycam.ui.view import Context, RenderState
+from tinycam.ui.view_items.core import Node3D
 
 
-class Polygon(ViewItem):
+class Polygon(Node3D):
     def __init__(
         self,
         context: Context,
-        polygon: Union[shapely.Polygon, shapely.MultiPolygon],
-        model_matrix: Optional[Matrix44] = None,
+        polygon: shapely.Polygon | shapely.MultiPolygon,
         color: Vector4 = Vector4(1, 1, 1, 1),
     ):
         super().__init__(context)
@@ -40,7 +39,6 @@ class Polygon(ViewItem):
             ''',
         )
 
-        self._model_matrix = model_matrix if model_matrix is not None else Matrix44.identity()
         self._color = color
         self._program['color'].value = color
 
@@ -81,17 +79,10 @@ class Polygon(ViewItem):
         self._color = value
         self._program['color'].value = self._color
 
-    @property
-    def model_matrix(self) -> Matrix44:
-        return self._model_matrix
-
-    @model_matrix.setter
-    def model_matrix(self, matrix: Matrix44):
-        self._model_matrix = matrix
-
     def render(self, state: RenderState):
+        camera = state.camera
         self._program['mvp'].write(
-            (state.camera.projection_matrix * state.camera.view_matrix * self._model_matrix)
+            (camera.projection_matrix * camera.view_matrix * self.world_matrix)
         )
 
         self._vao.render()
