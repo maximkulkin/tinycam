@@ -1,6 +1,7 @@
 from .create_circle import CreateCircleCommand
 from .create_drill_job import CreateDrillJobCommand
 from .create_isolate_job import CreateIsolateJobCommand
+from .create_polyline import CreatePolylineCommand
 from .create_rectangle import CreateRectangleCommand
 from .flip_horizontally import FlipHorizontallyCommand
 from .flip_vertically import FlipVerticallyCommand
@@ -17,6 +18,7 @@ __all__ = [
     'CreateCircleCommand',
     'CreateDrillJobCommand',
     'CreateIsolateJobCommand',
+    'CreatePolylineCommand',
     'CreateRectangleCommand',
     'FlipHorizontallyCommand',
     'FlipVerticallyCommand',

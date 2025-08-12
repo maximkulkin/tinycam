@@ -14,6 +14,7 @@ from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
 from tinycam.ui.tools import (
     CncTool, SelectTool, TransformTool, CircleTool, RectangleTool,
+    PolylineTool
 )
 from tinycam.ui.item_properties import CncProjectItemPropertiesWindow
 from tinycam.ui.cnc_controller import (
@@ -116,6 +117,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._transform_tool = TransformTool(self.project, self.canvas_2d)
         self._circle_tool = CircleTool(self.project, self.canvas_2d)
         self._rectangle_tool = RectangleTool(self.project, self.canvas_2d)
+        self._polyline_tool = PolylineTool(self.project, self.canvas_2d)
 
         select_tool_action = self._make_tool_action(
             'Select Tool', self._select_tool,
@@ -150,6 +152,12 @@ class CncMainWindow(QtWidgets.QMainWindow):
             shortcut='c',
         )
 
+        polyline_tool_action = self._make_tool_action(
+            'Line', self._polyline_tool,
+            icon=':/icons/polyline_tool.svg',
+            shortcut='l',
+        )
+
         self.tools_toolbar = QtWidgets.QToolBar()
         self.tools_toolbar.setObjectName('tools_toolbar')
         self.tools_toolbar.setWindowTitle('Tools Toolbar')
@@ -158,6 +166,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.tools_toolbar.addAction(transform_tool_action)
         self.tools_toolbar.addAction(self._flip_horizontally_action)
         self.tools_toolbar.addAction(self._flip_vertically_action)
+        self.tools_toolbar.addAction(polyline_tool_action)
         self.tools_toolbar.addAction(rectangle_tool_action)
         self.tools_toolbar.addAction(circle_tool_action)
 
