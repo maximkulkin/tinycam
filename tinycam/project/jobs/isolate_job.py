@@ -1,5 +1,3 @@
-import math
-
 from PySide6 import QtGui
 
 from tinycam.commands import CncCommand, CncCommandBuilder
@@ -10,7 +8,7 @@ from tinycam.project.jobs.job import CncJob
 import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.tasks import run_task
-from tinycam.tools import CncTool, CncToolType
+from tinycam.tools import CncTool
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
@@ -45,47 +43,47 @@ with s.SETTINGS.section('jobs/isolate') as S:
 
 
 class CncIsolateJob(CncJob):
-    def __init__(self,
-                 source_item: CncProjectItem,
-                 color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
-                 tool: CncTool | None = None,
-                 spindle_speed: int | None = None,
-                 cut_depth: float | None = None,
-                 cut_speed: float | None = None,
-                 travel_height: float | None = None,
-                 travel_speed: float | None = None,
-                 pass_count: int | None = None,
-                 pass_overlap: int | None = None):
-        super().__init__(
-            'Isolate %s' % source_item.name,
-            color=color,
-        )
+    def __init__(self):
+        super().__init__()
 
-        self._source_item = source_item
+        self._source_item = None
+        self.color = QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6)
 
         self._show_outline = True
         self._show_path = True
-        self._tool = tool
-        self._pass_count = pass_count or PASS_COUNT.value
-        self._pass_overlap = pass_overlap or PASS_OVERLAP.value
-        self._cut_depth = cut_depth or CUT_DEPTH.value
-        self._cut_speed = cut_speed or CUT_SPEED.value
-        self._spindle_speed = spindle_speed or SPINDLE_SPEED.value
-        self._travel_height = travel_height or TRAVEL_HEIGHT.value
-        self._travel_speed = travel_speed or TRAVEL_SPEED.value
-
-        self._geometry = None
+        self._tool = None
+        self._pass_count = PASS_COUNT.value
+        self._pass_overlap = PASS_OVERLAP.value
+        self._cut_depth = CUT_DEPTH.value
+        self._cut_speed = CUT_SPEED.value
+        self._spindle_speed = SPINDLE_SPEED.value
+        self._travel_height = TRAVEL_HEIGHT.value
+        self._travel_speed = TRAVEL_SPEED.value
 
         self._updating_geometry = False
         self._update_geometry()
 
-    @property
-    def geometry(self):
-        return self._geometry
-
     def _update(self):
         self._update_geometry()
         self._signal_changed()
+
+    @property
+    def source_item(self) -> CncProjectItem | None:
+        return self._source_item
+
+    @source_item.setter
+    def source_item(self, value: CncProjectItem):
+        if self._source_item is value:
+            return
+
+        if self._source_item is not None:
+            self._source_item.updated.disconnect(self._on_source_item_updated)
+
+        self._source_item = value
+        self.name = f'Isolate {self._source_item.name}'
+        if self._source_item is not None:
+            self._source_item.updated.connect(self._on_source_item_updated)
+            self._update_geometry()
 
     show_outline = p.Property[bool](on_update=_update, metadata=[p.Order(0)])
     show_path = p.Property[bool](on_update=_update, metadata=[p.Order(1)])
@@ -127,11 +125,15 @@ class CncIsolateJob(CncJob):
         p.Suffix('{units}/min'),
     ])
 
-    def _on_source_item_changed(self, _item):
-        self._update()
+    def _on_source_item_updated(self, _item):
+        self._update_geometry()
 
     def _update_geometry(self):
         if self._updating_geometry:
+            return
+
+        if self.source_item is None:
+            self._geometry = None
             return
 
         if self.tool is None:
@@ -150,13 +152,7 @@ class CncIsolateJob(CncJob):
             G = GLOBALS.GEOMETRY
             g = G.simplify(
                 G.buffer(
-                    G.translate(
-                        G.scale(
-                            self._source_item.geometry,
-                            self._source_item.scale,
-                        ),
-                        self._source_item.offset,
-                    ),
+                    self._source_item.geometry,
                     tool_radius,
                 ),
                 # TODO: parametrize into settings
@@ -211,13 +207,12 @@ class CncIsolateJob(CncJob):
 
             builder.set_cut_speed(self.travel_speed)
             builder.travel(z=self.travel_height)
-            point = self._transform_point(points[0])
+            point = points[0]
             builder.travel(x=point[0], y=point[1])
             builder.set_cut_speed(self.cut_speed)
             builder.cut(z=-self.cut_depth)
 
             for point in points[1:]:
-                point = self._transform_point(point)
                 builder.cut(x=point[0], y=point[1])
 
         builder.travel(z=self.travel_height)
@@ -225,6 +220,3 @@ class CncIsolateJob(CncJob):
         builder.travel(z=start_position[2])
 
         return builder.build()
-
-    def _transform_point(self, point: tuple[float, float]) -> tuple[float, float]:
-        return point * self._source_item.scale + self._source_item.offset

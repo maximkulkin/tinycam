@@ -94,7 +94,8 @@ class CncProject(CncProjectItem):
             return item in self._items
 
     def __init__(self):
-        super().__init__('Project')
+        super().__init__()
+        self.name = 'Project'
         self._selection = self.Selection(self)
 
     @property

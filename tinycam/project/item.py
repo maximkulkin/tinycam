@@ -1,13 +1,15 @@
 from collections.abc import Sequence
 import enum
+import inspect
 from typing import ForwardRef
 
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
 
+from tinycam.geometry import Shape
 from tinycam.globals import GLOBALS
 from tinycam.signals import Signal
-from tinycam.types import Vector2, Rect
+from tinycam.types import Rect
 import tinycam.properties as p
 from tinycam.utils import index_if
 
@@ -45,35 +47,59 @@ class CncProjectItem(p.EditableObject):
     # e.g. UI can update item geometry.
     updated = Signal[ForwardRef('CncProjectItem')]()
 
-    def __init__(self, name: str, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
+    def __init__(self):  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__()
-        self._name = name
-        self._color = color
+
+        self._name = 'Item'
+        self._color = Qt.black
         self._visible = True
         self._debug = False
         self._selected = False
         self._parent = None
         self._children = CncProjectItemCollection(self)
+        self._geometry = GLOBALS.GEOMETRY.group([])
+        self._bounds = None
 
     def _update(self):
         self._signal_changed()
 
-    offset = p.Property[Vector2](on_update=_update, default=Vector2(0, 0))
-    scale = p.Property[Vector2](on_update=_update, default=Vector2(1, 1))
+    @property
+    def geometry(self) -> Shape:
+        return self._geometry
+
+    @geometry.setter
+    def geometry(self, value: Shape):
+        self._geometry = value
+        self._bounds = None
+        self._signal_updated()
 
     @property
     def bounds(self) -> Rect:
-        return (
-            GLOBALS.GEOMETRY.bounds(self.geometry)
-            .scaled(self.scale)
-            .translated(self.offset)
-        )
+        if self._bounds is None:
+            self._bounds = GLOBALS.GEOMETRY.bounds(self.geometry)
+
+        return self._bounds
 
     def clone(self) -> 'CncProjectItem':
-        clone = self.__class__(self.name, self.color)
-        clone.visible = self.visible
-        clone.selected = self.selected
-        # TODO: clone children?
+        clone = self.__class__()
+
+        for attr in dir(self):
+            if attr.startswith('_') or attr == 'children':
+                continue
+
+            value = getattr(self, attr, None)
+            if inspect.ismethod(value):
+                continue
+
+            try:
+                setattr(clone, attr, value)
+            except AttributeError:
+                # Attribute is readonly
+                pass
+
+        for child in self.children:
+            clone.add_child(child.clone())
+
         return clone
 
     def _signal_updated(self):
