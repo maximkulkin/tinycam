@@ -216,6 +216,9 @@ class Geometry:
     def contains(self, shape: AnyShape, point: PointLike) -> bool:
         return shapely.contains_xy(shape, get_x(point), get_y(point))
 
+    def intersects(self, shape1: AnyShape, shape2: AnyShape) -> bool:
+        return shapely.intersects(shape1, shape2)
+
     # boolean operations
 
     def group(self, *shapes: list[AnyShape]) -> Group:
