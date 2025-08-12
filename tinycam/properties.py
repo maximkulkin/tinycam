@@ -186,6 +186,11 @@ class Label:
 
 
 @dataclass
+class Description:
+    description: str
+
+
+@dataclass
 class Suffix:
     suffix: str
 
