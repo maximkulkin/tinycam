@@ -1,9 +1,11 @@
 import enum
 from functools import reduce
+from typing import cast
 
 from PySide6 import QtWidgets
 from PySide6.QtCore import QEvent
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
 
 from tinycam.globals import GLOBALS
 from tinycam.ui.commands import MoveItemsCommand, ScaleItemsCommand
@@ -12,6 +14,7 @@ from tinycam.project import CncProjectItem
 from tinycam.ui.tools import CncTool
 from tinycam.ui.utils import vector2
 from tinycam.ui.view_items.canvas import Circle, Rectangle
+from tinycam.ui.view_items.core import Node3D
 
 
 class ControlType(enum.Enum):
@@ -47,6 +50,7 @@ class TransformTool(CncTool):
 
         self._selected_items = []
 
+        self._bounds = None
         self._offsets = None
         self._scales = None
 
@@ -61,6 +65,7 @@ class TransformTool(CncTool):
     def activate(self):
         super().activate()
 
+        self.view.grabKeyboard()
         if not self._controls:
             self._init_controls()
 
@@ -81,6 +86,9 @@ class TransformTool(CncTool):
         self.project.selection.changed.disconnect(self._on_selection_changed)
         for item in self._selected_items:
             item.changed.disconnect(self._on_selected_item_changed)
+
+        self.view.setCursor(Qt.CursorShape.ArrowCursor)
+        self.view.releaseKeyboard()
 
         super().deactivate()
 
@@ -113,68 +121,101 @@ class TransformTool(CncTool):
                 assert self._control_type is not None
                 end_point = self.view.camera.unproject(point).xy
 
-                bounds = reduce(lambda a, b: a.merge(b),
-                                [item.bounds for item in self._selected_items])
+                is_proportional = bool(
+                    event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                )
 
                 match self._control_type:
                     case ControlType.RESIZE_TOP_LEFT:
+                        scale = Vector2(
+                            (self._bounds.width - end_point.x + self._start_point.x) / self._bounds.width,
+                            (self._bounds.height + end_point.y - self._start_point.y) / self._bounds.height,
+                        )
+                        if is_proportional:
+                            scale = Vector2(1, 1) * max(scale.x, scale.y)
+
                         self._resize_items(
-                            Vector2(
-                                (bounds.width - end_point.x + self._start_point.x) / bounds.width,
-                                (bounds.height + end_point.y - self._start_point.y) / bounds.height,
-                            ),
-                            Vector2(bounds.xmax, bounds.ymin),
+                            scale,
+                            Vector2(self._bounds.xmax, self._bounds.ymin),
                         )
 
                     case ControlType.RESIZE_TOP:
+                        scale = Vector2(1.0, (self._bounds.height - self._start_point.y + end_point.y) / self._bounds.height)
+                        if is_proportional:
+                            scale = Vector2(1, 1) * scale.y
+
                         self._resize_items(
-                            Vector2(1.0, (bounds.height - self._start_point.y + end_point.y) / bounds.height),
-                            Vector2(bounds.xmid, bounds.ymin),
+                            scale,
+                            Vector2(self._bounds.xmid, self._bounds.ymin),
                         )
 
                     case ControlType.RESIZE_TOP_RIGHT:
+                        scale = Vector2(
+                            (self._bounds.width + end_point.x - self._start_point.x) / self._bounds.width,
+                            (self._bounds.height + end_point.y - self._start_point.y) / self._bounds.height,
+                        )
+                        if is_proportional:
+                            scale = Vector2(1, 1) * max(scale.x, scale.y)
+
                         self._resize_items(
-                            Vector2(
-                                (bounds.width + end_point.x - self._start_point.x) / bounds.width,
-                                (bounds.height + end_point.y - self._start_point.y) / bounds.height,
-                            ),
-                            Vector2(bounds.xmin, bounds.ymin),
+                            scale,
+                            Vector2(self._bounds.xmin, self._bounds.ymin),
                         )
 
                     case ControlType.RESIZE_LEFT:
+                        scale = Vector2((self._bounds.width - end_point.x + self._start_point.x) / self._bounds.width, 1.0)
+                        if is_proportional:
+                            scale = Vector2(1, 1) * scale.x
+
                         self._resize_items(
-                            Vector2((bounds.width - end_point.x + self._start_point.x) / bounds.width, 1.0),
-                            Vector2(bounds.xmax, bounds.ymid),
+                            scale,
+                            Vector2(self._bounds.xmax, self._bounds.ymid),
                         )
 
                     case ControlType.RESIZE_RIGHT:
+                        scale = Vector2((self._bounds.width + end_point.x - self._start_point.x) / self._bounds.width, 1.0)
+                        if is_proportional:
+                            scale = Vector2(1, 1) * scale.x
+
                         self._resize_items(
-                            Vector2((bounds.width + end_point.x - self._start_point.x) / bounds.width, 1.0),
-                            Vector2(bounds.xmin, bounds.ymid),
+                            scale,
+                            Vector2(self._bounds.xmin, self._bounds.ymid),
                         )
 
                     case ControlType.RESIZE_BOTTOM_LEFT:
+                        scale = Vector2(
+                            (self._bounds.width - end_point.x + self._start_point.x) / self._bounds.width,
+                            (self._bounds.height - end_point.y + self._start_point.y) / self._bounds.height,
+                        )
+                        if is_proportional:
+                            scale = Vector2(1, 1) * max(scale.x, scale.y)
+
                         self._resize_items(
-                            Vector2(
-                                (bounds.width - end_point.x + self._start_point.x) / bounds.width,
-                                (bounds.height - end_point.y + self._start_point.y) / bounds.height,
-                            ),
-                            Vector2(bounds.xmax, bounds.ymax),
+                            scale,
+                            Vector2(self._bounds.xmax, self._bounds.ymax),
                         )
 
                     case ControlType.RESIZE_BOTTOM:
+                        scale = Vector2(1.0, (self._bounds.height - end_point.y + self._start_point.y) / self._bounds.height)
+                        if is_proportional:
+                            scale = Vector2(1, 1) * scale.y
+
                         self._resize_items(
-                            Vector2(1.0, (bounds.height - end_point.y + self._start_point.y) / bounds.height),
-                            Vector2(bounds.xmid, bounds.ymax),
+                            scale,
+                            Vector2(self._bounds.xmid, self._bounds.ymax),
                         )
 
                     case ControlType.RESIZE_BOTTOM_RIGHT:
+                        scale = Vector2(
+                            (self._bounds.width + end_point.x - self._start_point.x) / self._bounds.width,
+                            (self._bounds.height - end_point.y + self._start_point.y) / self._bounds.height,
+                        )
+                        if is_proportional:
+                            scale = Vector2(1, 1) * max(scale.x, scale.y)
+
                         self._resize_items(
-                            Vector2(
-                                (bounds.width + end_point.x - self._start_point.x) / bounds.width,
-                                (bounds.height - end_point.y + self._start_point.y) / bounds.height,
-                            ),
-                            Vector2(bounds.xmin, bounds.ymax),
+                            scale,
+                            Vector2(self._bounds.xmin, self._bounds.ymax),
                         )
 
                     case ControlType.MOVE:
@@ -184,17 +225,36 @@ class TransformTool(CncTool):
             else:
                 control_type = self._control_under(point)
                 cursor = CURSOR_FOR_CONTROL.get(control_type, Qt.CursorShape.ArrowCursor)
-                widget.setCursor(cursor)
+                self.view.setCursor(cursor)
         elif event.type() == QEvent.Type.MouseButtonPress:
             point = vector2(event.position())
             self._control_type = self._control_under(point)
             if self._control_type is not None:
                 self._dragging = True
                 self._start_point = self.view.camera.unproject(point).xy
+                self._bounds = reduce(
+                    lambda a, b: a.merge(b),
+                    [item.bounds for item in self._selected_items]
+                )
+            return True
+        elif event.type() == QEvent.Type.MouseButtonRelease:
+            if self._dragging:
+                self._commit()
+                self._dragging = False
+                self._bounds = None
+            else:
+                self.deactivate()
+
+            return True
+        elif event.type() == QEvent.Type.KeyPress:
+            key_event = cast(QKeyEvent, event)
+            if key_event.key() == Qt.Key.Key_Escape:
+                if self._dragging:
+                    self._cancel()
+                else:
+                    self.deactivate()
+
                 return True
-        elif event.type() == QEvent.Type.MouseButtonRelease and self._dragging:
-            self._dragging = False
-            self._commit()
 
         return super().eventFilter(widget, event)
 
@@ -262,7 +322,20 @@ class TransformTool(CncTool):
         if len(self._selected_items) == 0:
             return
 
-        all_bounds = [item.bounds for item in self._selected_items]
+        all_bounds = [
+            item.bounds
+            for item in self._selected_items
+        ]
+        if self._applied_scale is not None:
+            pivot = self._applied_scale_pivot
+            all_bounds = [
+                bounds.scaled(self._applied_scale)
+                .translated(pivot - (pivot - bounds.pmin) * self._applied_scale - bounds.pmin)
+                for bounds in all_bounds
+            ]
+        if self._applied_offset is not None:
+            all_bounds = [bounds.translated(self._applied_offset) for bounds in all_bounds]
+
         bounds = reduce(lambda a, b: a.merge(b), all_bounds)
 
         def transform(x, y) -> Vector2:
@@ -287,9 +360,21 @@ class TransformTool(CncTool):
             item.changed.connect(self._on_selected_item_changed)
 
         self._selected_items = list(self.project.selection)
+        self._selected_views = [
+            view
+            for item in self._selected_items
+            for view in [self._find_view(item)]
+            if view is not None
+        ]
 
         self._show_controls(len(self._selected_items) > 0)
         self._update_control_positions()
+
+    def _find_view(self, item: CncProjectItem) -> Node3D | None:
+        for view in self.view.items:
+            if getattr(view, 'model', None) == item:
+                return view
+        return None
 
     def _on_selected_item_changed(self, item: CncProjectItem):
         self._update_control_positions()
@@ -299,16 +384,15 @@ class TransformTool(CncTool):
 
     def _ensure_item_states_saved(self):
         if self._offsets is None:
-            self._offsets = [item.offset for item in self._selected_items]
+            self._offsets = [item.world_position for item in self._selected_views]
 
         if self._scales is None:
-            self._scales = [item.scale for item in self._selected_items]
+            self._scales = [item.world_scale for item in self._selected_views]
 
     def _restore_items_states(self):
-        for item, offset, scale in zip(self._selected_items, self._offsets, self._scales):
-            with item:
-                item.offset = offset
-                item.scale = scale
+        for view, offset, scale in zip(self._selected_views, self._offsets, self._scales):
+            view.world_position = offset
+            view.world_scale = scale
 
     def _reset(self):
         self._offsets = None
@@ -323,8 +407,11 @@ class TransformTool(CncTool):
 
         self._applied_offset = offset
 
-        for item, item_offset, item_scale in zip(self._selected_items, self._offsets, self._scales):
-            item.offset = item_offset + offset
+        for view, item_offset, item_scale in zip(self._selected_views, self._offsets, self._scales):
+            view.world_position = item_offset + Vector3.from_vector2(offset)
+
+        self._update_control_positions()
+        self.view.update()
 
     def _resize_items(self, scale: Vector2, pivot: Vector2):
         self._ensure_item_states_saved()
@@ -333,12 +420,15 @@ class TransformTool(CncTool):
         self._applied_scale = scale
         self._applied_scale_pivot = pivot
 
-        for item, item_offset, item_scale in zip(self._selected_items, self._offsets, self._scales):
-            with item:
-                item.scale = item_scale * scale
+        scale3 = Vector3.from_vector2(scale, 1)
+        pivot3 = Vector3.from_vector2(pivot)
 
-                offset = (pivot - item_offset) * (Vector2(1, 1) - scale)
-                item.offset = item_offset + offset
+        for view, item_offset, item_scale in zip(self._selected_views, self._offsets, self._scales):
+            view.world_scale = item_scale * scale3
+            view.world_position = pivot3 - (pivot3 - item_offset) * scale3
+
+        self._update_control_positions()
+        self.view.update()
 
     def _commit(self):
         # Restore original offsets and scales to allow command to apply them
@@ -361,3 +451,5 @@ class TransformTool(CncTool):
     def _cancel(self):
         self._restore_items_states()
         self._reset()
+        self._dragging = False
+        self._bounds = None
