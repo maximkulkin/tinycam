@@ -737,10 +737,10 @@ class Controller:
         z: float | None = None
     ):
 
-        command = f'$J=G{90 + positioning.value}G{20 + units.value}'
+        command = f'$J=G{90 + positioning.value}G{19 + units.value}'
         if self._modal_command != 'G0':
             command += 'G0'
-        command += f'F{feedrate}'
+        command += f'F{int(feedrate)}'
         if x is not None:
             command += f'X{x}'
         if y is not None:
