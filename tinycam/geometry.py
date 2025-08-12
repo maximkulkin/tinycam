@@ -85,8 +85,10 @@ class Geometry:
         start_angle: number,
         end_angle: number,
         *,
-        angle_step: number=1.0,
-    ) -> Line: ...
+        angle_step: number = 1.0,
+    ) -> Line:
+        ...
+
     @overload
     def arc(
         self,
@@ -96,8 +98,9 @@ class Geometry:
         end_angle: number,
         *,
         width: number,
-        angle_step: number=1.0,
-    ) -> Polygon: ...
+        angle_step: number = 1.0,
+    ) -> Polygon:
+        ...
 
     def arc(
         self,
@@ -105,8 +108,8 @@ class Geometry:
         radius: number,
         start_angle: number,
         end_angle: number,
-        angle_step: number=1.0,
-        width: number=0.0,
+        angle_step: number = 1.0,
+        width: number = 0.0,
     ):
         angle = start_angle
         ccw = angle_step < 0
