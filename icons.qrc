@@ -12,5 +12,6 @@
     <file>icons/flip_horizontally.svg</file>
     <file>icons/flip_vertically.svg</file>
     <file>icons/circle_tool.svg</file>
+    <file>icons/rectangle_tool.svg</file>
   </qresource>
 </RCC>
