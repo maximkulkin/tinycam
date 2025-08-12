@@ -444,6 +444,8 @@ class Controller:
                         self._set_status(Status.RUN)
                     case 'JOG':
                         self._set_status(Status.JOG)
+                    case 'Jog':
+                        self._set_status(Status.JOG)
                     case 'Alarm':
                         self._set_status(Status.ALARM)
                     case 'ALARM':
