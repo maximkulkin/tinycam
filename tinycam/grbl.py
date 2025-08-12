@@ -74,7 +74,7 @@ class ErrorType(enum.Enum):
 
 class Error(Exception):
     def __init__(self, type: ErrorType):
-        super().__init__()
+        super().__init__(f'GRBL error code: {self.type}')
         self.type = type
 
 
