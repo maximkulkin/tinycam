@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QWidget
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector2, Vector4, Rect
+from tinycam.ui.commands import DeleteItemsCommand
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.canvas import Rectangle
 from tinycam.ui.view_items.project_item import CncProjectItemView
@@ -85,6 +86,9 @@ class SelectTool(CncTool):
             key_event = cast(QKeyEvent, event)
             if key_event.key() == Qt.Key.Key_Escape:
                 self.cancel()
+                return True
+            elif key_event.key() in [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]:
+                self._delete_selected_items()
                 return True
 
         return False
@@ -174,3 +178,11 @@ class SelectTool(CncTool):
         if keyboard_modifiers & Qt.KeyboardModifier.AltModifier:
             modifiers |= SelectionModifier.TOGGLE
         return modifiers
+
+    def _delete_selected_items(self):
+        if len(self.project.selection) == 0:
+            return
+
+        GLOBALS.APP.undo_stack.push(
+            DeleteItemsCommand(list(self.project.selection))
+        )
