@@ -2,7 +2,7 @@ import enum
 from typing import cast
 
 import numpy as np
-from PySide6.QtCore import QPoint, QPointF, QEvent, Qt
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QMouseEvent, QKeyEvent
 from PySide6.QtWidgets import QWidget
 
@@ -12,10 +12,7 @@ from tinycam.types import Vector2, Vector4, Rect
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.canvas import Rectangle
 from tinycam.ui.view_items.project_item import CncProjectItemView
-
-
-def vector2(point: QPoint | QPointF) -> Vector2:
-    return Vector2(point.x(), point.y())
+from tinycam.ui.utils import vector2
 
 
 class SelectionModifier(enum.Flag):
@@ -28,22 +25,26 @@ class SelectTool(CncTool):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._selecting = False
-        self._p1: Vector2 | None = None
-        self._p2: Vector2 | None = None
+        self._p1: Vector2 = Vector2()
+        self._p2: Vector2 = Vector2()
 
         self._box = None
+
+    def activate(self):
+        super().activate()
+        self.view.grabKeyboard()
+
+    def deactivate(self):
+        self.cancel()
+        self.view.releaseKeyboard()
+        super().deactivate()
 
     def cancel(self):
         if self._box:
             self.view.remove_item(self._box)
             self._box = None
-        self._p1 = None
-        self._p2 = None
-        self._selecting = False
 
-    def deactivate(self):
-        self.cancel()
-        super().deactivate()
+        self._selecting = False
 
     def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         mouse_event = cast(QMouseEvent, event)
@@ -59,8 +60,6 @@ class SelectTool(CncTool):
 
             modifiers = self._make_selection_modifiers(mouse_event.modifiers())
             if self._box:
-                assert self._p1 is not None
-                assert self._p2 is not None
                 self._select_items_in_box(self._p1, self._p2, modifiers)
 
                 self.view.remove_item(self._box)
@@ -92,8 +91,6 @@ class SelectTool(CncTool):
 
     def _make_box(self) -> Rectangle:
         assert self.view.ctx is not None
-        assert self._p1 is not None
-        assert self._p2 is not None
 
         return Rectangle(
             context=self.view.ctx,
@@ -105,8 +102,6 @@ class SelectTool(CncTool):
         )
 
     def _select_item_at_point(self, point: Vector2, modifiers: SelectionModifier):
-        project = GLOBALS.APP.project
-
         picked = self.view.pick_item(point)
         if picked is not None:
             obj, _ = picked
