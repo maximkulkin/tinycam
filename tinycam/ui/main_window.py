@@ -12,7 +12,9 @@ from tinycam.ui.commands import ImportFileCommand, FlipHorizontallyCommand, Flip
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
-from tinycam.ui.tools import CncTool, SelectTool, TransformTool
+from tinycam.ui.tools import (
+    CncTool, SelectTool, TransformTool, CircleTool,
+)
 from tinycam.ui.item_properties import CncProjectItemPropertiesWindow
 from tinycam.ui.cnc_controller import (
     CncControllerStateDisplayWindow, CncControllerJogControlsWindow,
@@ -112,6 +114,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         # Tools
         self._select_tool = SelectTool(self.project, self.canvas_2d)
         self._transform_tool = TransformTool(self.project, self.canvas_2d)
+        self._circle_tool = CircleTool(self.project, self.canvas_2d)
 
         select_tool_action = self._make_tool_action(
             'Select Tool', self._select_tool,
@@ -134,6 +137,12 @@ class CncMainWindow(QtWidgets.QMainWindow):
             icon=':/icons/flip_vertically.svg',
         )
 
+        circle_tool_action = self._make_tool_action(
+            'Circle', self._circle_tool,
+            icon=':/icons/circle_tool.svg',
+            shortcut='c',
+        )
+
         self.tools_toolbar = QtWidgets.QToolBar()
         self.tools_toolbar.setObjectName('tools_toolbar')
         self.tools_toolbar.setWindowTitle('Tools Toolbar')
@@ -142,6 +151,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.tools_toolbar.addAction(transform_tool_action)
         self.tools_toolbar.addAction(self._flip_horizontally_action)
         self.tools_toolbar.addAction(self._flip_vertically_action)
+        self.tools_toolbar.addAction(circle_tool_action)
 
         self.canvas_2d.default_tool = self._select_tool
         self._activate_tool(self._select_tool)

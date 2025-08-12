@@ -1,3 +1,4 @@
+from .create_circle import CreateCircleCommand
 from .create_drill_job import CreateDrillJobCommand
 from .create_isolate_job import CreateIsolateJobCommand
 from .flip_horizontally import FlipHorizontallyCommand
@@ -12,6 +13,7 @@ from .import_file import ImportFileCommand
 
 
 __all__ = [
+    'CreateCircleCommand',
     'CreateDrillJobCommand',
     'CreateIsolateJobCommand',
     'FlipHorizontallyCommand',
