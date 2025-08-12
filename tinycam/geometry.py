@@ -139,6 +139,10 @@ class Geometry:
 
     # utils
 
+    def bounds(self, *shapes: tuple[AnyShape, ...]) -> Rect:
+        xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
+        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
+
     def points(self, shape: AnyShape) -> Sequence[Vector2]:
         match shape:
             case shapely.MultiLineString() | shapely.MultiPolygon():
@@ -159,10 +163,6 @@ class Geometry:
             case _:
                 raise ValueError(f'Unknown shape: {shape}')
 
-    def bounds(self, *shapes: tuple[AnyShape, ...]) -> Rect:
-        xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
-        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
-
     def lines(self, shape: AnyShape) -> list[Line]:
         if isinstance(shape, shapely.LineString):
             return [shape]
@@ -178,6 +178,16 @@ class Geometry:
             return shape.geoms
 
         raise ValueError('Geometry is not a polygon: %s' % shape.__class__)
+
+    def shapes(self, shape: AnyShape) -> list[Shape]:
+        if isinstance(shape, shapely.GeometryCollection):
+            return shape.geoms
+        elif isinstance(shape, shapely.MultiLineString):
+            return shape.geoms
+        elif isinstance(shape, shapely.MultiPolygon):
+            return shape.geoms
+        else:
+            return [shape]
 
     def exteriors(self, shape: AnyShape) -> list[Line]:
         if isinstance(shape, shapely.Polygon):
