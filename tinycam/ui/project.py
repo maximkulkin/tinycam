@@ -11,6 +11,7 @@ from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
     CreateIsolateJobCommand,
     CreateDrillJobCommand,
+    CreateCutoutJobCommand,
     DeleteItemsCommand,
     DuplicateItemCommand,
     UpdateItemsCommand,
@@ -593,6 +594,8 @@ class CncProjectWindow(CncWindow):
             popup.addAction('Create Drill Job', self._drill_job)
         elif isinstance(item, CncJob):
             popup.addAction('Export G-code', self._export_gcode)
+        elif isinstance(item, CncProjectItem):
+            popup.addAction('Create Cutout Job', self._cutout_job)
 
         popup.exec(self.mapToGlobal(position))
 
@@ -621,6 +624,15 @@ class CncProjectWindow(CncWindow):
             return
 
         command = CreateDrillJobCommand(self.project.selection[0])
+        GLOBALS.APP.undo_stack.push(command)
+        if command.result_item is not None:
+            GLOBALS.APP.project.selection.set([command.result_item])
+
+    def _cutout_job(self):
+        if len(self.project.selection) == 0:
+            return
+
+        command = CreateCutoutJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
         if command.result_item is not None:
             GLOBALS.APP.project.selection.set([command.result_item])

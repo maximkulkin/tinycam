@@ -5,7 +5,7 @@ from PySide6 import QtCore
 
 from tinycam.project import (
     CncProjectItem, GerberItem, ExcellonItem,
-    CncJob, CncIsolateJob, CncDrillJob,
+    CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
 )
 import tinycam.settings as s
 from tinycam.types import Vector2
@@ -14,6 +14,7 @@ from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
 from tinycam.ui.view_items.core.grid_xy import GridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
+from tinycam.ui.view_items.cutout_job import CncCutoutJobView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.orientation_cube import OrientationCube, Orientation, OrientationCubePosition
@@ -112,6 +113,8 @@ class CncPreview3D(CncView):
         assert self.ctx is not None
 
         match item:
+            case CncCutoutJob():
+                view = CncCutoutJobView(self.ctx, item)
             case CncIsolateJob():
                 view = CncIsolateJobView(self.ctx, item)
             case CncDrillJob():

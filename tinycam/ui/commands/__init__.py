@@ -1,4 +1,5 @@
 from .create_circle import CreateCircleCommand
+from .create_cutout_job import CreateCutoutJobCommand
 from .create_drill_job import CreateDrillJobCommand
 from .create_isolate_job import CreateIsolateJobCommand
 from .create_polyline import CreatePolylineCommand
@@ -16,6 +17,7 @@ from .import_file import ImportFileCommand
 
 __all__ = [
     'CreateCircleCommand',
+    'CreateCutoutJobCommand',
     'CreateDrillJobCommand',
     'CreateIsolateJobCommand',
     'CreatePolylineCommand',
