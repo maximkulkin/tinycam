@@ -469,6 +469,21 @@ class Rect(np.ndarray):
                     self.ymin >= obj[1] and self.ymax <= obj[1]
                 )
 
+    def intersects(self, rect: 'Rect') -> bool:
+        if not (
+            (rect.xmin <= self.xmin and self.xmin < rect.xmax) or
+            (self.xmin <= rect.xmin and rect.xmin < self.xmax)
+        ):
+            return False
+
+        if not (
+            (rect.ymin <= self.ymin and self.ymin < rect.ymax) or
+            (self.ymin <= rect.ymin and rect.ymin < self.ymax)
+        ):
+            return False
+
+        return True
+
     def intersect(self, rect: 'Rect') -> 'Rect | None':
         x1, x2 = max(self.xmin, rect.xmin), min(self.xmax, rect.xmax)
         if x2 < x1:
