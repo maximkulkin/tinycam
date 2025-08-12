@@ -122,6 +122,7 @@ class SelectTool(CncTool):
         wp2 = self.view.camera.screen_to_world_point(p2)
 
         rect = Rect.from_coords(wp1.x, wp1.y, wp2.x, wp2.y)
+        shape = GLOBALS.GEOMETRY.box(rect.pmin, rect.pmax)
 
         selection = []
         for item in self.view.items:
@@ -131,10 +132,14 @@ class SelectTool(CncTool):
             if not item.visible:
                 continue
 
-            bounds = item.bounds.xy
+            if hasattr(item.model, 'geometry'):
+                if GLOBALS.GEOMETRY.intersects(item.model.geometry, shape):
+                    selection.append(item.model)
+            else:
+                bounds = item.bounds.xy
 
-            if rect.contains(bounds):
-                selection.append(item.model)
+                if rect.contains(bounds):
+                    selection.append(item.model)
 
         self._select_with_modifiers(selection, modifiers)
 
