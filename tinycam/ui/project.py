@@ -1,5 +1,5 @@
 from PySide6 import QtCore, QtWidgets, QtGui
-from PySide6.QtCore import Qt, QEvent, QAbstractItemModel, QModelIndex
+from PySide6.QtCore import QItemSelection, QSignalBlocker, Qt, QEvent, QAbstractItemModel, QModelIndex
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget, QStyleOptionViewItem
 from typing import cast
@@ -174,18 +174,16 @@ class ProjectModel(QAbstractItemModel):
         parent = item.parent
         if parent is None:
             parent_index = QModelIndex()
-            idx = 0
         else:
             parent_index = self.createIndex(
                 0 if parent.parent is None else parent.parent.children.index(parent),
                 0,
                 parent
             )
-            idx = parent.children.index(item)
 
-        if idx >= 0:
-            self.beginRemoveRows(parent_index, idx, idx)
-            self.endRemoveRows()
+        row_count = self.rowCount(parent_index)
+        self.beginRemoveRows(parent_index, row_count, row_count + 1)
+        self.endRemoveRows()
 
     def _on_item_changed(self, item: CncProjectItem):
         parent = item.parent
@@ -507,8 +505,6 @@ class CncProjectWindow(CncWindow):
 
         self.project.selection.changed.connect(self._on_project_selection_changed)
 
-        self._updating_selection = False
-
         self._model = ProjectModel(self.project)
 
         self._view = QtWidgets.QTreeView()
@@ -556,27 +552,22 @@ class CncProjectWindow(CncWindow):
         self._view.expandAll()
 
     def _on_project_selection_changed(self):
-        if self._updating_selection:
-            return
-
-        self._updating_selection = True
-
         selection_model = self._view.selectionModel()
-        selection_model.clear()
-        for item in self.project.selection:
-            index = self.project.items.index(item)
-            selection_model.select(
-                self._model.createIndex(index, 0, item),
-                QtCore.QItemSelectionModel.SelectionFlag.Select
-                | QtCore.QItemSelectionModel.SelectionFlag.Rows
-            )
 
-        self._updating_selection = False
+        with QSignalBlocker(selection_model):
+            selection_model.clear()
 
-    def _on_view_selection_changed(self, _selected, _deselected):
-        if self._updating_selection:
-            return
+            for item in self.project.selection:
+                index = self.project.items.index(item)
+                selection_model.select(
+                    self._model.createIndex(index, 0, item),
+                    QtCore.QItemSelectionModel.SelectionFlag.Select
+                    | QtCore.QItemSelectionModel.SelectionFlag.Rows
+                )
 
+        self._view.viewport().update()
+
+    def _on_view_selection_changed(self, _selected: QItemSelection, _deselected: QItemSelection):
         self.project.selection.set([
             self.project.items[index.row()]
             for index in self._view.selectedIndexes()
