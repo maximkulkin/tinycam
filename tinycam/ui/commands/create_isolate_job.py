@@ -19,7 +19,8 @@ class CreateIsolateJobCommand(QtGui.QUndoCommand):
         return self._result_item
 
     def redo(self):
-        self._result_item = CncIsolateJob(self._source_item)
+        self._result_item = CncIsolateJob()
+        self._result_item.source_item = self._source_item
         GLOBALS.APP.project.items.append(self._result_item)
 
     def undo(self):

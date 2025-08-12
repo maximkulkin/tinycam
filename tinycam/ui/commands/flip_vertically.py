@@ -11,8 +11,14 @@ class FlipVerticallyCommand(QtGui.QUndoCommand):
         self._items = items
 
     def _flip(self):
+        G = GLOBALS.GEOMETRY
         for item in self._items:
-            item.scale *= Vector2(1, -1)
+            bounds = item.bounds
+            item.geometry = G.scale(
+                item.geometry,
+                factor=Vector2(1, -1),
+                origin=bounds.center,
+            )
 
     def redo(self):
         self._flip()
