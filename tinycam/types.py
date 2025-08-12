@@ -444,7 +444,7 @@ class Rect(np.ndarray):
 
     def scaled(self, scale: Vector2) -> 'Rect':
         return Rect(
-            self.x * scale.x, self.y * scale.y,
+            self.x, self.y,
             self.width * scale.x, self.height * scale.y,
         )
 
