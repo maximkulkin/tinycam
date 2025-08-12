@@ -4,6 +4,7 @@ from PySide6 import QtCore
 from tinycam.project import (
     CncProject, CncProjectItem, GerberItem, ExcellonItem,
     CncJob, CncIsolateJob, CncDrillJob,
+    GeometryItem,
 )
 from tinycam.ui.camera import OrthographicCamera
 from tinycam.ui.camera_controllers import (
@@ -17,6 +18,7 @@ from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
+from tinycam.ui.view_items.geometry_item import GeometryItemView
 from tinycam.ui.tools import CncTool, DummyTool
 from tinycam.ui.utils import vector2
 from tinycam.types import Vector2, Vector3
@@ -126,6 +128,8 @@ class CncCanvas2D(CncView):
                 view = CncDrillJobView(self.ctx, item)
             case CncJob():
                 view = CncProjectItemView(self.ctx, item)
+            case GeometryItem():
+                view = GeometryItemView(self.ctx, item)
             case _:
                 return
 
