@@ -417,6 +417,14 @@ class Rect(np.ndarray):
         return self.y + self.height * 0.5
 
     @property
+    def pmin(self) -> Vector2:
+        return Vector2(self.xmin, self.ymin)
+
+    @property
+    def pmax(self) -> Vector2:
+        return Vector2(self.xmax, self.ymax)
+
+    @property
     def center(self) -> Vector2:
         return Vector2(self.xmid, self.ymid)
 
@@ -479,6 +487,14 @@ class Rect(np.ndarray):
             x2=max(self.xmax, rect.xmax),
             y2=max(self.ymax, rect.ymax),
         )
+
+    @staticmethod
+    def from_two_points(p1: Vector2, p2: Vector2) -> 'Rect':
+        xmin = min(p1.x, p2.x)
+        xmax = max(p1.x, p2.x)
+        ymin = min(p1.y, p2.y)
+        ymax = max(p1.y, p2.y)
+        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
 
     @staticmethod
     def from_point_and_size(bottom_left: Vector2, size: Vector2) -> 'Rect':
