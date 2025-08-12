@@ -14,12 +14,13 @@ from tinycam.types import Vector2, Vector3, Rect
 
 type number = int | float
 
-type Point = shapely.Point
-type Line = shapely.LineString
-type MultiLineString = shapely.MultiLineString
-type Polygon = shapely.Polygon
-type MultiPolygon = shapely.MultiPolygon
-type Group = shapely.GeometryCollection
+Point = shapely.Point
+Line = shapely.LineString
+Ring = shapely.LinearRing
+MultiLineString = shapely.MultiLineString
+Polygon = shapely.Polygon
+MultiPolygon = shapely.MultiPolygon
+Group = shapely.GeometryCollection
 
 type PointLike = Point | Vector2 | Vector3
 type AnyShape = Point | Line | Polygon | Group | MultiLineString | MultiPolygon
@@ -59,12 +60,19 @@ class Geometry:
 
     # geometry
     @overload
-    def line(self, points: Sequence[PointLike] | np.ndarray) -> Line: ...
-    @overload
-    def line(self, points: Sequence[PointLike] | np.ndarray, width: number) -> Polygon: ...
+    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool) -> Line | Ring:
+        ...
 
-    def line(self, points: Sequence[PointLike] | np.ndarray, width: number=0.0):
-        line = shapely.LineString(points)
+    @overload
+    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool, width: number) -> Polygon:
+        ...
+
+    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool = False, width: number = 0.0):
+        if closed:
+            line = shapely.LinearRing(points)
+        else:
+            line = shapely.LineString(points)
+
         if width > 0:
             line = line.buffer(width / 2)
         return line
@@ -140,7 +148,7 @@ class Geometry:
                     self.points(geom)
                     for geom in chain([shape.exterior], shape.interiors)
                 ])
-            case shapely.LineString() | shapely.LinearRing() | shapely.LinearRing():
+            case shapely.LineString() | shapely.LinearRing():
                 return [
                     Vector2(coord[0], coord[1])
                     for coord in shape.coords

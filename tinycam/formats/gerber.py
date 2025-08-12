@@ -760,7 +760,10 @@ class GerberParser:
         shape = None
         match self._plot_mode:
             case PlotMode.LINEAR:
-                shape = self._geometry.line([self._current_position, point], width)
+                shape = self._geometry.line(
+                    [self._current_position, point],
+                    width=width,
+                )
 
             case PlotMode.CIRCULAR_CW:
                 offset = self._eval_point(
