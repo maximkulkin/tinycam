@@ -478,6 +478,19 @@ class Controller:
                             self._set_feedrate_override(values[0])
                             self._set_rapids_override(values[1])
                             self._set_spindle_override(values[2])
+                        case 'Bf':
+                            # TODO: parse buffer state
+                            # (number of commands available, number of bytes available)
+                            pass
+                        case 'Pn':
+                            # TODO: parse pin states
+                            # XYZ: - axis limit switch triggered
+                            # P - probe
+                            # D - safety door
+                            # H - hold
+                            # R - reset
+                            # S - cycle start
+                            pass
 
         elif l.startswith('$'):
             l = l[1:]
