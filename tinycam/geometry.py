@@ -245,13 +245,20 @@ class Geometry:
         """Rotate shape around origin by given angle in degrees counterclockwise."""
         return shapely.affinity.rotate(shape, angle, shapely.Point(origin))
 
-    def scale[T: AnyShape](self, shape: T, factor: number | Vector2 | Vector3) -> T:
+    def scale[T: AnyShape](self, shape: T, factor: number | Vector2 | Vector3,
+                           origin: PointLike = Vector2(0, 0)) -> T:
         """Scale shape by given factor."""
         if isinstance(factor, (int, float)):
             factor = Vector3(factor, factor, factor)
         elif len(factor) == 2:
             factor = Vector3(factor[0], factor[1], 1)
-        return shapely.affinity.scale(shape, factor[0], factor[1], factor[2])
+        return shapely.affinity.scale(
+            shape,
+            xfact=factor[0],
+            yfact=factor[1],
+            zfact=factor[2],
+            origin=(origin[0], origin[1]),
+        )
 
     def buffer(self, shape: AnyShape, offset: number) -> Polygon:
         return shape.buffer(offset)
