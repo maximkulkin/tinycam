@@ -1,7 +1,8 @@
 import sys
 
+import asyncio
 from PySide6 import QtGui
-import PySide6.QtAsyncio as QtAsyncio
+from qasync import QEventLoop
 
 import tinycam.icons_rc
 from tinycam.application import CncApplication
@@ -23,5 +24,8 @@ QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 main_window = CncMainWindow()
 main_window.show()
 
-async_loop = QtAsyncio.QAsyncioEventLoop(GLOBALS.APP)
-async_loop.run_forever()  # internally calls app.exec()
+loop = QEventLoop(GLOBALS.APP)
+asyncio.set_event_loop(loop)
+
+with loop:
+    loop.run_forever()
