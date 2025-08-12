@@ -11,7 +11,7 @@ METADATA_ATTRIBUTE = '_cnc_metadata'
 
 
 class EditableObject:
-    changed = Signal(object)
+    changed = Signal[object]()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

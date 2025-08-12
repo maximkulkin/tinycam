@@ -43,7 +43,7 @@ class CncProjectItem(p.EditableObject):
     # first changed signal will be emitted to signal that the property has changed.
     # When asynchronous update will finish, updated signal will be emitted, so that
     # e.g. UI can update item geometry.
-    updated = Signal(ForwardRef('CncProjectItem'))
+    updated = Signal[ForwardRef('CncProjectItem')]()
 
     def __init__(self, name: str, color: QtGui.QColor = Qt.black):  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__()
@@ -151,10 +151,10 @@ class CncProjectItem(p.EditableObject):
 
 
 class CncProjectItemCollection:
-    added = Signal(CncProjectItem)
-    removed = Signal(CncProjectItem)
-    changed = Signal(CncProjectItem)
-    updated = Signal(CncProjectItem)
+    added = Signal[CncProjectItem]()
+    removed = Signal[CncProjectItem]()
+    changed = Signal[CncProjectItem]()
+    updated = Signal[CncProjectItem]()
 
     def __init__(self, owner: CncProjectItem | None = None):
         self._owner = owner

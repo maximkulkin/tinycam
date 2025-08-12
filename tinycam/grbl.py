@@ -180,23 +180,23 @@ class Units(enum.Enum):
 
 
 class Controller:
-    connected_changed = Signal(bool)
-    ready_changed = Signal(bool)
-    status_changed = Signal(Status)
-    positioning_changed = Signal(Positioning)
-    units_changed = Signal(Units)
-    plane_changed = Signal(Plane)
-    feedrate_changed = Signal(float)
-    spindle_speed_changed = Signal(float)
-    machine_coordinates_changed = Signal(Vector3)
-    workspace_coordinates_changed = Signal(Vector3)
+    connected_changed = Signal[bool]()
+    ready_changed = Signal[bool]()
+    status_changed = Signal[Status]()
+    positioning_changed = Signal[Positioning]()
+    units_changed = Signal[Units]()
+    plane_changed = Signal[Plane]()
+    feedrate_changed = Signal[float]()
+    spindle_speed_changed = Signal[float]()
+    machine_coordinates_changed = Signal[Vector3]()
+    workspace_coordinates_changed = Signal[Vector3]()
 
-    feedrate_override_changed = Signal(int)
-    rapids_override_changed = Signal(int)
-    spindle_override_changed = Signal(int)
+    feedrate_override_changed = Signal[int]()
+    rapids_override_changed = Signal[int]()
+    spindle_override_changed = Signal[int]()
 
-    line_sent = Signal(str)
-    line_received = Signal(str)
+    line_sent = Signal[str]()
+    line_received = Signal[str]()
 
     def __init__(self):
         self._reader = None
