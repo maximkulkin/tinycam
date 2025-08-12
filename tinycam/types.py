@@ -637,7 +637,7 @@ class Box(np.ndarray):
                     self.zmin >= obj[2] and self.zmax <= obj[2]
                 )
 
-    def intersect(self, box: 'Box') -> 'Box | None':
+    def intersects(self, box: 'Box') -> 'Box | None':
         x1, x2 = max(self.xmin, box.xmin), min(self.xmax, box.xmax)
         if x2 < x1:
             return None
