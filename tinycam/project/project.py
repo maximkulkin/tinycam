@@ -97,6 +97,7 @@ class CncProject(CncProjectItem):
         super().__init__()
         self.name = 'Project'
         self._selection = self.Selection(self)
+        self._children.removed.connect(self._on_item_removed)
 
     @property
     def items(self) -> CncProjectItemCollection:
@@ -105,3 +106,7 @@ class CncProject(CncProjectItem):
     @property
     def selection(self) -> 'CncProject.Selection':
         return self._selection
+
+    def _on_item_removed(self, item: CncProjectItem):
+        if item in self.selection:
+            self.selection.remove(item)
