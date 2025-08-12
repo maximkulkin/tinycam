@@ -215,5 +215,10 @@ class Order:
 
 
 @dataclass
+class EnabledIf:
+    condition: Callable[[object], bool]
+
+
+@dataclass
 class VisibleIf:
     condition: Callable[[object], bool]

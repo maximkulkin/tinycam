@@ -56,6 +56,7 @@ class BasePropertyEditor[T](QtWidgets.QWidget):
 
         self._type = t
         self._metadata = metadata or p.Metadata()
+        self._enabled = True
 
     @property
     def type(self) -> type:
@@ -66,6 +67,12 @@ class BasePropertyEditor[T](QtWidgets.QWidget):
 
     def setValue(self, value: T):
         raise NotImplementedError()
+
+    def enabled(self) -> bool:
+        return self._enabled
+
+    def setEnabled(self, value: bool):
+        self._enabled = value
 
 
 @editor_for(str)
@@ -90,6 +97,11 @@ class StringPropertyEditor(BasePropertyEditor[str]):
     @override
     def setValue(self, value: str):
         self._editor.setText(value)
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
 
 
 @editor_for(bool)
@@ -116,6 +128,11 @@ class BoolPropertyEditor(BasePropertyEditor[bool]):
     @override
     def setValue(self, value: bool):
         self._editor.setChecked(value)
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
 
 
 @editor_for(int)
@@ -150,6 +167,11 @@ class IntPropertyEditor(BasePropertyEditor[int]):
     @override
     def setValue(self, value: int):
         self._editor.setValue(value)
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
 
     def _on_editing_finished(self):
         self.valueChanged.emit(self._editor.value())
@@ -187,6 +209,11 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
     @override
     def setValue(self, value: float):
         self._editor.setValue(value)
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
 
     def _on_editing_finished(self):
         self.valueChanged.emit(self._editor.value())
@@ -240,6 +267,12 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         self._value = value
         self._x_editor.setValue(value[0])
         self._y_editor.setValue(value[1])
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._x_editor.setEnabled(self.enabled())
+        self._y_editor.setEnabled(self.enabled())
 
     def _on_editing_finished(self):
         value = Vector2((
@@ -320,6 +353,13 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         self._y_editor.setValue(value[1])
         self._z_editor.setValue(value[2])
 
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._x_editor.setEnabled(self.enabled())
+        self._y_editor.setEnabled(self.enabled())
+        self._z_editor.setEnabled(self.enabled())
+
     def _on_editing_finished(self):
         value = Vector3(
             self._x_editor.value(),
@@ -360,6 +400,11 @@ class EnumPropertyEditor(BasePropertyEditor[enum.Enum]):
         index = self._editor.findData(value)
         self._editor.setCurrentIndex(index)
 
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
+
     def _on_current_index_changed(self, index: int):
         value = self._editor.itemData(index)
         self.valueChanged.emit(value)
@@ -395,6 +440,11 @@ class ReferencePropertyEditor(BasePropertyEditor[p.ReferenceType]):
         self._updating = True
         self._editor.setCurrentIndex(index)
         self._updating = False
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
 
     def _on_current_index_changed(self, index: int):
         if self._updating:
@@ -458,6 +508,12 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
 
         self._populate_props()
 
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        for editor in self._editors.values():
+            editor.setEnabled(self.enabled())
+
     def _on_value_changed(self, _: object):
         for name, editor in self._editors.items():
             editor.setValue(getattr(self._value, name))
@@ -501,6 +557,10 @@ class ObjectPropertyEditor(BasePropertyEditor[object]):
 
             editor = editor_type(prop_type, metadata=metadata)
             self._editors[name] = editor
+
+            enabled_if = metadata.find(p.EnabledIf)
+            if enabled_if is not None and not enabled_if.condition(self._value):
+                editor.setEnabled(False)
 
             editor.setValue(getattr(self._value, name))
             editor.valueChanged.connect(partial(self._on_property_value_changed, name))
