@@ -446,7 +446,7 @@ class CncControllerJogControlsWindow(CncWindow):
     @asyncSlot()
     async def _on_x_neg_clicked(self):
         await self._controller.jog(
-            feedrate=self._xy_feedrate_edit.value(),
+            feedrate=self._feedrate_edit.value(),
             units=s.SETTINGS.get('general/units'),
             x=-self._xy_step_edit.value(),
         )
