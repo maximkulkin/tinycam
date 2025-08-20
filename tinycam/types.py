@@ -70,6 +70,18 @@ class Vector2(np.ndarray):
         if l != 0.0:
             self /= l
 
+    @property
+    def normal(self) -> 'Vector2':
+        return self.rot90ccw.normalized
+
+    @property
+    def rot90cw(self) -> 'Vector2':
+        return Vector2(self.y, -self.x)
+
+    @property
+    def rot90ccw(self) -> 'Vector2':
+        return Vector2(-self.y, self.x)
+
     # @staticmethod
     # def dot(v1: 'Vector2', v2: 'Vector2') -> float:
     #     return np.dot(v1, v2)
