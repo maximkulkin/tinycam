@@ -3,6 +3,7 @@ from tinycam.project import CncIsolateJob
 from tinycam.types import Vector3
 from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core import Line2D, Node3D
+from tinycam.ui.view_items.core.line2d import JointStyle
 from tinycam.ui.view_items.commands_view import CncCommandsView
 from tinycam.ui.view_items.project_item import CncProjectItemView
 
@@ -31,6 +32,9 @@ class CncIsolateJobView(CncProjectItemView[CncIsolateJob]):
                     closed=line.is_closed,
                     color=qcolor_to_vec4(self._model.color),
                     width=tool_diameter,
+                    miter_limit=tool_diameter,
+                    max_segment_length=tool_diameter * 8,
+                    joint_style=JointStyle.MITER,
                 )
                 self._outline.add_child(line_view)
 
