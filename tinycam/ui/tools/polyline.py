@@ -51,7 +51,7 @@ class PolylineTool(CncTool):
     def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         mouse_event = cast(QMouseEvent, event)
 
-        if (event.type() == QEvent.Type.MouseButtonRelease and
+        if (event.type() == QEvent.Type.MouseButtonPress and
                 mouse_event.button() & Qt.MouseButton.LeftButton):
             p = self._adjust_point(self._screen_to_world_point(mouse_event.position()).xy)
 
@@ -73,6 +73,11 @@ class PolylineTool(CncTool):
                 self._points.append(p)
 
             return True
+        elif (event.type() == QEvent.Type.MouseButtonPress and
+                mouse_event.button() & Qt.MouseButton.RightButton):
+            self.commit()
+            return True
+
         elif self._drawing and event.type() == QEvent.Type.MouseMove:
             p = self._adjust_point(self._screen_to_world_point(mouse_event.position()).xy)
             if mouse_event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
