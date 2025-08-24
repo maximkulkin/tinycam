@@ -60,11 +60,11 @@ class Geometry:
 
     # geometry
     @overload
-    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool) -> Line | Ring:
+    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool = False) -> Line | Ring:
         ...
 
     @overload
-    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool, width: number) -> Polygon:
+    def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool = False, width: number = 0.0) -> Polygon:
         ...
 
     def line(self, points: Sequence[PointLike] | np.ndarray, closed: bool = False, width: number = 0.0):
