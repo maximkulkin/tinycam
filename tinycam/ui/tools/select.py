@@ -52,7 +52,8 @@ class SelectTool(CncTool):
             self._selecting = True
             return True
         elif (event.type() == QEvent.Type.MouseButtonRelease and
-                mouse_event.button() & Qt.MouseButton.LeftButton):
+              mouse_event.button() & Qt.MouseButton.LeftButton and
+              self._selecting):
 
             modifiers = self._make_selection_modifiers(mouse_event.modifiers())
             if self._box:
