@@ -9,6 +9,7 @@ import tinycam.settings as s
 from tinycam.properties import format_suffix
 from tinycam.ui.property_editor import ObjectPropertyEditor
 from tinycam.ui.utils import schedule
+from tinycam.ui.widgets import Vector2Editor, Vector3Editor
 from tinycam.utils import find_if
 
 
@@ -203,6 +204,20 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 widget.setCheckState(Qt.Checked if self.settings.get(setting) else Qt.Unchecked)
                 widget.checkStateChanged.connect(
                     lambda state: self.settings.set(setting, state == Qt.Checked)
+                )
+                return widget
+            case s.CncVector2Setting():
+                widget = Vector2Editor()
+                widget.setValue(self.settings.get(setting))
+                widget.valueChanged.connect(
+                    lambda value: self.settings.set(setting, value)
+                )
+                return widget
+            case s.CncVector3Setting():
+                widget = Vector3Editor()
+                widget.setValue(self.settings.get(setting))
+                widget.valueChanged.connect(
+                    lambda value: self.settings.set(setting, value)
                 )
                 return widget
             case s.CncEnumSetting():

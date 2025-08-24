@@ -539,6 +539,16 @@ class CncVector2Setting(CncSetting[Vector2]):
         return 'VECTOR2'
 
 
+class CncVector3Setting(CncSetting[Vector3]):
+    @override
+    def validate(self, data: object) -> str | None:
+        return None if isinstance(data, Vector3) else 'Value is not a Vector3'
+
+    @override
+    def __str__(self):
+        return 'VECTOR3'
+
+
 class CncEnumSetting[E: enum.Enum](CncSetting[E]):
     @override
     @property
