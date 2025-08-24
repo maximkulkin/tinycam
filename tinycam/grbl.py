@@ -152,9 +152,7 @@ class Positioning(enum.Enum):
     RELATIVE = 1
 
     def __str__(self) -> str:
-        match self:
-            case self.ABSOLUTE: return 'ABSOLUTE'
-            case self.RELATIVE: return 'RELATIVE'
+        return self.name
 
 
 class Plane(enum.Enum):
@@ -163,10 +161,7 @@ class Plane(enum.Enum):
     YZ = 2
 
     def __str__(self) -> str:
-        match self:
-            case self.XY: return 'XY'
-            case self.XZ: return 'XZ'
-            case self.YZ: return 'YZ'
+        return self.name
 
 
 class Units(enum.Enum):
@@ -174,9 +169,7 @@ class Units(enum.Enum):
     MM = 1
 
     def __str__(self) -> str:
-        match self:
-            case self.IN: return 'IN'
-            case self.MM: return 'MM'
+        return self.name
 
 
 class Controller:
