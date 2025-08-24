@@ -7,6 +7,7 @@ from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
 from tinycam.ui.utils import clear_layout
+from tinycam.ui.widgets import SpinBox, DoubleSpinBox
 from tinycam import properties as p
 from tinycam.types import Vector2, Vector3
 from tinycam.utils import get_property_type
@@ -141,8 +142,8 @@ class IntPropertyEditor(BasePropertyEditor[int]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._editor = QtWidgets.QSpinBox(self)
-        self._editor.editingFinished.connect(self._on_editing_finished)
+        self._editor = SpinBox(self)
+        self._editor.value_changed.connect(self._on_value_changed)
         self._editor.setReadOnly(self._metadata.has(p.ReadOnly))
 
         min_value = self._metadata.find(p.MinValue)
@@ -173,8 +174,8 @@ class IntPropertyEditor(BasePropertyEditor[int]):
         super().setEnabled(value)
         self._editor.setEnabled(self.enabled())
 
-    def _on_editing_finished(self):
-        self.valueChanged.emit(self._editor.value())
+    def _on_value_changed(self, value: int):
+        self.valueChanged.emit(value)
 
 
 @editor_for(float)
@@ -183,8 +184,8 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._editor = QtWidgets.QDoubleSpinBox(self)
-        self._editor.editingFinished.connect(self._on_editing_finished)
+        self._editor = DoubleSpinBox(self)
+        self._editor.value_changed.connect(self._on_value_changed)
         self._editor.setReadOnly(self._metadata.has(p.ReadOnly))
 
         min_value = self._metadata.find(p.MinValue)
@@ -215,7 +216,7 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
         super().setEnabled(value)
         self._editor.setEnabled(self.enabled())
 
-    def _on_editing_finished(self):
+    def _on_value_changed(self, _: float):
         self.valueChanged.emit(self._editor.value())
 
 
@@ -228,17 +229,17 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         readonly = self._metadata.has(p.ReadOnly)
         self._value = Vector2()
 
-        self._x_editor = QtWidgets.QDoubleSpinBox(self)
+        self._x_editor = DoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
         self._x_editor.setMaximum(10000.0)
         self._x_editor.setReadOnly(readonly)
-        self._x_editor.editingFinished.connect(self._on_editing_finished)
+        self._x_editor.value_changed.connect(self._on_value_changed)
 
-        self._y_editor = QtWidgets.QDoubleSpinBox(self)
+        self._y_editor = DoubleSpinBox(self)
         self._y_editor.setMinimum(-10000.0)
         self._y_editor.setMaximum(10000.0)
         self._y_editor.setReadOnly(readonly)
-        self._y_editor.editingFinished.connect(self._on_editing_finished)
+        self._y_editor.value_changed.connect(self._on_value_changed)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -274,7 +275,7 @@ class Vector2PropertyEditor(BasePropertyEditor[Vector2]):
         self._x_editor.setEnabled(self.enabled())
         self._y_editor.setEnabled(self.enabled())
 
-    def _on_editing_finished(self):
+    def _on_value_changed(self, _: float):
         value = Vector2((
             self._x_editor.value(),
             self._y_editor.value(),
@@ -295,23 +296,23 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         readonly = self._metadata.has(p.ReadOnly)
         self._value = Vector3()
 
-        self._x_editor = QtWidgets.QDoubleSpinBox(self)
+        self._x_editor = DoubleSpinBox(self)
         self._x_editor.setMinimum(-10000.0)
         self._x_editor.setMaximum(10000.0)
         self._x_editor.setReadOnly(readonly)
-        self._x_editor.editingFinished.connect(self._on_editing_finished)
+        self._x_editor.value_changed.connect(self._on_value_changed)
 
-        self._y_editor = QtWidgets.QDoubleSpinBox(self)
+        self._y_editor = DoubleSpinBox(self)
         self._y_editor.setMinimum(-10000.0)
         self._y_editor.setMaximum(10000.0)
         self._y_editor.setReadOnly(readonly)
-        self._y_editor.editingFinished.connect(self._on_editing_finished)
+        self._y_editor.value_changed.connect(self._on_value_changed)
 
-        self._z_editor = QtWidgets.QDoubleSpinBox(self)
+        self._z_editor = DoubleSpinBox(self)
         self._z_editor.setMinimum(-10000.0)
         self._z_editor.setMaximum(10000.0)
         self._z_editor.setReadOnly(readonly)
-        self._z_editor.editingFinished.connect(self._on_editing_finished)
+        self._z_editor.value_changed.connect(self._on_value_changed)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -360,7 +361,7 @@ class Vector3PropertyEditor(BasePropertyEditor[Vector3]):
         self._y_editor.setEnabled(self.enabled())
         self._z_editor.setEnabled(self.enabled())
 
-    def _on_editing_finished(self):
+    def _on_value_changed(self, _: float):
         value = Vector3(
             self._x_editor.value(),
             self._y_editor.value(),
