@@ -73,7 +73,7 @@ class CncProjectItem(p.EditableObject):
                 pass
 
         for child in self.children:
-            clone.add_child(child.clone())
+            clone.children.append(child)
 
         return clone
 
