@@ -34,7 +34,7 @@ class CircleTool(CncTool):
 
     def commit(self):
         if self._circle:
-            self._create_circle(self._p1, (self._p2 - self._p1).length)
+            self._create_circle(self._p1, float((self._p2 - self._p1).length))
 
             self.view.remove_item(self._circle)
             self._circle = None
@@ -73,13 +73,19 @@ class CircleTool(CncTool):
             self._p2 = self._screen_to_world_point(mouse_event.position()).xy
 
             if self._circle is None and (self._p1 - self._p2).length > 10:
-                self._circle = self._make_circle(self._p1, (self._p1 - self._p2).length)
+                self._circle = self._make_circle(
+                    self._p1,
+                    float((self._p1 - self._p2).length),
+                )
                 self.view.add_item(self._circle)
                 self._center_marker = self._make_center_marker(self._p1)
                 self.view.add_item(self._center_marker)
             elif self._circle is not None:
                 self.view.remove_item(self._circle)
-                self._circle = self._make_circle(self._p1, (self._p1 - self._p2).length)
+                self._circle = self._make_circle(
+                    self._p1,
+                    float((self._p1 - self._p2).length),
+                )
                 self.view.add_item(self._circle)
 
             widget.update()
@@ -126,4 +132,3 @@ class CircleTool(CncTool):
         GLOBALS.APP.undo_stack.push(
             CreateCircleCommand(center=center, radius=radius,)
         )
-
