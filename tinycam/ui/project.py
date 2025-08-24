@@ -583,11 +583,19 @@ class CncProjectWindow(CncWindow):
 
         popup = QtWidgets.QMenu(self)
 
-        popup.addAction('Hide' if item.visible else 'Show',
-                        lambda: self._toggle_item_visibility(item))
+        hide_action = QtGui.QAction('Hide')
+        hide_action.triggered.connect(lambda: self._toggle_item_visibility(item))
+        hide_action.setCheckable(True)
+        hide_action.setChecked(not item.visible)
+        popup.addAction(hide_action)
+
+        popup.addSeparator()
+
         popup.addAction('Duplicate',
                         lambda: self._duplicate_item(item))
         popup.addAction('Delete', self._delete_items)
+
+        popup.addSeparator()
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
         elif isinstance(item, ExcellonItem):
