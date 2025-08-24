@@ -1,28 +1,20 @@
-from PySide6 import QtGui
-
-from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem, CncIsolateJob
+from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 
-class CreateIsolateJobCommand(QtGui.QUndoCommand):
-    def __init__(self, item: CncProjectItem, parent=None):
-        super().__init__('Create Isolate Job', parent=parent)
+class CreateIsolateJobCommand(CreateItemCommandBase):
+    def __init__(self, item: CncProjectItem):
+        super().__init__('Create Isolate Job')
         self._source_item = item
-        self._result_item = None
+        self._item = None
 
     @property
     def source_item(self) -> CncProjectItem:
         return self._source_item
 
     @property
-    def result_item(self) -> CncProjectItem | None:
-        return self._result_item
-
-    def redo(self):
-        self._result_item = CncIsolateJob()
-        self._result_item.source_item = self._source_item
-        GLOBALS.APP.project.items.append(self._result_item)
-
-    def undo(self):
-        if self._result_item is not None:
-            GLOBALS.APP.project.items.remove(self._result_item)
+    def item(self) -> CncProjectItem | None:
+        if self._item is None:
+            self._item = CncIsolateJob()
+            self._item.source_item = self.source_item
+        return self._item

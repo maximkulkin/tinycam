@@ -1,19 +1,21 @@
-from PySide6 import QtGui
-
-from tinycam.globals import GLOBALS
-from tinycam.project import GeometryItem
+from tinycam.project import CncProjectItem, RectangleItem
 from tinycam.types import Rect
+from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 
-class CreateRectangleCommand(QtGui.QUndoCommand):
+class CreateRectangleCommand(CreateItemCommandBase):
     def __init__(self, rect: Rect):
         super().__init__('Create rectangle')
-        self._item = GeometryItem()
-        self._item.name = 'Rectangle'
-        self._item.geometry = GLOBALS.GEOMETRY.box(rect.pmin, rect.pmax).exterior
+        self._rect = rect
+        self._item = None
 
-    def redo(self):
-        GLOBALS.APP.project.items.append(self._item)
+    @property
+    def rect(self) -> Rect:
+        return self._rect
 
-    def undo(self):
-        GLOBALS.APP.project.items.remove(self._item)
+    @property
+    def item(self) -> CncProjectItem | None:
+        if self._item is None:
+            self._item = RectangleItem(self.rect)
+
+        return self._item

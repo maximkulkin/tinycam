@@ -1,27 +1,20 @@
-from PySide6 import QtGui
-
-from tinycam.globals import GLOBALS
-from tinycam.project import CncCutoutJob
+from tinycam.project import CncProjectItem, CncCutoutJob
+from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 
-class CreateCutoutJobCommand(QtGui.QUndoCommand):
-    def __init__(self, item, parent=None):
-        super().__init__('Create Cutout Job', parent=parent)
+class CreateCutoutJobCommand(CreateItemCommandBase):
+    def __init__(self, item: CncProjectItem):
+        super().__init__('Create Cutout Job')
         self._source_item = item
-        self._result_item = None
+        self._item = None
 
     @property
-    def source_item(self):
+    def source_item(self) -> CncProjectItem:
         return self._source_item
 
     @property
-    def result_item(self):
-        return self._result_item
+    def item(self) -> CncProjectItem | None:
+        if self._item is None:
+            self._item = CncCutoutJob(self.source_item)
 
-    def redo(self):
-        self._result_item = CncCutoutJob()
-        self._result_item.source_item = self._source_item
-        GLOBALS.APP.project.items.append(self._result_item)
-
-    def undo(self):
-        GLOBALS.APP.project.items.remove(self._result_item)
+        return self._item

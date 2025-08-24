@@ -1,21 +1,37 @@
 from typing import Sequence
 
-from PySide6 import QtGui
-
 from tinycam.globals import GLOBALS
-from tinycam.project import GeometryItem
+from tinycam.project import CncProjectItem, GeometryItem
 from tinycam.types import Vector2
+from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 
-class CreatePolylineCommand(QtGui.QUndoCommand):
+class CreatePolylineCommand(CreateItemCommandBase):
     def __init__(self, points: Sequence[Vector2], closed: bool = False):
         super().__init__('Create line')
-        self._item = GeometryItem()
-        self._item.name = 'Line'
-        self._item.geometry = GLOBALS.GEOMETRY.line(points, closed=closed)
+        self._item = None
 
-    def redo(self):
-        GLOBALS.APP.project.items.append(self._item)
+        self._points = points
+        self._closed = closed
 
-    def undo(self):
-        GLOBALS.APP.project.items.remove(self._item)
+        self._previous_selection = []
+
+    @property
+    def points(self) -> Sequence[Vector2]:
+        return self._points
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def item(self) -> CncProjectItem | None:
+        if self._item is None:
+            self._item = GeometryItem()
+            self._item.name = 'Line'
+            self._item.geometry = GLOBALS.GEOMETRY.line(
+                self.points,
+                closed=self.closed,
+            )
+
+        return self._item
