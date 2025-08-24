@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from collections.abc import Callable
 from numbers import Number
-from typing import cast
+from typing import cast, Type
 
 import tinycam.settings as s
 from tinycam.signals import Signal
@@ -64,7 +64,7 @@ class Metadata:
     def has(self, type: type) -> bool:
         return self.find(type) is not None
 
-    def find(self, type: type) -> object | None:
+    def find[T](self, type: Type[T]) -> T | None:
         for item in self._items:
             if isinstance(item, type):
                 return item
@@ -83,11 +83,11 @@ class Property[T]:
         self.default = default
         self._on_update: Callable[[object], None] = on_update
 
-        metadata = Metadata(metadata[:])
+        metadata_ = Metadata(metadata[:])
         if order is not None:
             metadata.append(Order(order))
 
-        setattr(self, METADATA_ATTRIBUTE, metadata)
+        setattr(self, METADATA_ATTRIBUTE, metadata_)
 
     def __set_name__(self, objtype, name):
         self._variable_name = f'_{name}'
@@ -121,6 +121,8 @@ def get_all(obj_type: type) -> list[str]:
 
     def order_or_name(name: str):
         metadata = get_metadata(obj_type, name)
+        if metadata is None:
+            return 10000
         order = metadata.find(Order)
         return (order.order if order is not None else 10000, name)
 
