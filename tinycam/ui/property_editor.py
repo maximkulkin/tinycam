@@ -180,6 +180,8 @@ class IntPropertyEditor(BasePropertyEditor[int]):
 
 @editor_for(float)
 class FloatPropertyEditor(BasePropertyEditor[float]):
+    MIN_VALUE = -1000000.0
+    MAX_VALUE = 1000000.0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -189,10 +191,10 @@ class FloatPropertyEditor(BasePropertyEditor[float]):
         self._editor.setReadOnly(self._metadata.has(p.ReadOnly))
 
         min_value = self._metadata.find(p.MinValue)
-        self._editor.setMinimum(min_value.value if min_value is not None else -1000000.0)
+        self._editor.setMinimum(min_value.value if min_value is not None else self.MIN_VALUE)
 
         max_value = self._metadata.find(p.MaxValue)
-        self._editor.setMaximum(max_value.value if max_value is not None else 1000000.0)
+        self._editor.setMaximum(max_value.value if max_value is not None else self.MAX_VALUE)
 
         suffix = self._metadata.find(p.Suffix)
         if suffix is not None:
