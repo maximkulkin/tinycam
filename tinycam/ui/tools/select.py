@@ -31,13 +31,8 @@ class SelectTool(CncTool):
 
         self._box = None
 
-    def activate(self):
-        super().activate()
-        self.view.grabKeyboard()
-
     def deactivate(self):
         self.cancel()
-        self.view.releaseKeyboard()
         super().deactivate()
 
     def cancel(self):

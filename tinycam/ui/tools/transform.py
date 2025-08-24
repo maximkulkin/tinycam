@@ -65,7 +65,6 @@ class TransformTool(CncTool):
     def activate(self):
         super().activate()
 
-        self.view.grabKeyboard()
         if not self._controls:
             self._init_controls()
 
@@ -88,7 +87,6 @@ class TransformTool(CncTool):
             item.changed.disconnect(self._on_selected_item_changed)
 
         self.view.setCursor(Qt.CursorShape.ArrowCursor)
-        self.view.releaseKeyboard()
 
         super().deactivate()
 

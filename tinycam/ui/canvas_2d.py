@@ -1,6 +1,7 @@
 from typing import cast
 
 from PySide6 import QtCore
+from PySide6.QtCore import Qt
 from tinycam.project import (
     CncProject, CncProjectItem, GerberItem, ExcellonItem,
     CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
@@ -34,6 +35,7 @@ class CncCanvas2D(CncView):
 
         super().__init__(camera=camera, *args, **kwargs)
 
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._project = project
 
         self._pan_and_zoom_controller = PanAndZoomController(self._camera)

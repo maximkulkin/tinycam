@@ -23,12 +23,10 @@ class PolylineTool(CncTool):
 
     def activate(self):
         super().activate()
-        self.view.grabKeyboard()
         self.view.setCursor(Qt.CursorShape.CrossCursor)
 
     def deactivate(self):
         self.cancel()
-        self.view.releaseKeyboard()
         self.view.setCursor(Qt.CursorShape.ArrowCursor)
         super().deactivate()
 
