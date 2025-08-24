@@ -12,7 +12,7 @@ from tinycam.types import Vector2
 from tinycam.ui.view import CncView
 from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
-from tinycam.ui.view_items.core.grid_xy import GridXY
+from tinycam.ui.view_items.core import InfiniteGridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.cutout_job import CncCutoutJobView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
@@ -49,7 +49,7 @@ class CncPreview3D(CncView):
 
         assert self.ctx is not None
 
-        self.add_item(GridXY(self.ctx))
+        self.add_item(InfiniteGridXY(self.ctx))
 
         self._orientation_cube = OrientationCube(
             self.ctx,

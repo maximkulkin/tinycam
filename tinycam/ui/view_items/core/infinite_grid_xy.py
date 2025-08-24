@@ -6,7 +6,7 @@ from tinycam.ui.camera import PerspectiveCamera, OrthographicCamera
 from tinycam.ui.view import Context, ViewItem, RenderState
 
 
-class GridXY(ViewItem):
+class InfiniteGridXY(ViewItem):
     priority = 1
 
     def __init__(self, context: Context):

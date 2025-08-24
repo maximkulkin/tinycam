@@ -13,7 +13,7 @@ from tinycam.ui.camera_controllers import (
     CameraPanAndZoomAnimation,
 )
 from tinycam.ui.view import CncView
-from tinycam.ui.view_items.core.grid_xy import GridXY
+from tinycam.ui.view_items.core import InfiniteGridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
@@ -51,7 +51,7 @@ class CncCanvas2D(CncView):
 
         assert self.ctx is not None
 
-        self.add_item(GridXY(self.ctx))
+        self.add_item(InfiniteGridXY(self.ctx))
 
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
