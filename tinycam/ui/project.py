@@ -589,6 +589,12 @@ class CncProjectWindow(CncWindow):
         hide_action.setChecked(not item.visible)
         popup.addAction(hide_action)
 
+        debug_action = QtGui.QAction('Debug')
+        debug_action.triggered.connect(lambda: self._debug_item(item))
+        debug_action.setCheckable(True)
+        debug_action.setChecked(item.debug)
+        popup.addAction(debug_action)
+
         popup.addSeparator()
 
         popup.addAction('Duplicate',
@@ -611,6 +617,9 @@ class CncProjectWindow(CncWindow):
         GLOBALS.APP.undo_stack.push(
             UpdateItemsCommand([item], {'visible': not item.visible})
         )
+
+    def _debug_item(self, item: CncProjectItem):
+        GLOBALS.APP.undo_stack.push(UpdateItemsCommand([item], {'debug': not item.debug}))
 
     def _duplicate_item(self, item: CncProjectItem):
         GLOBALS.APP.undo_stack.push(DuplicateItemCommand(item))
