@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-import enum
 import inspect
 from typing import ForwardRef
 
@@ -12,30 +11,6 @@ from tinycam.signals import Signal
 from tinycam.types import Rect
 import tinycam.properties as p
 from tinycam.utils import index_if
-
-
-class Origin(enum.Enum):
-    TOP_LEFT = enum.auto()
-    TOP_CENTER = enum.auto()
-    TOP_RIGHT = enum.auto()
-    MIDDLE_LEFT = enum.auto()
-    MIDDLE_CENTER = enum.auto()
-    MIDDLE_RIGHT = enum.auto()
-    BOTTOM_LEFT = enum.auto()
-    BOTTOM_CENTER = enum.auto()
-    BOTTOM_RIGHT = enum.auto()
-
-    def __str__(self) -> str:
-        match self:
-            case self.TOP_LEFT: return 'Top Left'
-            case self.TOP_CENTER: return 'Top Center'
-            case self.TOP_RIGHT: return 'Top Right'
-            case self.MIDDLE_LEFT: return 'Middle Left'
-            case self.MIDDLE_CENTER: return 'Middle Center'
-            case self.MIDDLE_RIGHT: return 'Middle Right'
-            case self.BOTTOM_LEFT: return 'Bottom Left'
-            case self.BOTTOM_CENTER: return 'Bottom Center'
-            case self.BOTTOM_RIGHT: return 'Bottom Right'
 
 
 class CncProjectItem(p.EditableObject):
