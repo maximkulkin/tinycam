@@ -167,10 +167,10 @@ class Serializer[T]:
     def __init__(self, t: Type[T]):
         self.type = t
 
-    def serialize(self, value: T, writer: BufferWriter):
+    def serialize(self, _value: T, _writer: BufferWriter):
         return NotImplementedError()
 
-    def deserialize(self, reader: BufferReader) -> T:
+    def deserialize(self, _reader: BufferReader) -> T:
         raise NotImplementedError()
 
     _all_serializers = []
@@ -237,8 +237,8 @@ class Vector2Serializer(Serializer[Vector2]):
 
     @override
     def serialize(self, value: Vector2, writer: BufferWriter):
-        writer.write_float(value.x)
-        writer.write_float(value.y)
+        writer.write_float(float(value.x))
+        writer.write_float(float(value.y))
 
     @override
     def deserialize(self, reader: BufferReader) -> Vector2:
@@ -282,9 +282,11 @@ class ListSerializer[T](Serializer[list[T]]):
     def __init__(self, t: Type[list[T]]):
         super().__init__(t)
         item_type = get_args(t)[0]
-        self._item_serializer = get_serializer(item_type)
-        if self._item_serializer is None:
+        serializer = get_serializer(item_type)
+        if serializer is None:
             raise TypeError('List item type {item_type} is not serializable')
+
+        self._item_serializer = serializer
 
     @override
     def serialize(self, value: list[T], writer: BufferWriter):
@@ -297,7 +299,7 @@ class ListSerializer[T](Serializer[list[T]]):
         count = reader.read_uxx()
 
         result = []
-        for i in range(count):
+        for _ in range(count):
             result.append(self._item_serializer.deserialize(reader))
         return result
 
@@ -350,9 +352,6 @@ class ObjectSerializer(Serializer[object]):
 
 
 def get_serializer[T](t: Type[T]) -> Serializer[T] | None:
-    if t is None:
-        raise ValueError('t is None')
-
     serializer = find_if(Serializer.all_serializers(), lambda s: s.type == t)
     if serializer is None:
         if getattr(t, '__origin__', None) == list:
@@ -550,8 +549,8 @@ class CncVector3Setting(CncSetting[Vector3]):
 
 
 class CncEnumSetting[E: enum.Enum](CncSetting[E]):
-    @override
     @property
+    @override
     def type(self) -> type:
         return get_args(self.__orig_class__)[0]
 
@@ -565,8 +564,8 @@ class CncEnumSetting[E: enum.Enum](CncSetting[E]):
 
 
 class CncListSetting[I](CncSetting[list[I]]):
-    @override
     @property
+    @override
     def type(self) -> type:
         return list[get_args(self.__orig_class__)[0]]
 
