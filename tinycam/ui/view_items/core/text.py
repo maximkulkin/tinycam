@@ -45,26 +45,33 @@ def make_font_from_qfont(ctx: Context, font: QtGui.QFont, alphabet: str) -> Font
     line_height = metrics.height()
     padding = 2
 
-    # Determine max glyph size
-    max_width = 0
-    max_height = 0
+    # Determine glyph sizes
+    glyph_sizes = {}
     for char in alphabet:
         rect = metrics.boundingRect(char)
-        if rect.width() > max_width:
-            max_width = rect.width()
-        if rect.height() > max_height:
-            max_height = rect.height()
+        glyph_sizes[char] = (rect.width() + padding * 2, rect.height() + padding * 2)
 
-    max_width += padding * 2
-    max_height += padding * 2
+    # Estimate texture size
+    total_area = sum(w * h for w, h in glyph_sizes.values())
+    side = int(math.sqrt(total_area))
 
-    # Arrange glyphs in a grid
-    n = len(alphabet)
-    cols = int(math.sqrt(n))
-    rows = math.ceil(n / cols)
+    # Arrange glyphs
+    rows = []
+    row_width = 0
+    row = []
+    for char in sorted(glyph_sizes.keys(), key=lambda c: glyph_sizes[c][1], reverse=True):
+        w, h = glyph_sizes[char]
+        if row_width + w > side and row:
+            rows.append((row, row_width))
+            row = []
+            row_width = 0
+        row.append(char)
+        row_width += w
+    if row:
+        rows.append((row, row_width))
 
-    texture_width = cols * max_width
-    texture_height = rows * max_height
+    texture_width = max(w for _, w in rows)
+    texture_height = sum(max(glyph_sizes[c][1] for c in row) for row, _ in rows)
     texture_size = (texture_width, texture_height)
 
     image = QtGui.QImage(texture_width, texture_height, QtGui.QImage.Format.Format_RGBA8888)
@@ -75,24 +82,24 @@ def make_font_from_qfont(ctx: Context, font: QtGui.QFont, alphabet: str) -> Font
     painter.setPen(QtCore.Qt.GlobalColor.white)
 
     glyphs = {}
-    for i, char in enumerate(alphabet):
-        col = i % cols
-        row = i // cols
-        x = col * max_width + padding
-        y = row * max_height + padding
-
-        painter.drawText(x, y + metrics.ascent(), char)
-
-        u0 = x / texture_width
-        v0 = y / texture_height
-        u1 = (x + metrics.horizontalAdvance(char)) / texture_width
-        v1 = (y + line_height) / texture_height
-
-        glyphs[char] = GlyphInfo(
-            size=(metrics.horizontalAdvance(char), line_height),
-            coords=(u0, v0, u1, v1),
-            width=metrics.horizontalAdvance(char)
-        )
+    y = 0
+    for row, _ in rows:
+        x = 0
+        max_h = max(glyph_sizes[c][1] for c in row)
+        for char in row:
+            w, h = glyph_sizes[char]
+            painter.drawText(x + padding, y + padding + metrics.ascent(), char)
+            u0 = (x + padding) / texture_width
+            v0 = (y + padding) / texture_height
+            u1 = (x + padding + metrics.horizontalAdvance(char)) / texture_width
+            v1 = (y + padding + line_height) / texture_height
+            glyphs[char] = GlyphInfo(
+                size=(metrics.horizontalAdvance(char), line_height),
+                coords=(u0, v0, u1, v1),
+                width=metrics.horizontalAdvance(char)
+            )
+            x += w
+        y += max_h
 
     painter.end()
 
@@ -196,4 +203,3 @@ class Text(ViewItem):
         self._program['resolution'].write(np.array(state.camera.pixel_size, dtype='f4').tobytes())
         with self.context.scope(enable=moderngl.BLEND):
             self._vao.render(moderngl.TRIANGLE_STRIP)
-
