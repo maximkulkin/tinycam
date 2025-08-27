@@ -8,7 +8,11 @@ from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
 from tinycam.settings import SETTINGS, ControlType
 from tinycam.types import Vector2
-from tinycam.ui.commands import ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand
+from tinycam.ui.commands import (
+    ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand,
+    AlignLeftCommand, AlignRightCommand, AlignCenterCommand,
+    AlignTopCommand, AlignBottomCommand, AlignVCenterCommand,
+)
 from tinycam.ui.canvas_2d import CncCanvas2D
 from tinycam.ui.preview_3d import CncPreview3D
 from tinycam.ui.project import CncProjectWindow
@@ -170,6 +174,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.tools_toolbar.addAction(rectangle_tool_action)
         self.tools_toolbar.addAction(circle_tool_action)
 
+        self.align_toolbar = self._make_align_toolbar()
+        self.addToolBar(self.align_toolbar)
+
         self.canvas_2d.default_tool = self._select_tool
         self._activate_tool(self._select_tool)
 
@@ -228,6 +235,108 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self._load_settings()
 
+    def _make_align_toolbar(self) -> QtWidgets.QToolBar:
+        align_horizontal_button = QtWidgets.QToolButton()
+        align_horizontal_button.setText('Align Horizontally')
+        align_horizontal_button.setIcon(QtGui.QIcon(':/icons/align_left.svg'))
+
+        align_horizontal_menu = QtWidgets.QMenu(align_horizontal_button)
+        align_left_action = self._make_action(
+            'Align Left',
+            self._align_left,
+            icon=':/icons/align_left.svg',
+        )
+        align_center_action = self._make_action(
+            'Align Center',
+            self._align_center,
+            icon=':/icons/align_center.svg',
+        )
+        align_right_action = self._make_action(
+            'Align Right',
+            self._align_right,
+            icon=':/icons/align_right.svg',
+        )
+
+        align_horizontal_menu.addActions([
+            align_left_action,
+            align_center_action,
+            align_right_action,
+        ])
+        align_horizontal_menu.setStyleSheet("""
+            QMenu::item {
+                margin-left: 8px;
+                padding-left: 8px;
+            }
+        """)
+
+        align_horizontal_button.setMenu(align_horizontal_menu)
+        align_horizontal_button.setPopupMode(
+            QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup
+        )
+
+        align_vertical_button = QtWidgets.QToolButton()
+        align_vertical_button.setText('Align Horizontally')
+        align_vertical_button.setIcon(QtGui.QIcon(':/icons/align_bottom.svg'))
+
+        align_vertical_menu = QtWidgets.QMenu(align_vertical_button)
+        align_top_action = self._make_action(
+            'Align Top',
+            self._align_top,
+            icon=':/icons/align_top.svg',
+        )
+        align_vcenter_action = self._make_action(
+            'Align VCenter',
+            self._align_vcenter,
+            icon=':/icons/align_vcenter.svg',
+        )
+        align_bottom_action = self._make_action(
+            'Align Bottom',
+            self._align_bottom,
+            icon=':/icons/align_bottom.svg',
+        )
+
+        align_vertical_menu.addActions([
+            align_top_action,
+            align_vcenter_action,
+            align_bottom_action,
+        ])
+        align_vertical_menu.setStyleSheet("""
+            QMenu::item {
+                margin-left: 8px;
+                padding-left: 8px;
+            }
+        """)
+
+        align_vertical_button.setMenu(align_vertical_menu)
+        align_vertical_button.setPopupMode(
+            QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup
+        )
+
+        toolbar = QtWidgets.QToolBar()
+        toolbar.setObjectName('align_toolbar')
+        toolbar.setWindowTitle('Align Toolbar')
+        toolbar.addWidget(align_horizontal_button)
+        toolbar.addWidget(align_vertical_button)
+
+        def on_selection_changed():
+            multiple_selected = len(self.project.selection) > 1
+
+            align_horizontal_button.setEnabled(multiple_selected)
+            align_vertical_button.setEnabled(multiple_selected)
+
+            align_left_action.setEnabled(multiple_selected)
+            align_right_action.setEnabled(multiple_selected)
+            align_center_action.setEnabled(multiple_selected)
+
+            align_top_action.setEnabled(multiple_selected)
+            align_bottom_action.setEnabled(multiple_selected)
+            align_vcenter_action.setEnabled(multiple_selected)
+
+        self.project.selection.changed.connect(on_selection_changed)
+        on_selection_changed()
+
+        return toolbar
+
     def _make_action(
         self,
         label: str,
@@ -240,6 +349,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         action.triggered.connect(callback)
         if icon is not None:
             action.setIcon(QtGui.QIcon(icon))
+            action.setIconVisibleInMenu(True)
         if shortcut is not None:
             action.setShortcut(shortcut)
         action.setCheckable(checkable)
@@ -344,6 +454,36 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
     def _flip_vertically(self):
         GLOBALS.APP.undo_stack.push(FlipVerticallyCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_left(self):
+        GLOBALS.APP.undo_stack.push(AlignLeftCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_right(self):
+        GLOBALS.APP.undo_stack.push(AlignRightCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_center(self):
+        GLOBALS.APP.undo_stack.push(AlignCenterCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_top(self):
+        GLOBALS.APP.undo_stack.push(AlignTopCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_bottom(self):
+        GLOBALS.APP.undo_stack.push(AlignBottomCommand(
+            list(self.project.selection),
+        ))
+
+    def _align_vcenter(self):
+        GLOBALS.APP.undo_stack.push(AlignVCenterCommand(
             list(self.project.selection),
         ))
 

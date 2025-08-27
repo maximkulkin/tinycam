@@ -1,3 +1,7 @@
+from .align import (
+    AlignLeftCommand, AlignRightCommand, AlignCenterCommand,
+    AlignTopCommand, AlignBottomCommand, AlignVCenterCommand,
+)
 from .create_circle import CreateCircleCommand
 from .create_cutout_job import CreateCutoutJobCommand
 from .create_drill_job import CreateDrillJobCommand
@@ -16,6 +20,12 @@ from .import_file import ImportFileCommand
 
 
 __all__ = [
+    'AlignLeftCommand',
+    'AlignRightCommand',
+    'AlignCenterCommand',
+    'AlignTopCommand',
+    'AlignBottomCommand',
+    'AlignVCenterCommand',
     'CreateCircleCommand',
     'CreateCutoutJobCommand',
     'CreateDrillJobCommand',
