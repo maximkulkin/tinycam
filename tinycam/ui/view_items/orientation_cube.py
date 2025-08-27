@@ -224,7 +224,6 @@ class OrientationCube(ViewItem, QtCore.QObject):
 
         image = Image.open('textures/orientation_cube.png').transpose(Image.FLIP_TOP_BOTTOM)
         self._texture = self.context.texture(image.size, 3, image)
-        self._program['tex'] = 0
 
         self._vertex_buffer = self.context.buffer(vertices)
         self._uv_buffer = self.context.buffer(uvs)
@@ -251,7 +250,6 @@ class OrientationCube(ViewItem, QtCore.QObject):
             (self._vertex_buffer, '3f', 'position'),
             (self._face_id_buffer, 'i', 'face_id'),
         ])
-        self._pick_program['tex'] = 0
 
         quad_buffer = self.context.buffer(np.array([
             ( 0.5, -0.5, 1., 0.),
@@ -270,7 +268,6 @@ class OrientationCube(ViewItem, QtCore.QObject):
             color_attachments=[self._rendered_texture],
             depth_attachment=self.context.depth_renderbuffer((512, 512)),
         )
-        self._quad_program['tex'] = 0
 
     @property
     def orientation_cube_position(self) -> OrientationCubePosition:
@@ -324,6 +321,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 state.register_pickable(self, Orientation.TOP),
             ], dtype='u1')
             self._face_pick_texture.write(data)
+            self._pick_program['tex'] = 0
             self._pick_program['mvp'].write(self._matrix)
             with self.context.scope(
                 framebuffer=self._framebuffer,
@@ -333,6 +331,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
                 self._face_pick_texture.use(0)
                 self._pick_vao.render(mgl.TRIANGLES)
         else:
+            self._program['tex'] = 0
             self._program['mvp'].write(self._matrix)
 
             with self.context.scope(
@@ -347,6 +346,7 @@ class OrientationCube(ViewItem, QtCore.QObject):
             Vector2(self.SIZE.x * state.camera.aspect, self.SIZE.y) *
             2.0 / state.camera.pixel_size
         )
+        self._quad_program['tex'] = 0
         self._quad_program['center'] = p.xy
         self._quad_program['size'] = size
 

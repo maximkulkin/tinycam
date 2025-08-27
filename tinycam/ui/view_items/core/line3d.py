@@ -99,9 +99,6 @@ class Line3D(Node3D):
             side_data[0::2] = -1.0
             side_data[1::2] = 1.0
 
-            self._program['width'] = self._width
-            self._program['color'].write(color.astype('f4'))
-
             self._vbo_curr_points = self.context.buffer(points_data.tobytes())
             self._vbo_prev_points = self.context.buffer(prev_points_data.tobytes())
             self._vbo_next_points = self.context.buffer(next_points_data.tobytes())
@@ -135,7 +132,6 @@ class Line3D(Node3D):
                     }
                 ''',
             )
-            self._program['color'].write(color.astype('f4'))
             self._vbo = self.context.buffer(np.array(points, dtype='f4').tobytes())
             self._vao = self.context.vertex_array(self._program, [
                 (self._vbo, '3f', 'position'),
@@ -148,9 +144,11 @@ class Line3D(Node3D):
     @color.setter
     def color(self, value: Vector4):
         self._color = value
-        self._program['color'].write(self._color.tobytes())
 
     def render(self, state: RenderState):
+        self._program['width'] = self._width
+        self._program['color'].write(self._color.astype('f4'))
+
         self._program['mvp'].write(
             (state.camera.projection_matrix * state.camera.view_matrix).tobytes()
         )

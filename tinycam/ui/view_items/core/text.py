@@ -145,7 +145,6 @@ class Text(ViewItem):
         )
 
         self.font_texture = font.texture
-        self._program["font"] = 0
 
         glyph_count = sum(1 for c in text if c not in ' \n')
 
@@ -199,6 +198,7 @@ class Text(ViewItem):
         ])
 
     def render(self, state: RenderState):
+        self._program["font"] = 0
         self.font_texture.use(0)
         self._program['resolution'].write(np.array(state.camera.pixel_size, dtype='f4').tobytes())
         with self.context.scope(enable=moderngl.BLEND):

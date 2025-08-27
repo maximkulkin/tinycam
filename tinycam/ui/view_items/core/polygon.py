@@ -40,7 +40,6 @@ class Polygon(Node3D):
         )
 
         self._color = color
-        self._program['color'].value = color
 
         polygons = []
         if isinstance(polygon, sg.Polygon):
@@ -77,9 +76,9 @@ class Polygon(Node3D):
     @color.setter
     def color(self, value: Vector4):
         self._color = value
-        self._program['color'].value = self._color
 
     def render(self, state: RenderState):
+        self._program['color'].value = self._color
         camera = state.camera
         self._program['mvp'].write(
             (camera.projection_matrix * camera.view_matrix * self.world_matrix)

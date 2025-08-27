@@ -327,7 +327,6 @@ class Line2D(Node3D):
 
         self._color = color
         self._width = width
-        self._program['color'].write(color.astype('f4').tobytes())
 
         vertices, uvs = _generate_vertices(
             points,
@@ -357,9 +356,9 @@ class Line2D(Node3D):
     @color.setter
     def color(self, value: Vector4):
         self._color = value
-        self._program['color'].write(self._color.astype('f4').tobytes())
 
     def render(self, state: RenderState):
+        self._program['color'].write(self._color.astype('f4').tobytes())
         camera = state.camera
         self._program['mvp'].write(
             camera.projection_matrix * camera.view_matrix * self.world_matrix

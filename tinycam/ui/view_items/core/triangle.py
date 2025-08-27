@@ -13,6 +13,8 @@ class Triangle(Node3D):
     ):
         super().__init__(context)
 
+        self._color = color
+
         self._program = self.context.program(
             vertex_shader='''
                 #version 410 core
@@ -47,9 +49,9 @@ class Triangle(Node3D):
         self._vao = self.context.vertex_array(self._program, [
             (self._vbo, '3f', 'position'),
         ])
-        self._program['color'] = color
 
     def render(self, state: RenderState):
+        self._program['color'] = self._color
         camera = state.camera
         self._program['mvp'] = (
             (camera.projection_matrix * camera.view_matrix * self.world_matrix)

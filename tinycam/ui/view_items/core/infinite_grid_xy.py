@@ -125,7 +125,6 @@ class InfiniteGridXY(ViewItem):
             [(self._vbo, '2f', 'position')],
             mode=mgl.TRIANGLE_STRIP,
         )
-        self._program['scale'] = 1.0
 
     def render(self, state: RenderState):
         if state.picking:

@@ -55,8 +55,8 @@ class DirectionMarkers(Node3D):
                 }
             ''',
         )
-        self._program['color'] = color
-        self._program['size'] = size
+        self._color = color
+        self._size = size
 
         self._instance_count = min(len(positions), len(directions))
         self._position_vbo = self.context.buffer(np.array(positions, dtype='f4'))
@@ -68,6 +68,8 @@ class DirectionMarkers(Node3D):
         ], mode=mgl.TRIANGLES)
 
     def render(self, state: RenderState):
+        self._program['color'] = self._color
+        self._program['size'] = self._size
         camera = state.camera
         self._program['camera_position'] = camera.position
         self._program['vp'] = camera.projection_matrix * camera.view_matrix

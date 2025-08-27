@@ -76,9 +76,9 @@ class CanvasItem(ViewItem):
     @size.setter
     def size(self, value: Vector2):
         self._size = value
-        self._program['size'] = self._size
 
     def render(self, state: RenderState):
+        self._program['size'] = self._size
         self._program['screen_size'] = state.camera.pixel_size
         self._program['center'] = Vector2(self._center.x, state.camera.pixel_height - self._center.y)
 
