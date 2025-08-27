@@ -1,17 +1,18 @@
 from dataclasses import dataclass
+import math
+from typing import Optional
+
 import moderngl
 import numpy as np
-from tinycam.ui.view import ViewItem, RenderState, Context
-from typing import Optional
 from PySide6 import QtGui, QtCore
-import math
+
+from tinycam.ui.view import ViewItem, RenderState, Context
 
 
 @dataclass
 class GlyphInfo:
     size: tuple[int, int]
     coords: tuple[float, float, float, float]
-    width: int
 
 
 class FontAtlas:
@@ -33,11 +34,6 @@ class FontAtlas:
         if c not in self._glyphs:
             return None
         return self._glyphs[c].coords
-
-    def glyph_width(self, c: str) -> Optional[int]:
-        if c not in self._glyphs:
-            return None
-        return self._glyphs[c].width
 
 
 def make_font_from_qfont(ctx: Context, font: QtGui.QFont, alphabet: str) -> FontAtlas:
@@ -87,16 +83,16 @@ def make_font_from_qfont(ctx: Context, font: QtGui.QFont, alphabet: str) -> Font
         x = 0
         max_h = max(glyph_sizes[c][1] for c in row)
         for char in row:
-            w, h = glyph_sizes[char]
+            w = metrics.horizontalAdvance(char)
+
             painter.drawText(x + padding, y + padding + metrics.ascent(), char)
             u0 = (x + padding) / texture_width
             v0 = (y + padding) / texture_height
-            u1 = (x + padding + metrics.horizontalAdvance(char)) / texture_width
+            u1 = (x + padding + w) / texture_width
             v1 = (y + padding + line_height) / texture_height
             glyphs[char] = GlyphInfo(
-                size=(metrics.horizontalAdvance(char), line_height),
+                size=(w, line_height),
                 coords=(u0, v0, u1, v1),
-                width=metrics.horizontalAdvance(char)
             )
             x += w
         y += max_h
@@ -158,7 +154,7 @@ class Text(ViewItem):
                 x = position[0]
                 y -= font.line_height
             elif c == ' ':
-                x += font.glyph_width(' ')
+                x += font.glyph_size(' ')[0]
             else:
                 g_size = font.glyph_size(c)
                 if not g_size:
@@ -187,7 +183,7 @@ class Text(ViewItem):
                 g_uvs[2, 0:2] = (g_coords[0], g_coords[1])
                 g_uvs[3, 0:2] = (g_coords[2], g_coords[1])
 
-                x += font.glyph_width(c)
+                x += font.glyph_size(c)[0]
                 idx += 4
 
         self._vbo_positions = self.context.buffer(positions.tobytes())
