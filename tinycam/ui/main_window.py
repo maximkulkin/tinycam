@@ -116,63 +116,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.zoom_toolbar.addAction(zoom_out_action)
         self.zoom_toolbar.addAction(zoom_fit_action)
 
-        # Tools
-        self._select_tool = SelectTool(self.project, self.canvas_2d)
-        self._transform_tool = TransformTool(self.project, self.canvas_2d)
-        self._circle_tool = CircleTool(self.project, self.canvas_2d)
-        self._rectangle_tool = RectangleTool(self.project, self.canvas_2d)
-        self._polyline_tool = PolylineTool(self.project, self.canvas_2d)
-
-        select_tool_action = self._make_tool_action(
-            'Select Tool', self._select_tool,
-            icon=':/icons/select_tool.svg',
-            shortcut='v',
-        )
-
-        transform_tool_action = self._make_tool_action(
-            'Transform Tool', self._transform_tool,
-            icon=':/icons/transform_tool.svg',
-            shortcut='e',
-        )
-
-        self._flip_horizontally_action = self._make_action(
-            'Flip Horizontally', self._flip_horizontally,
-            icon=':/icons/flip_horizontally.svg',
-        )
-        self._flip_vertically_action = self._make_action(
-            'Flip Vertically', self._flip_vertically,
-            icon=':/icons/flip_vertically.svg',
-        )
-
-        rectangle_tool_action = self._make_tool_action(
-            'Rectangle', self._rectangle_tool,
-            icon=':/icons/rectangle_tool.svg',
-            shortcut='r',
-        )
-
-        circle_tool_action = self._make_tool_action(
-            'Circle', self._circle_tool,
-            icon=':/icons/circle_tool.svg',
-            shortcut='c',
-        )
-
-        polyline_tool_action = self._make_tool_action(
-            'Line', self._polyline_tool,
-            icon=':/icons/polyline_tool.svg',
-            shortcut='l',
-        )
-
-        self.tools_toolbar = QtWidgets.QToolBar()
-        self.tools_toolbar.setObjectName('tools_toolbar')
-        self.tools_toolbar.setWindowTitle('Tools Toolbar')
+        self.tools_toolbar = self._make_tools_toolbar()
         self.addToolBar(self.tools_toolbar)
-        self.tools_toolbar.addAction(select_tool_action)
-        self.tools_toolbar.addAction(transform_tool_action)
-        self.tools_toolbar.addAction(self._flip_horizontally_action)
-        self.tools_toolbar.addAction(self._flip_vertically_action)
-        self.tools_toolbar.addAction(polyline_tool_action)
-        self.tools_toolbar.addAction(rectangle_tool_action)
-        self.tools_toolbar.addAction(circle_tool_action)
 
         self.align_toolbar = self._make_align_toolbar()
         self.addToolBar(self.align_toolbar)
@@ -234,6 +179,76 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.view_menu.addSeparator()
 
         self._load_settings()
+
+    def _make_tools_toolbar(self):
+        # Tools
+        self._select_tool = SelectTool(self.project, self.canvas_2d)
+        self._transform_tool = TransformTool(self.project, self.canvas_2d)
+        self._circle_tool = CircleTool(self.project, self.canvas_2d)
+        self._rectangle_tool = RectangleTool(self.project, self.canvas_2d)
+        self._polyline_tool = PolylineTool(self.project, self.canvas_2d)
+
+        select_tool_action = self._make_tool_action(
+            'Select Tool (v)', self._select_tool,
+            icon=':/icons/select_tool.svg',
+            shortcut='v',
+        )
+
+        transform_tool_action = self._make_tool_action(
+            'Transform Tool (e)', self._transform_tool,
+            icon=':/icons/transform_tool.svg',
+            shortcut='e',
+        )
+
+        self._flip_horizontally_action = self._make_action(
+            'Flip Horizontally', self._flip_horizontally,
+            icon=':/icons/flip_horizontally.svg',
+        )
+        self._flip_vertically_action = self._make_action(
+            'Flip Vertically', self._flip_vertically,
+            icon=':/icons/flip_vertically.svg',
+        )
+
+        rectangle_tool_action = self._make_tool_action(
+            'Rectangle (r)', self._rectangle_tool,
+            icon=':/icons/rectangle_tool.svg',
+            shortcut='r',
+        )
+
+        circle_tool_action = self._make_tool_action(
+            'Circle (c)', self._circle_tool,
+            icon=':/icons/circle_tool.svg',
+            shortcut='c',
+        )
+
+        polyline_tool_action = self._make_tool_action(
+            'Line (l)', self._polyline_tool,
+            icon=':/icons/polyline_tool.svg',
+            shortcut='l',
+        )
+
+        tools_toolbar = QtWidgets.QToolBar()
+        tools_toolbar.setObjectName('tools_toolbar')
+        tools_toolbar.setWindowTitle('Tools Toolbar')
+        tools_toolbar.addAction(select_tool_action)
+        tools_toolbar.addAction(transform_tool_action)
+        tools_toolbar.addAction(self._flip_horizontally_action)
+        tools_toolbar.addAction(self._flip_vertically_action)
+        tools_toolbar.addAction(polyline_tool_action)
+        tools_toolbar.addAction(rectangle_tool_action)
+        tools_toolbar.addAction(circle_tool_action)
+
+        def on_selection_changed():
+            selection_not_empty = len(self.project.selection) > 0
+
+            transform_tool_action.setEnabled(selection_not_empty)
+            self._flip_horizontally_action.setEnabled(selection_not_empty)
+            self._flip_vertically_action.setEnabled(selection_not_empty)
+
+        self.project.selection.changed.connect(on_selection_changed)
+        on_selection_changed()
+
+        return tools_toolbar
 
     def _make_align_toolbar(self) -> QtWidgets.QToolBar:
         align_horizontal_button = QtWidgets.QToolButton()
