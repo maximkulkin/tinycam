@@ -141,7 +141,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         GLOBALS.APP.task_manager.statusbar = self.statusbar
 
         self._windows = []
-        self._windows_menu = {}
+        self._window_actions = {}
 
         self._add_dock_window(
             CncProjectWindow(self.project),
@@ -509,11 +509,14 @@ class CncMainWindow(QtWidgets.QMainWindow):
     def _add_dock_window(self, window, area, shortcut=''):
         self._windows.append(window)
         self.addDockWidget(area, window)
-        action = self.view_menu.addAction(
-            window.windowTitle(), lambda: self._toggle_window(window),
-            shortcut=shortcut)
+
+        action = QtGui.QAction(window.windowTitle(), self)
+        action.triggered.connect(lambda: self._toggle_window(window))
+        action.setShortcut(shortcut)
         action.setCheckable(True)
-        self._windows_menu[window] = action
+
+        self.view_menu.addAction(action)
+        self._window_actions[window] = action
 
     def _toggle_window(self, window):
         if window.isVisible():
@@ -521,14 +524,15 @@ class CncMainWindow(QtWidgets.QMainWindow):
         else:
             window.show()
 
-        if window in self._windows_menu:
-            self._windows_menu.get(window).setChecked(window.isVisible())
+        action = self._window_actions.get(window)
+        if action is not None:
+            action.setChecked(window.isVisible())
 
     def showEvent(self, event):
         super().showEvent(event)
 
         for window in self._windows:
-            self._windows_menu[window].setChecked(window.isVisible())
+            self._window_actions[window].setChecked(window.isVisible())
 
     def closeEvent(self, event):
         self._save_settings()
@@ -553,7 +557,7 @@ class CoordinateInfo(QtWidgets.QFrame):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.setFrameStyle(QtWidgets.QFrame.Panel)
+        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
         self._x_label = QtWidgets.QLabel('0.00')
         self._x_label.setFixedWidth(50)
@@ -582,7 +586,7 @@ class ControlTypeInfo(QtWidgets.QFrame):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent=parent)
 
-        self.setFrameStyle(QtWidgets.QFrame.Panel)
+        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
         self._mouse_icon = load_icon('icons/mouse.svg')
         self._touchpad_icon = load_icon('icons/touchpad.svg')
