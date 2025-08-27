@@ -6,7 +6,8 @@ import moderngl
 import numpy as np
 from PySide6 import QtGui, QtCore
 
-from tinycam.ui.view import ViewItem, RenderState, Context
+from tinycam.ui.view import RenderState, Context
+from tinycam.ui.view_items.core import Node3D
 
 
 @dataclass
@@ -104,15 +105,15 @@ def make_font_from_qfont(ctx: Context, font: QtGui.QFont, alphabet: str) -> Font
     return FontAtlas(texture, glyphs, line_height)
 
 
-class Text(ViewItem):
-    def __init__(self, context, font: FontAtlas, text: str, position: tuple[int, int]):
+class Text(Node3D):
+    def __init__(self, context, font: FontAtlas, text: str):
         super().__init__(context)
 
         self._program = self.context.program(
             vertex_shader='''
                 #version 410 core
 
-                uniform vec2 resolution;
+                uniform mat4 mvp;
 
                 in vec2 aPosition;
                 in vec2 aUV;
@@ -120,7 +121,7 @@ class Text(ViewItem):
                 out vec2 UV;
 
                 void main() {
-                    gl_Position = vec4(aPosition / resolution * 2 - 1.0, 0.0, 1.0);
+                    gl_Position = mvp * vec4(aPosition, 0.0, 1.0);
                     UV = aUV;
                 }
             ''',
@@ -144,14 +145,14 @@ class Text(ViewItem):
 
         glyph_count = sum(1 for c in text if c not in ' \n')
 
-        x, y = position[0], position[1]
+        x, y = 0, 0
         vertex_count = 4 * glyph_count + 2 * (glyph_count - 1) if glyph_count > 1 else 4 * glyph_count
         positions = np.zeros((vertex_count, 2), dtype='f4')
         uvs = np.zeros((vertex_count, 2), dtype='f4')
         idx = 0
         for i, c in enumerate(text):
             if c == '\n':
-                x = position[0]
+                x = 0
                 y -= font.line_height
             elif c == ' ':
                 x += font.glyph_size(' ')[0]
@@ -196,6 +197,9 @@ class Text(ViewItem):
     def render(self, state: RenderState):
         self._program["font"] = 0
         self.font_texture.use(0)
-        self._program['resolution'].write(np.array(state.camera.pixel_size, dtype='f4').tobytes())
+        camera = state.camera
+        self._program['mvp'] = (
+            camera.projection_matrix * camera.view_matrix * self.world_matrix
+        )
         with self.context.scope(enable=moderngl.BLEND):
             self._vao.render(moderngl.TRIANGLE_STRIP)
