@@ -633,8 +633,6 @@ class CncProjectWindow(CncWindow):
 
         command = CreateIsolateJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
-        if command.result_item is not None:
-            GLOBALS.APP.project.selection.set([command.result_item])
 
     def _drill_job(self):
         if len(self.project.selection) == 0:
@@ -642,8 +640,6 @@ class CncProjectWindow(CncWindow):
 
         command = CreateDrillJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
-        if command.result_item is not None:
-            GLOBALS.APP.project.selection.set([command.result_item])
 
     def _cutout_job(self):
         if len(self.project.selection) == 0:
@@ -651,8 +647,6 @@ class CncProjectWindow(CncWindow):
 
         command = CreateCutoutJobCommand(self.project.selection[0])
         GLOBALS.APP.undo_stack.push(command)
-        if command.result_item is not None:
-            GLOBALS.APP.project.selection.set([command.result_item])
 
     def _export_gcode(self):
         if len(self.project.selection) == 0:
