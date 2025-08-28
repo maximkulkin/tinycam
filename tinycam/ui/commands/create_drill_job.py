@@ -15,6 +15,7 @@ class CreateDrillJobCommand(CreateItemCommandBase):
     @property
     def item(self) -> CncProjectItem | None:
         if self._item is None:
-            self._item = CncDrillJob(self.source_item)
+            self._item = CncDrillJob()
+            self._item.source_item = self._source_item
 
         return self._item

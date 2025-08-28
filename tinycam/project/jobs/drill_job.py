@@ -95,34 +95,21 @@ class SelectedHoleSizesEditor(pe.BasePropertyEditor[dict[excellon.Tool, bool]]):
 
 
 class CncDrillJob(CncJob):
-    def __init__(self,
-                 source_item: ExcellonItem,
-                 color=QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6),
-                 tool: CncTool | None = None,
-                 mill_holes: bool | None = None,
-                 cut_depth: float | None = None,
-                 cut_speed: float | None = None,
-                 spindle_speed: float | None = None,
-                 travel_height: float | None = None,
-                 travel_speed: float | None = None):
-        super().__init__(
-            'Drill %s' % source_item.name,
-            color=color,
-        )
+    def __init__(self):
+        super().__init__()
 
-        self._source_item = source_item
+        self.name = 'Drill'
+        self.color = QtGui.QColor.fromRgbF(0.65, 0.0, 0.0, 0.6)
+        self._source_item = None
 
-        self._tool = tool
-        self._hole_sizes = {
-            tool: False
-            for tool in self._source_item.tools
-        }
-        self._mill_holes = mill_holes or False
-        self._cut_depth = cut_depth or CUT_DEPTH.value
-        self._cut_speed = cut_speed or CUT_SPEED.value
-        self._travel_height = travel_height or TRAVEL_HEIGHT.value
-        self._travel_speed = travel_speed or TRAVEL_SPEED.value
-        self._spindle_speed = spindle_speed or SPINDLE_SPEED.value
+        self._tool = None
+        self._hole_sizes = {}
+        self._mill_holes = False
+        self._cut_depth = CUT_DEPTH.value
+        self._cut_speed = CUT_SPEED.value
+        self._travel_height = TRAVEL_HEIGHT.value
+        self._travel_speed = TRAVEL_SPEED.value
+        self._spindle_speed = SPINDLE_SPEED.value
 
         self._geometry = None
         self._updating_geometry = False
@@ -136,6 +123,28 @@ class CncDrillJob(CncJob):
     def _update(self):
         self._update_geometry()
         self._signal_changed()
+
+    @property
+    def source_item(self) -> ExcellonItem | None:
+        return self._source_item
+
+    @source_item.setter
+    def source_item(self, value: ExcellonItem):
+        if self._source_item is value:
+            return
+
+        if self._source_item is not None:
+            self._source_item.updated.disconnect(self._on_source_item_updated)
+
+        self._source_item = value
+        self.name = f'Drill {self._source_item.name}'
+        self._hole_sizes = {
+            tool: False
+            for tool in self._source_item.tools
+        }
+        if self._source_item is not None:
+            self._source_item.updated.connect(self._on_source_item_updated)
+            self._update_geometry()
 
     show_outline = p.Property[bool](on_update=_update, default=True, metadata=[p.Order(0)])
     show_path = p.Property[bool](on_update=_update, default=True, metadata=[p.Order(1)])
@@ -174,8 +183,8 @@ class CncDrillJob(CncJob):
         p.Suffix('{units}/min'),
     ])
 
-    def _on_source_item_changed(self, _item):
-        self._update()
+    def _on_source_item_updated(self, _item):
+        self._update_geometry()
 
     def _update_geometry(self):
         if self._updating_geometry:
@@ -208,7 +217,7 @@ class CncDrillJob(CncJob):
                 if not tool_enabled[drill.tool_id]:
                     continue
 
-                point = self._transform_point(drill.position)
+                point = drill.position
                 diameter = tool_diameter
                 if self.mill_holes:
                     diameter = max(diameter, tools[drill.tool_id].diameter)
@@ -228,17 +237,13 @@ class CncDrillJob(CncJob):
 
                     # TODO: implement proper milling algorithm
                     line = G.buffer(
-                        G.line([self._transform_point(point)
-                                for point in mill.positions]),
+                        G.line(mill.positions),
                         0.5 * diameter,
                     )
                     geometry = G.union(geometry, line)
 
             self._geometry = geometry
             self._updating_geometry = False
-
-    def _transform_point(self, point: tuple[float, float]) -> tuple[float, float]:
-        return point * self._source_item.scale + self._source_item.offset
 
     def _find_closest(self, lines: list[Line], point) -> int:
         # TODO: implement finding closest line
@@ -248,6 +253,7 @@ class CncDrillJob(CncJob):
         # TODO: allow selecting different starting positions
         start_position = (0, 0, 0)
         builder = CncCommandBuilder(start_position=start_position)
+        builder.travel(z=self._travel_height)
 
         tool_enabled = {
             tool.id: self._hole_sizes.get(tool, False)
@@ -258,29 +264,29 @@ class CncDrillJob(CncJob):
             if not tool_enabled[drill.tool_id]:
                 continue
 
-            point = self._transform_point(drill.position)
+            point = drill.position
 
-            builder.travel(z=self._travel_height)
             builder.travel(x=point[0], y=point[1])
             if not self.mill_holes:
-                builder.cut(z=-self._cut_depth)
+                builder.cut(z=-self.cut_depth)
             else:
                 pass
+
+            builder.travel(z=self._travel_height)
 
         if self.mill_holes:
             for mill in self._source_item.mills:
                 if not tool_enabled[mill.tool_id]:
                     continue
 
-                point = self._transform_point(mill.positions[0])
+                point = mill.positions[0]
 
                 builder.travel(z=self._travel_height)
                 builder.travel(x=point[0], y=point[1])
-                builder.cut(z=-self._cut_depth)
+                builder.cut(z=-self.cut_depth)
 
                 # TODO: implement proper milling algorithm
                 for point in mill.positions[1:]:
-                    point = self._transform_point(point)
                     builder.cut(x=point[0], y=point[1])
 
         builder.travel(z=self.travel_height)
