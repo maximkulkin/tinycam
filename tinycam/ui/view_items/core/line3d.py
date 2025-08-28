@@ -146,7 +146,8 @@ class Line3D(Node3D):
         self._color = value
 
     def render(self, state: RenderState):
-        self._program['width'] = self._width
+        if self._width is not None:
+            self._program['width'] = self._width
         self._program['color'].write(self._color.astype('f4'))
 
         self._program['mvp'].write(
