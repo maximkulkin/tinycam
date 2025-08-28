@@ -140,7 +140,7 @@ class GcodeRenderer:
                 case commands.CncCutCommand:
                     g.move(x=command.x, y=command.y, z=command.z,
                            feed_rate=move_speed, spindle_speed=spindle_speed)
-                case commands.CncSetCutSpeed:
+                case commands.CncSetMoveSpeed:
                     move_speed = command.speed
                 case commands.CncSetSpindleSpeed:
                     spindle_speed = command.speed

@@ -205,11 +205,11 @@ class CncIsolateJob(CncJob):
             #     # Shape is open, pick the closest end and start with it
             #     # TODO:
 
-            builder.set_cut_speed(self.travel_speed)
+            builder.set_move_speed(self.travel_speed)
             builder.travel(z=self.travel_height)
             point = points[0]
             builder.travel(x=point[0], y=point[1])
-            builder.set_cut_speed(self.cut_speed)
+            builder.set_move_speed(self.cut_speed)
             builder.cut(z=-self.cut_depth)
 
             for point in points[1:]:

@@ -24,7 +24,7 @@ class CncCutCommand(CncCommand):
 
 
 @dataclass
-class CncSetCutSpeed(CncCommand):
+class CncSetMoveSpeed(CncCommand):
     speed: float
 
 
@@ -57,8 +57,8 @@ class CncCommandBuilder:
     ):
         self._commands.append(CncCutCommand(x=x, y=y, z=z))
 
-    def set_cut_speed(self, speed: float):
-        self._commands.append(CncSetCutSpeed(speed))
+    def set_move_speed(self, speed: float):
+        self._commands.append(CncSetMoveSpeed(speed))
 
     def set_spindle_speed(self, speed: int):
         self._commands.append(CncSetSpindleSpeed(speed))
