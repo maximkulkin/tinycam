@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import cast
 
 from tinycam.types import Vector3, Quaternion, Matrix44
 from tinycam.ui.view import Context
@@ -117,7 +118,7 @@ class Node3D(Node):
 
     @property
     def children(self) -> 'Sequence[Node3D]':
-        return super().children
+        return cast(Sequence[Node3D], super().children)
 
     def add_child(self, child: 'Node3D', update_parent: bool = True):
         super().add_child(child, update_parent=update_parent)
