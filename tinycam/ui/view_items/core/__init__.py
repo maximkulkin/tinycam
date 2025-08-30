@@ -8,6 +8,7 @@ from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.line3d import Line3D
 from tinycam.ui.view_items.core.polygon import Polygon
 from tinycam.ui.view_items.core.quad import Quad
+from tinycam.ui.view_items.core.textured_quad import TexturedQuad
 from tinycam.ui.view_items.core.triangle import Triangle
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     'Line3D',
     'Polygon',
     'Quad',
+    'TexturedQuad',
     'Triangle',
 ]
