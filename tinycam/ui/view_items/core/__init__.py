@@ -2,6 +2,7 @@ from tinycam.ui.view_items.core.node import Node
 from tinycam.ui.view_items.core.node2d import Node2D
 from tinycam.ui.view_items.core.node3d import Node3D
 from tinycam.ui.view_items.core.debug import Debug
+from tinycam.ui.view_items.core.billboard import Billboard
 from tinycam.ui.view_items.core.infinite_grid_xy import InfiniteGridXY
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.line3d import Line3D
@@ -14,6 +15,7 @@ __all__ = [
     'Node2D',
     'Node3D',
     'Debug',
+    'Billboard',
     'InfiniteGridXY',
     'Line2D',
     'Line3D',
