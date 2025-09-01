@@ -133,9 +133,13 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._coordinate_info = CoordinateInfo()
         self._control_type_info = ControlTypeInfo()
         self._snap_widget = SnapControlsWidget()
+
         self.statusbar.addPermanentWidget(self._coordinate_info)
+        self.statusbar.addPermanentWidget(StatusBarSeparator())
         self.statusbar.addPermanentWidget(self._snap_widget)
+        self.statusbar.addPermanentWidget(StatusBarSeparator())
         self.statusbar.addPermanentWidget(self._control_type_info)
+        self.statusbar.addPermanentWidget(StatusBarSeparator())
         self.canvas_2d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
         self.preview_3d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
 
@@ -554,11 +558,17 @@ class CncMainWindow(QtWidgets.QMainWindow):
         settings.endGroup()
 
 
+class StatusBarSeparator(QtWidgets.QFrame):
+    def __init__(self):
+        super().__init__()
+
+        self.setFrameStyle(QtWidgets.QFrame.Shape.VLine)
+        self.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+
+
 class CoordinateInfo(QtWidgets.QFrame):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-
-        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
         self._x_label = QtWidgets.QLabel('0.00')
         self._x_label.setFixedWidth(50)
@@ -586,8 +596,6 @@ class CoordinateInfo(QtWidgets.QFrame):
 class ControlTypeInfo(QtWidgets.QFrame):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent=parent)
-
-        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
         self._mouse_icon = QtGui.QIcon(':/icons/mouse.svg')
         self._touchpad_icon = QtGui.QIcon(':/icons/touchpad.svg')
@@ -626,8 +634,6 @@ class ControlTypeInfo(QtWidgets.QFrame):
 class SnapControlsWidget(QtWidgets.QFrame):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent=parent)
-
-        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
         self._snap_to_grid_button = QtWidgets.QToolButton()
         self._snap_to_grid_button.setIcon(QtGui.QIcon(':/icons/snap_to_grid.svg'))

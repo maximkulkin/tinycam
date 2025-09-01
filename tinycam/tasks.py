@@ -18,14 +18,14 @@ class TaskManager(QtCore.QObject):
         self._statusbar = None
 
         self._task_label = QtWidgets.QLabel('Idle')
-        self._task_label.setFixedWidth(100)
+        self._task_label.setFixedWidth(50)
         self._task_label.setAlignment(
             Qt.AlignmentFlag.AlignLeft |
             Qt.AlignmentFlag.AlignVCenter
         )
 
         self._progressbar = QtWidgets.QProgressBar()
-        self._progressbar.setFixedWidth(100)
+        self._progressbar.setFixedWidth(50)
         self._progressbar.setStyleSheet(
             'QProgressBar::chunk { background-color: transparent; }'
         )
@@ -36,7 +36,6 @@ class TaskManager(QtCore.QObject):
         layout.addWidget(self._progressbar)
 
         self._widget = QtWidgets.QFrame()
-        self._widget.setFrameStyle(QtWidgets.QFrame.Panel)
         self._widget.setLayout(layout)
         self._widget.setSizePolicy(
             QtWidgets.QSizePolicy.Fixed,
