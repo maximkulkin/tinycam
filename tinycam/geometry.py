@@ -23,7 +23,7 @@ MultiPolygon = shapely.MultiPolygon
 Group = shapely.GeometryCollection
 
 type PointLike = Point | Vector2 | Vector3
-type AnyShape = Point | Line | Polygon | Group | MultiLineString | MultiPolygon
+type AnyShape = Shape | Point | Line | Polygon | Group | MultiLineString | MultiPolygon
 
 
 # class Shape_:
