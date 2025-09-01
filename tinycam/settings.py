@@ -804,3 +804,5 @@ class ControlType(enum.Enum):
 SETTINGS.register('general/units', CncEnumSetting[Units], default=Units.MM)
 SETTINGS.register('general/control_type', CncEnumSetting[ControlType], default=ControlType.MOUSE)
 SETTINGS.register('general/invert_zoom', CncBooleanSetting, default=False)
+
+SETTINGS.register('general/machine_area_size', CncVector2Setting, default=Vector2(100, 100))

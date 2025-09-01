@@ -14,6 +14,7 @@ from tinycam.ui.camera_controllers import (
 )
 from tinycam.ui.view import CncView
 from tinycam.ui.view_items.core import InfiniteGridXY
+from tinycam.ui.view_items.grid import Grid
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.gerber_item import GerberItemView
 from tinycam.ui.view_items.excellon_item import ExcellonItemView
@@ -51,7 +52,9 @@ class CncCanvas2D(CncView):
 
         assert self.ctx is not None
 
-        self.add_item(InfiniteGridXY(self.ctx))
+        self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
+        self.add_item(self._grid)
+        s.SETTINGS['general/machine_area_size'].changed.connect(self._on_machine_area_size_changed)
 
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
@@ -186,3 +189,13 @@ class CncCanvas2D(CncView):
             on_update=self.update,
         )
         self._animation.start()
+
+    def _on_machine_area_size_changed(self, _: Vector2):
+        if self._grid is None:
+            return
+
+        assert self.ctx is not None
+
+        self.remove_item(self._grid)
+        self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
+        self.add_item(self._grid)
