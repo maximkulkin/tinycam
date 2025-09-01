@@ -27,6 +27,7 @@ from tinycam.ui.cnc_controller import (
     CncConnectionToolbar,
 )
 from tinycam.ui.settings import CncSettingsDialog
+from tinycam.ui.widgets import DoubleSpinBox
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -645,18 +646,71 @@ class SnapControlsWidget(QtWidgets.QFrame):
         self._snap_to_grid_button.setCheckable(True)
         self._snap_to_grid_button.setChecked(GLOBALS.APP.state.snap_to_grid.value)
         self._snap_to_grid_button.toggled.connect(self._on_button_toggled)
+        self._snap_to_grid_button.setToolTip('Snap to grid')
+
+        self._x_step = DoubleSpinBox(parent=parent)
+        self._x_step.valueChanged.connect(self._on_x_step_changed)
+        self._x_label = QtWidgets.QLabel('X:')
+        self._x_label.setToolTip('Snap grid X step size')
+        self._y_step = DoubleSpinBox(parent=parent)
+        self._y_step.valueChanged.connect(self._on_y_step_changed)
+        self._y_label = QtWidgets.QLabel('Y:')
+        self._y_label.setToolTip('Snap grid Y step size')
+        self._sync_checkbox = QtWidgets.QCheckBox(parent=parent)
+        self._sync_checkbox.setToolTip('Sync snap step on both axes')
+        self._sync_checkbox.checkStateChanged.connect(self._on_sync_checkbox_changed)
 
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._snap_to_grid_button)
+        layout.addWidget(self._x_label)
+        layout.addWidget(self._x_step)
+        layout.addWidget(self._y_label)
+        layout.addWidget(self._y_step)
+        layout.addWidget(self._sync_checkbox)
 
         self.setLayout(layout)
 
         snap_to_grid = GLOBALS.APP.state.snap_to_grid
         snap_to_grid.changed.connect(self._on_snap_to_grid_changed)
 
+        snap_step = GLOBALS.APP.state.snap_step
+        snap_step.changed.connect(self._on_snap_step_changed)
+
+        self._x_step.setValue(snap_step.value.x)
+        self._y_step.setValue(snap_step.value.y)
+        self._sync_checkbox.setChecked(snap_step.value.x == snap_step.value.y)
+        self._on_sync_checkbox_changed(self._sync_checkbox.checkState())
+
     def _on_snap_to_grid_changed(self, value: bool):
         self._snap_to_grid_button.setDown(value)
+
+    def _on_snap_step_changed(self, value: Vector2):
+        self._x_step.setValue(value.x)
+        self._y_step.setValue(value.y)
+
+    def _on_sync_checkbox_changed(self, checkState: Qt.CheckState):
+        synced = checkState == Qt.CheckState.Checked
+        self._x_label.setText('Step:' if synced else 'X:')
+        self._x_label.setToolTip(
+            'Snap grid step size' if synced else 'Snap grid X step size'
+        )
+        self._y_label.setVisible(not synced)
+        self._y_step.setVisible(not synced)
+
+    def _on_x_step_changed(self, _: float):
+        step = Vector2(self._x_step.value(), self._y_step.value())
+        if self._sync_checkbox.isChecked():
+            step = Vector2(step.x, step.x)
+
+        GLOBALS.APP.state.snap_step.value = step
+
+    def _on_y_step_changed(self, _: float):
+        if self._sync_checkbox.isChecked():
+            return
+
+        step = Vector2(self._x_step.value(), self._x_step.value())
+        GLOBALS.APP.state.snap_step.value = step
 
     def _on_button_toggled(self, checked: bool):
         GLOBALS.APP.state.snap_to_grid.value = checked

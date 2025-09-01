@@ -6,10 +6,12 @@ from tinycam.project import CncProject
 from tinycam.reactive import ReactiveVar
 from tinycam.settings import CncSettings, BufferReader, BufferWriter, get_serializer
 from tinycam.tasks import TaskManager
+from tinycam.types import Vector2
 
 
 class CncApplicationState:
     snap_to_grid = ReactiveVar[bool](False)
+    snap_step = ReactiveVar[Vector2](Vector2(1, 1))
 
 
 class CncApplication(QtWidgets.QApplication):
