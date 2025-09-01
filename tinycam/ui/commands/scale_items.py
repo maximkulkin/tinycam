@@ -1,10 +1,16 @@
 import math
+from typing import Protocol, runtime_checkable
 
 from PySide6 import QtGui
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector2
+
+
+@runtime_checkable
+class Scalable(Protocol):
+    def scale(self, scale: Vector2, origin: Vector2 = Vector2()): ...
 
 
 class ScaleItemsCommand(QtGui.QUndoCommand):
@@ -27,11 +33,8 @@ class ScaleItemsCommand(QtGui.QUndoCommand):
         assert self._pivot is not None
 
         for item in self._items:
-            item.geometry = GLOBALS.GEOMETRY.scale(
-                item.geometry,
-                factor=scale,
-                origin=self._pivot,
-            )
+            if isinstance(item, Scalable):
+                item.scale(scale, origin=self._pivot)
 
     def redo(self):
         self._apply_scale(self._scale)

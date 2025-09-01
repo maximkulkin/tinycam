@@ -6,6 +6,7 @@ from PySide6 import QtGui
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
 import tinycam.properties as p
+from tinycam.types import Vector2
 
 
 class JointStyle(enum.Enum):
@@ -59,3 +60,13 @@ class GeometryItem(CncProjectItem):
             p.VisibleIf(lambda item: cast(GeometryItem, item).line_thickness > 0),
         ],
     )
+
+    def translate(self, offset: Vector2):
+        self.geometry = GLOBALS.GEOMETRY.translate(self.geometry, offset)
+
+    def scale(self, scale: Vector2, origin: Vector2 = Vector2()):
+        self.geometry = GLOBALS.GEOMETRY.scale(
+            self.geometry,
+            factor=scale,
+            origin=origin,
+        )

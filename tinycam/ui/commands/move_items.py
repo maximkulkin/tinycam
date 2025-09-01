@@ -1,8 +1,15 @@
+from typing import Protocol, runtime_checkable
+
 from PySide6 import QtGui
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
 from tinycam.types import Vector2
+
+
+@runtime_checkable
+class Moveable(Protocol):
+    def translate(self, offset: Vector2): ...
 
 
 class MoveItemsCommand(QtGui.QUndoCommand):
@@ -13,7 +20,8 @@ class MoveItemsCommand(QtGui.QUndoCommand):
 
     def _move(self, offset: Vector2):
         for item in self._items:
-            item.geometry = GLOBALS.GEOMETRY.translate(item.geometry, offset)
+            if isinstance(item, Moveable):
+                item.translate(offset)
 
     def redo(self):
         self._move(self._offset)

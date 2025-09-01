@@ -4,6 +4,7 @@ import os.path
 from tinycam.formats import excellon
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
+from tinycam.types import Vector2
 
 
 class ExcellonItem(CncProjectItem):
@@ -46,6 +47,48 @@ class ExcellonItem(CncProjectItem):
             return
         self._mills = value
         self._signal_changed()
+
+    def translate(self, offset: Vector2):
+        for drill in self._drills:
+            drill.position += offset
+
+        for mill in self._mills:
+            mill.positions = [
+                position + offset
+                for position in mill.positions
+            ]
+
+        self.geometry = GLOBALS.GEOMETRY.translate(self.geometry, offset)
+
+    def scale(self, scale: Vector2, origin: Vector2 = Vector2()):
+        factor = min(scale.x, scale.y)
+
+        for tool in self._tools:
+            tool.diameter *= factor
+
+        def do_scale(p: Vector2) -> Vector2:
+            return origin + (p - origin) * scale
+
+        if scale.x != scale.y:
+            # TODO: convert drills into mills
+            for drill in self._drills:
+                drill.position = do_scale(drill.position)
+
+        else:
+            for drill in self._drills:
+                drill.position = do_scale(drill.position)
+
+            for mill in self._mills:
+                mill.positions = [
+                    do_scale(position)
+                    for position in mill.positions
+                ]
+
+        self.geometry = GLOBALS.GEOMETRY.scale(
+            self.geometry,
+            factor=scale,
+            origin=origin,
+        )
 
     @staticmethod
     def from_file(path) -> 'ExcellonItem':
