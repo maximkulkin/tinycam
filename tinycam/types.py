@@ -13,8 +13,8 @@ class Vector1Proxy:
     def __init__(self, index: int):
         self._index = index
 
-    def __get__(self, obj: np.ndarray, cls) -> np.float32:
-        return obj[self._index]
+    def __get__(self, obj: np.ndarray, cls) -> float:
+        return float(obj[self._index])
 
     def __set__(self, obj: np.ndarray, value: number):
         obj[self._index] = value
@@ -56,8 +56,8 @@ class Vector2(np.ndarray):
     y = Vector1Proxy(1)
 
     @property
-    def length(self) -> np.float32:
-        return pyrr.vector.length(self)
+    def length(self) -> float:
+        return float(pyrr.vector.length(self))
 
     @property
     def normalized(self) -> 'Vector2':
@@ -156,8 +156,8 @@ class Vector3(pyrr.Vector3):
         return Vector3(v[0], v[1], z)
 
     @property
-    def length(self) -> np.float32:
-        return pyrr.vector.length(self)
+    def length(self) -> float:
+        return float(pyrr.vector.length(self))
 
     @property
     def normalized(self) -> 'Vector3':
