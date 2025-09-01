@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, cast
 
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem
-from tinycam.settings import SETTINGS, ControlType
+from tinycam.settings import SETTINGS, CncSetting, ControlType
 from tinycam.types import Vector2
 from tinycam.ui.commands import (
     ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand,
@@ -131,7 +131,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.setStatusBar(self.statusbar)
 
         self._coordinate_info = CoordinateInfo()
-        self._control_type_info = ControlTypeInfo()
+        self._control_type_info = ControlTypeWidget()
         self._snap_widget = SnapControlsWidget()
 
         self.statusbar.addPermanentWidget(self._coordinate_info)
@@ -593,7 +593,7 @@ class CoordinateInfo(QtWidgets.QFrame):
         self._y_label.setText(f'{coords.y:.2f}')
 
 
-class ControlTypeInfo(QtWidgets.QFrame):
+class ControlTypeWidget(QtWidgets.QFrame):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent=parent)
 
@@ -609,9 +609,14 @@ class ControlTypeInfo(QtWidgets.QFrame):
 
         self.setLayout(layout)
 
-        setting = SETTINGS['general/control_type']
-        setting.changed.connect(self._on_control_type_changed)
-        self._on_control_type_changed(setting.value)
+        control_type_setting = cast(
+            CncSetting[ControlType],
+            SETTINGS['general/control_type'],
+        )
+        control_type_setting.changed.connect(self._on_control_type_changed)
+        control_type = control_type_setting.value
+        if control_type is not None:
+            self._on_control_type_changed(control_type)
 
     def _on_control_type_changed(self, value: ControlType):
         match value:
