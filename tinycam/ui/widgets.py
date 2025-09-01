@@ -11,7 +11,7 @@ class PushButton(QtWidgets.QPushButton):
         options = QtWidgets.QStyleOptionButton();
         self.initStyleOption(options)
         options.rect = self.rect().adjusted(0, -2, 0, -2)
-        painter.drawControl(QtWidgets.QStyle.CE_PushButton, options)
+        painter.drawControl(QtWidgets.QStyle.ControlElement.CE_PushButton, options)
 
 
 class SpinBox(QtWidgets.QSpinBox):
@@ -25,13 +25,13 @@ class SpinBox(QtWidgets.QSpinBox):
 
         self._typing = False
 
-    def _on_value_changed(self, value: int):
+    def _on_value_changed(self, _: int):
         if self._typing:
             return
 
         self.value_changed.emit(self.value())
 
-    def _on_text_edited(self, text: str):
+    def _on_text_edited(self, _: str):
         self._typing = True
 
     def _on_editing_finished(self):
@@ -117,8 +117,8 @@ class Vector2Editor(QtWidgets.QWidget):
     @override
     def setEnabled(self, value: bool):
         super().setEnabled(value)
-        self._x_editor.setEnabled(self.enabled())
-        self._y_editor.setEnabled(self.enabled())
+        self._x_editor.setEnabled(self.isEnabled())
+        self._y_editor.setEnabled(self.isEnabled())
 
     def _on_value_changed(self, _: float):
         value = Vector2((
@@ -196,9 +196,9 @@ class Vector3Editor(QtWidgets.QWidget):
     @override
     def setEnabled(self, value: bool):
         super().setEnabled(value)
-        self._x_editor.setEnabled(self.enabled())
-        self._y_editor.setEnabled(self.enabled())
-        self._z_editor.setEnabled(self.enabled())
+        self._x_editor.setEnabled(self.isEnabled())
+        self._y_editor.setEnabled(self.isEnabled())
+        self._z_editor.setEnabled(self.isEnabled())
 
     def _on_value_changed(self, _: float):
         value = Vector3(
