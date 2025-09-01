@@ -99,14 +99,29 @@ class Vector2(np.ndarray):
     def __mul__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__mul__(other).view(Vector2)
 
-    def __div__(self, other: 'number | Vector2') -> 'Vector2':
-        return super().__div__(other).view(Vector2)
+    def __truediv__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__truediv__(other).view(Vector2)
+
+    def __floordiv__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__floordiv__(other).view(Vector2)
+
+    def __iadd__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__iadd__(other).view(Vector2)
+
+    def __isub__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__isub__(other).view(Vector2)
+
+    def __imul__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__imul__(other).view(Vector2)
+
+    def __itruediv__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__itruediv__(other).view(Vector2)
+
+    def __ifloordiv__(self, other: 'number | Vector2') -> 'Vector2':
+        return super().__ifloordiv__(other).view(Vector2)
 
     def __neg__(self) -> 'Vector2':
         return Vector2(-self.x, -self.y)
-
-    def __truediv__(self, other: 'number | Vector2') -> 'Vector2':
-        return super().__truediv__(other).view(Vector2)
 
     def __eq__(self, other: 'Vector2') -> bool:
         return np.array_equal(self, other)
@@ -172,11 +187,26 @@ class Vector3(pyrr.Vector3):
     def __mul__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__mul__(other).view(Vector3)
 
-    def __div__(self, other: 'number | Vector3') -> 'Vector3':
-        return super().__div__(other).view(Vector3)
-
     def __truediv__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__truediv__(other).view(Vector3)
+
+    def __floordiv__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__floordiv__(other).view(Vector3)
+
+    def __iadd__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__iadd__(other).view(Vector3)
+
+    def __isub__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__isub__(other).view(Vector3)
+
+    def __imul__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__imul__(other).view(Vector3)
+
+    def __itruediv__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__itruediv__(other).view(Vector3)
+
+    def __ifloordiv__(self, other: 'number | Vector3') -> 'Vector3':
+        return super().__ifloordiv__(other).view(Vector3)
 
     def __neg__(self) -> 'Vector3':
         return Vector3(-self.x, -self.y, -self.z)
@@ -236,11 +266,26 @@ class Vector4(pyrr.Vector4):
     def __mul__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__mul__(other).view(Vector4)
 
-    def __div__(self, other: 'number | Vector4') -> 'Vector4':
-        return super().__div__(other).view(Vector4)
-
     def __truediv__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__truediv__(other).view(Vector4)
+
+    def __floordiv__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__floordiv__(other).view(Vector4)
+
+    def __iadd__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__iadd__(other).view(Vector4)
+
+    def __isub__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__isub__(other).view(Vector4)
+
+    def __imul__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__imul__(other).view(Vector4)
+
+    def __itruediv__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__itruediv__(other).view(Vector4)
+
+    def __ifloordiv__(self, other: 'number | Vector4') -> 'Vector4':
+        return super().__ifloordiv__(other).view(Vector4)
 
     def __neg__(self) -> 'Vector4':
         return Vector4(-self.x, -self.y, -self.z, -self.w)
