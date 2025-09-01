@@ -52,11 +52,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         undo_action = GLOBALS.APP.undo_stack.createUndoAction(self, "&Undo")
         undo_action.setIcon(QtGui.QIcon(":/icons/undo.png"))
-        undo_action.setShortcuts(QtGui.QKeySequence.Undo)
+        undo_action.setShortcuts(QtGui.QKeySequence.StandardKey.Undo)
 
         redo_action = GLOBALS.APP.undo_stack.createRedoAction(self, "&Redo")
         redo_action.setIcon(QtGui.QIcon(":/icons/redo.png"))
-        redo_action.setShortcuts(QtGui.QKeySequence.Redo)
+        redo_action.setShortcuts(QtGui.QKeySequence.StandardKey.Redo)
 
         self.edit_menu = self.menu.addMenu("Edit")
         self.edit_menu.addAction(undo_action)
