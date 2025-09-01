@@ -27,7 +27,6 @@ from tinycam.ui.cnc_controller import (
     CncConnectionToolbar,
 )
 from tinycam.ui.settings import CncSettingsDialog
-from tinycam.ui.utils import load_icon
 
 
 class CncMainWindow(QtWidgets.QMainWindow):
@@ -588,8 +587,8 @@ class ControlTypeInfo(QtWidgets.QFrame):
 
         self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
 
-        self._mouse_icon = load_icon('icons/mouse.svg')
-        self._touchpad_icon = load_icon('icons/touchpad.svg')
+        self._mouse_icon = QtGui.QIcon(':/icons/mouse.svg')
+        self._touchpad_icon = QtGui.QIcon(':/icons/touchpad.svg')
 
         self._button = QtWidgets.QToolButton()
         self._button.clicked.connect(self._on_button_clicked)
