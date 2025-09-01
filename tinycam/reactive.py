@@ -6,8 +6,8 @@ from tinycam.signals import Signal
 class ReactiveVar[T]:
     changed = Signal[T]()
 
-    def __init__(self, type: Type[T]):
-        self._value = type()
+    def __init__(self, value: T):
+        self._value = value
 
     @property
     def value(self) -> T:

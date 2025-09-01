@@ -9,7 +9,7 @@ from tinycam.tasks import TaskManager
 
 
 class CncApplicationState:
-    snap_to_grid = ReactiveVar(bool)
+    snap_to_grid = ReactiveVar[bool](False)
 
 
 class CncApplication(QtWidgets.QApplication):
