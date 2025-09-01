@@ -81,11 +81,15 @@ class CncPath:
     start: Vector3
     end: Vector3
 
+    @property
+    def length(self) -> float:
+        return float((self.end - self.start).length)
+
 
 class CncPathTracer:
     def __init__(self, start_position: Vector3 | None = None):
         self._position = start_position or Vector3()
-        self._paths = []
+        self._paths: list[CncPath] = []
 
     @property
     def paths(self) -> Sequence[CncPath]:
@@ -115,6 +119,16 @@ class CncPathTracer:
     def execute_commands(self, commands: Sequence[CncCommand]):
         for command in commands:
             self.execute_command(command)
+
+    def calculate_position(self, distance: float):
+        for path in self._paths:
+            length = path.length
+            if distance < length:
+                return Vector3.lerp(path.start, path.end, distance / length)
+
+            distance -= length
+
+        return self._paths[-1].end
 
     def _update_position(
         self,
