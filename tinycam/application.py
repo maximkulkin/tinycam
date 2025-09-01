@@ -3,8 +3,13 @@ from typing import cast
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProject
+from tinycam.reactive import ReactiveVar
 from tinycam.settings import CncSettings, BufferReader, BufferWriter, get_serializer
 from tinycam.tasks import TaskManager
+
+
+class CncApplicationState:
+    snap_to_grid = ReactiveVar(bool)
 
 
 class CncApplication(QtWidgets.QApplication):
@@ -19,6 +24,7 @@ class CncApplication(QtWidgets.QApplication):
         self.settings: CncSettings = GLOBALS.SETTINGS
         self.undo_stack: QtGui.QUndoStack = QtGui.QUndoStack()
         self.task_manager: TaskManager = TaskManager()
+        self.state = CncApplicationState()
 
         self._load_settings()
         self.aboutToQuit.connect(self._save_settings)

@@ -132,7 +132,9 @@ class CncMainWindow(QtWidgets.QMainWindow):
 
         self._coordinate_info = CoordinateInfo()
         self._control_type_info = ControlTypeInfo()
+        self._snap_widget = SnapControlsWidget()
         self.statusbar.addPermanentWidget(self._coordinate_info)
+        self.statusbar.addPermanentWidget(self._snap_widget)
         self.statusbar.addPermanentWidget(self._control_type_info)
         self.canvas_2d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
         self.preview_3d.coordinateChanged.connect(self._coordinate_info.setCoordinates)
@@ -619,3 +621,31 @@ class ControlTypeInfo(QtWidgets.QFrame):
                 setting.value = ControlType.TOUCHPAD
             case ControlType.TOUCHPAD:
                 setting.value = ControlType.MOUSE
+
+
+class SnapControlsWidget(QtWidgets.QFrame):
+    def __init__(self, parent: QtWidgets.QWidget | None = None):
+        super().__init__(parent=parent)
+
+        self.setFrameStyle(QtWidgets.QFrame.Shape.Panel)
+
+        self._snap_to_grid_button = QtWidgets.QToolButton()
+        self._snap_to_grid_button.setIcon(QtGui.QIcon(':/icons/snap_to_grid.svg'))
+        self._snap_to_grid_button.setCheckable(True)
+        self._snap_to_grid_button.setChecked(GLOBALS.APP.state.snap_to_grid.value)
+        self._snap_to_grid_button.toggled.connect(self._on_button_toggled)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._snap_to_grid_button)
+
+        self.setLayout(layout)
+
+        snap_to_grid = GLOBALS.APP.state.snap_to_grid
+        snap_to_grid.changed.connect(self._on_snap_to_grid_changed)
+
+    def _on_snap_to_grid_changed(self, value: bool):
+        self._snap_to_grid_button.setDown(value)
+
+    def _on_button_toggled(self, checked: bool):
+        GLOBALS.APP.state.snap_to_grid.value = checked

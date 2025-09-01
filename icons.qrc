@@ -20,5 +20,6 @@
     <file>icons/align_top.svg</file>
     <file>icons/align_bottom.svg</file>
     <file>icons/align_vcenter.svg</file>
+    <file>icons/snap_to_grid.svg</file>
   </qresource>
 </RCC>
