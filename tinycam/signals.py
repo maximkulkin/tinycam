@@ -1,10 +1,21 @@
 import inspect
-from typing import Any, Callable, Unpack, cast, overload
+from typing import Any, Callable, cast, overload
 import weakref
 
 
-class Connection[*Ts]:
-    def __init__(self, signal: 'SignalInstance[*Ts]', callback: Callable[[Unpack[Ts]], None]):
+_MISSING = object()
+
+
+class Connection[T]:
+    @overload
+    def __init__(self, signal: 'SignalInstance[None]', callback: Callable[[], None]):
+            ...
+
+    @overload
+    def __init__(self, signal: 'SignalInstance[T]', callback: Callable[[T], None]):
+            ...
+
+    def __init__(self, signal, callback):
         self.owner = signal
         self.callback = callback
 
@@ -13,35 +24,58 @@ class Connection[*Ts]:
         else:
             self._ref = weakref.ref(callback, self.disconnect)
 
-    def __call__(self, *args: Unpack[Ts]):
-        self.callback(*args)
+    @overload
+    def __call__(self: 'Connection[None]') -> None:
+        ...
 
-    def disconnect(self, _):
+    @overload
+    def __call__(self: 'Connection[T]', value: T) -> None:
+        ...
+
+    def __call__(self, value: object = _MISSING):
+        if value is _MISSING:
+            self.callback()
+        else:
+            self.callback(value)
+
+    def disconnect(self, _) -> None:
         self.owner.disconnect(self)
 
 
-class SignalInstance[*Ts]:
+class SignalInstance[T]:
     def __init__(self):
-        self._connections: list[Connection[*Ts]] = []
+        self._connections: list[Connection[T]] = []
 
-    def connect(self, callback: Callable[[Unpack[Ts]], None]) -> Connection[*Ts]:
+    @overload
+    def connect(self: 'SignalInstance[None]', callback: Callable[[], None]) -> Connection[T]:
+        ...
+
+    @overload
+    def connect(self: 'SignalInstance[T]', callback: Callable[[T], None]) -> Connection[T]:
+        ...
+
+    def connect(self, callback: Callable[..., None]) -> Connection[T]:
         connection = Connection(self, callback)
         self._connections.append(connection)
         return connection
 
     @overload
-    def disconnect(self, subject: Callable[[Unpack[Ts]], None]) -> bool:
+    def disconnect(self: 'SignalInstance[None]', subject: Callable[[], None]) -> bool:
         ...
 
     @overload
-    def disconnect(self, subject: Connection[*Ts]) -> bool:
+    def disconnect(self: 'SignalInstance[T]', subject: Callable[[T], None]) -> bool:
+        ...
+
+    @overload
+    def disconnect(self, subject: Connection[T]) -> bool:
         ...
 
     def disconnect(self, subject) -> bool:
         if isinstance(subject, Connection):
             if subject not in self._connections:
                 return False
-            connection = cast(Connection[*Ts], subject)
+            connection = cast(Connection[T], subject)
             self._connections.remove(connection)
             return True
         elif isinstance(subject, Callable):
@@ -56,12 +90,24 @@ class SignalInstance[*Ts]:
         else:
             raise ValueError('Unknown slot to disconnect')
 
-    def emit(self, *args: Unpack[Ts]):
-        for connection in self._connections:
-            connection.callback(*args)
+    @overload
+    def emit(self: 'SignalInstance[None]') -> None:
+        ...
+
+    @overload
+    def emit(self: 'SignalInstance[T]', value: T) -> None:
+        ...
+
+    def emit(self, value: object = _MISSING):
+        if value is _MISSING:
+            for connection in self._connections:
+                connection.callback()
+        else:
+            for connection in self._connections:
+                connection.callback(value)
 
 
-class Signal[*Ts]:
+class Signal[T = None]:
     def __init__(self):
         self._name = None
 
@@ -69,18 +115,18 @@ class Signal[*Ts]:
         self._name = name
 
     @overload
-    def __get__(self, instance: object, owner: Any) -> SignalInstance[*Ts]:
+    def __get__(self, instance: None, owner: Any) -> 'Signal[T]':
         ...
 
     @overload
-    def __get__(self, instance: None, owner: Any) -> 'Signal[*Ts]':
+    def __get__(self, instance: object, owner: Any) -> SignalInstance[T]:
         ...
 
-    def __get__(self, instance, owner) -> SignalInstance[*Ts]:
+    def __get__(self, instance, owner):
         if instance is None:
             return self
 
-        signal_instance = SignalInstance[*Ts]()
+        signal_instance = SignalInstance[T]()
         assert self._name is not None
         setattr(instance, self._name, signal_instance)
         return signal_instance
