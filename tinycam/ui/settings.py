@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import dataclasses
-from typing import List
+import enum
+from typing import List, cast
 
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
@@ -50,7 +51,7 @@ class CncSettingsModel(QtCore.QAbstractItemModel):
 
             root.settings.append(setting)
 
-    def get_item_by_index(self, index: QtCore.QModelIndex = QtCore.QModelIndex()):
+    def get_item_by_index(self, index: QtCore.QModelIndex | QtCore.QPersistentModelIndex = QtCore.QModelIndex()):
         return self._items_by_id.get(index.internalId())
 
     def data(self, index, role):
@@ -58,7 +59,7 @@ class CncSettingsModel(QtCore.QAbstractItemModel):
         if item is None:
             return None
 
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
 
         if index.column() == 0:
@@ -90,6 +91,8 @@ class CncSettingsModel(QtCore.QAbstractItemModel):
 
     def rowCount(self, parent: QtCore.QModelIndex = QtCore.QModelIndex()):
         item = self.get_item_by_index(parent)
+        if item is None:
+            return 0
         return len(item.children)
 
     def columnCount(self, parent: QtCore.QModelIndex = QtCore.QModelIndex()):
@@ -108,17 +111,17 @@ class CncSettingsDialog(QtWidgets.QDialog):
         self._tree_view = QtWidgets.QTreeView(self)
         self._tree_view.setMinimumSize(QtCore.QSize(300, 300))
         self._tree_view.setSizePolicy(
-            QtWidgets.QSizePolicy.Fixed,
-            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.Policy.Fixed,
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding,
         )
         self._tree_view.setModel(self._tree_model)
         self._tree_view.setHeaderHidden(True)
         self._tree_view.setItemsExpandable(True)
         # self._tree_view.setExpandsOnDoubleClick(True)
         self._tree_view.setIndentation(20)
-        self._tree_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self._tree_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self._tree_view.expandAll()
-        self._tree_view.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self._tree_view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self._tree_view.selectionModel().currentRowChanged.connect(self._on_selection_row_changed)
 
         self._main_panel_layout = QtWidgets.QGridLayout()
@@ -139,7 +142,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
 
         buttons_layout = QtWidgets.QHBoxLayout()
         buttons_layout.setContentsMargins(0, 0, 0, 0)
-        buttons_layout.setAlignment(Qt.AlignHCenter)
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         buttons_layout.addWidget(close_button)
 
         layout = QtWidgets.QVBoxLayout()
@@ -149,7 +152,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
 
         self.setLayout(layout)
 
-    def _on_selection_row_changed(self, current: QtCore.QModelIndex, previous: QtCore.QModelIndex):
+    def _on_selection_row_changed(self, current: QtCore.QModelIndex, _previous: QtCore.QModelIndex):
         item = self._tree_model.get_item_by_index(current)
         if item is None:
             return
@@ -177,7 +180,7 @@ class CncSettingsDialog(QtWidgets.QDialog):
             if widget is not None:
                 layout.addWidget(widget, i, 1)
 
-    def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget:
+    def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget | None:
         match setting:
             case s.CncSettingSection():
                 # This case is handled separately
@@ -213,9 +216,12 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 return widget
             case s.CncBooleanSetting():
                 widget = QtWidgets.QCheckBox()
-                widget.setCheckState(Qt.Checked if self.settings.get(setting) else Qt.Unchecked)
+                widget.setCheckState(
+                    Qt.CheckState.Checked if self.settings.get(setting)
+                    else Qt.CheckState.Unchecked
+                )
                 widget.checkStateChanged.connect(
-                    lambda state: self.settings.set(setting, state == Qt.Checked)
+                    lambda state: self.settings.set(setting, state == Qt.CheckState.Checked)
                 )
                 return widget
             case s.CncVector2Setting():
@@ -234,9 +240,12 @@ class CncSettingsDialog(QtWidgets.QDialog):
                 return widget
             case s.CncEnumSetting():
                 widget = QtWidgets.QComboBox()
-                for value in setting.type:
+                enum_type = cast(enum.Enum, setting.type)
+
+                for value in enum_type:
                     label = str(value)
                     widget.addItem(label, value)
+
                 widget.setCurrentIndex(widget.findData(self.settings.get(setting)))
                 widget.currentIndexChanged.connect(
                     lambda idx: self.settings.set(setting, widget.itemData(idx))
@@ -245,13 +254,14 @@ class CncSettingsDialog(QtWidgets.QDialog):
             case s.CncListSetting():
                 widget = QtWidgets.QWidget()
                 list_widget = QtWidgets.QListWidget()
+                setting_value = cast(list, setting.value)
 
                 def add_item(value: object):
                     item = QtWidgets.QListWidgetItem()
 
                     def on_delete_button_clicked():
                         nonlocal item
-                        setting.value.remove(value)
+                        setting_value.remove(value)
                         for i in range(list_widget.count()):
                             if list_widget.item(i) == item:
                                 list_widget.takeItem(i)
@@ -281,19 +291,20 @@ class CncSettingsDialog(QtWidgets.QDialog):
                         list_widget.doItemsLayout()
                         list_widget.viewport().update()
 
-                    @editor.valueChanged.connect
-                    def on_item_value_changed(item: object):
+                    def on_item_value_changed(_: object):
                         schedule(update_item_geometry)
+
+                    editor.valueChanged.connect(on_item_value_changed)
 
                     list_widget.addItem(item)
                     list_widget.setItemWidget(item, item_widget)
 
-                for value in setting.value:
+                for value in setting_value:
                     add_item(value)
 
                 def on_add_button_clicked():
                     value = setting.type.__args__[0]()
-                    setting.value.append(value)
+                    setting_value.append(value)
 
                     add_item(value)
 
