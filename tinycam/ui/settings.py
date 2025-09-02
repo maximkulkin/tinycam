@@ -163,6 +163,15 @@ class CncSettingsDialog(QtWidgets.QDialog):
             item.widget().setParent(None)
 
         for i, setting in enumerate(settings):
+            if isinstance(setting, s.CncSettingSection):
+                section_label = QtWidgets.QLabel(setting.label)
+                font = section_label.font()
+                font.setPointSize(font.pointSize() + 4)
+                section_label.setFont(font)
+
+                layout.addWidget(section_label, i, 0)
+                continue
+
             widget = self._make_setting_widget(setting)
             layout.addWidget(QtWidgets.QLabel(setting.label), i, 0)
             if widget is not None:
@@ -170,6 +179,9 @@ class CncSettingsDialog(QtWidgets.QDialog):
 
     def _make_setting_widget(self, setting: s.CncSetting) -> QtWidgets.QWidget:
         match setting:
+            case s.CncSettingSection():
+                # This case is handled separately
+                return None
             case s.CncStringSetting():
                 widget = QtWidgets.QLineEdit()
                 widget.setText(self.settings.get(setting) or '')

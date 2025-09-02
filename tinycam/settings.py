@@ -426,6 +426,12 @@ class CncSetting[T](QtCore.QObject):
         raise NotImplementedError()
 
 
+class CncSettingSection(CncSetting[None]):
+    @override
+    def __str__(self):
+        return 'SECTION'
+
+
 class CncStringSetting(CncSetting[str]):
     @override
     def validate(self, data: object) -> str | None:
