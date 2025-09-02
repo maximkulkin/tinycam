@@ -342,7 +342,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         super().__init__(*args, **kwargs)
         self.setMouseTracking(True)
 
-        self.ctx = None
+        self._ctx = None
 
         self._items: list[ViewItem] = []
         if camera is None:
@@ -364,6 +364,15 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def items(self) -> Sequence[ViewItem]:
         return self._items
 
+    @property
+    def initialized(self) -> bool:
+        return self._ctx is not None
+
+    @property
+    def ctx(self) -> Context:
+        assert self._ctx is not None
+        return self._ctx
+
     def add_item(self, item: ViewItem):
         self.add_items([item])
 
@@ -384,9 +393,6 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         self,
         screen_point: Vector2 | QtCore.QPoint | QtCore.QPointF
     ) -> tuple[ViewItem, object] | None:
-        if self.ctx is None:
-            return None
-
         if isinstance(screen_point, (QtCore.QPoint, QtCore.QPointF)):
             screen_point = Vector2(screen_point.x(), screen_point.y())
 
@@ -417,7 +423,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
 
     def initializeGL(self):
         super().initializeGL()
-        self.ctx = Context(mgl.create_context(require=410))
+        self._ctx = Context(mgl.create_context(require=410))
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)

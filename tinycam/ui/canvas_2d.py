@@ -50,8 +50,6 @@ class CncCanvas2D(CncView):
     def initializeGL(self):
         super().initializeGL()
 
-        assert self.ctx is not None
-
         self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
         self.add_item(self._grid)
         s.SETTINGS['general/machine_area_size'].changed.connect(self._on_machine_area_size_changed)
@@ -82,7 +80,7 @@ class CncCanvas2D(CncView):
             self._tool.deactivated.disconnect(self._on_tool_deactivated)
             self._tool.deactivate()
         self._tool = value
-        if self.ctx is not None:
+        if self.initialized:
             self.tool.deactivated.connect(self._on_tool_deactivated)
             self._tool.activate()
 
@@ -121,8 +119,6 @@ class CncCanvas2D(CncView):
         return self._project
 
     def _on_project_item_added(self, item: CncProjectItem):
-        assert self.ctx is not None
-
         match item:
             case GerberItem():
                 view = GerberItemView(self.ctx, item)
@@ -193,8 +189,6 @@ class CncCanvas2D(CncView):
     def _on_machine_area_size_changed(self, _: Vector2):
         if self._grid is None:
             return
-
-        assert self.ctx is not None
 
         self.remove_item(self._grid)
         self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
