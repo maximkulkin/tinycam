@@ -6,8 +6,9 @@ from typing import cast
 import moderngl as mgl
 import numpy as np
 from PySide6 import QtGui, QtCore
+from PySide6.QtCore import Qt
 
-from tinycam.types import Vector2
+from tinycam.types import Vector2, Vector4
 from tinycam.ui.view import RenderState, Context
 from tinycam.ui.view_items.core import Node3D
 
@@ -113,8 +114,20 @@ class FontAtlas:
 
 
 class Text(Node3D):
-    def __init__(self, context, font: FontAtlas, text: str, centered: bool = False):
+    def __init__(
+        self,
+        context: Context,
+        font: FontAtlas,
+        text: str,
+        color: Vector4 | None = None,
+        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+        margin: int | float | Vector2 = 0,
+    ):
         super().__init__(context)
+
+        self._color = color if color is not None else Vector4(1, 1, 1, 1)
+        if not isinstance(margin, Vector2):
+            margin = Vector2(margin, margin)
 
         self._program = self.context.program(
             vertex_shader='''
@@ -136,13 +149,14 @@ class Text(Node3D):
                 #version 410 core
 
                 uniform sampler2D font;
+                uniform vec4 color;
 
                 in vec2 UV;
-                out vec4 color;
+                out vec4 fragment_color;
 
                 void main() {
-                    color = texture(font, UV);
-                    if (color.a == 0.0)
+                    fragment_color = color * texture(font, UV);
+                    if (fragment_color.a == 0.0)
                         discard;
                 }
             ''',
@@ -205,8 +219,23 @@ class Text(Node3D):
         self._width = x
         self._height = -y
 
-        if centered:
-            positions -= Vector2(self._width * 0.5, -self.height * 0.5)
+        offset = Vector2()
+        if alignment & Qt.AlignmentFlag.AlignLeft:
+            offset += Vector2(margin.x, 0)
+        elif alignment & Qt.AlignmentFlag.AlignHCenter:
+            offset -= Vector2(self._width * 0.5, 0)
+        elif alignment & Qt.AlignmentFlag.AlignRight:
+            offset -= Vector2(self._width + margin.x, 0)
+
+        if alignment & Qt.AlignmentFlag.AlignTop:
+            offset -= Vector2(0, margin.y)
+        elif alignment & Qt.AlignmentFlag.AlignVCenter:
+            offset += Vector2(0, self._height * 0.5)
+        elif alignment & Qt.AlignmentFlag.AlignBottom:
+            offset += Vector2(0, self._height + margin.y)
+
+        if offset != Vector2():
+            positions += offset
 
         self._vbo_positions = self.context.buffer(positions.tobytes())
         self._vbo_uvs = self.context.buffer(uvs.tobytes())
@@ -227,6 +256,14 @@ class Text(Node3D):
     def height(self) -> float:
         return self._height
 
+    @property
+    def color(self) -> Vector4:
+        return self._color
+
+    @color.setter
+    def color(self, value: Vector4):
+        self._color = value
+
     def render(self, state: RenderState):
         self.font_texture.use(0)
 
@@ -234,5 +271,32 @@ class Text(Node3D):
         self._program['mvp'] = (
             camera.projection_matrix * camera.view_matrix * self.world_matrix
         )
+        self._program['color'] = self.color
         with self.context.scope(enable=mgl.BLEND):
             self._vao.render()
+
+    @staticmethod
+    def calculate_size(text: str, font: FontAtlas) -> Vector2:
+        x, y = 0, -font.line_height
+        for i, c in enumerate(text):
+            if c == '\n':
+                x = 0
+                y -= font.line_height
+            elif c == ' ':
+                space_size = font.glyph_size(' ')
+                if space_size is None:
+                    continue
+
+                x += space_size[0]
+            else:
+                glyph_size = font.glyph_size(c)
+                if glyph_size is None:
+                    continue
+
+                glyph_coords = font.glyph_coords(c)
+                if glyph_coords is None:
+                    continue
+
+                x += glyph_size[0]
+
+        return Vector2(x, -y)
