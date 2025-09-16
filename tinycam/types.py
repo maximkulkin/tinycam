@@ -90,10 +90,10 @@ class Vector2(np.ndarray):
     def lerp(v1: 'Vector2', v2: 'Vector2', delta: float) -> 'Vector2':
         return Vector2(v1 * delta + v2 * (1.0 - delta))
 
-    def __add__(self, other: 'number | Vector2') -> 'Vector2':
+    def __add__(self, other: 'Vector2') -> 'Vector2':
         return super().__add__(other).view(Vector2)
 
-    def __sub__(self, other: 'number | Vector2') -> 'Vector2':
+    def __sub__(self, other: 'Vector2') -> 'Vector2':
         return super().__sub__(other).view(Vector2)
 
     def __mul__(self, other: 'number | Vector2') -> 'Vector2':
@@ -105,10 +105,10 @@ class Vector2(np.ndarray):
     def __floordiv__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__floordiv__(other).view(Vector2)
 
-    def __iadd__(self, other: 'number | Vector2') -> 'Vector2':
+    def __iadd__(self, other: 'Vector2') -> 'Vector2':
         return super().__iadd__(other).view(Vector2)
 
-    def __isub__(self, other: 'number | Vector2') -> 'Vector2':
+    def __isub__(self, other: 'Vector2') -> 'Vector2':
         return super().__isub__(other).view(Vector2)
 
     def __imul__(self, other: 'number | Vector2') -> 'Vector2':
@@ -178,10 +178,10 @@ class Vector3(pyrr.Vector3):
     def lerp(cls, v1: 'Vector3', v2: 'Vector3', delta: float) -> 'Vector3':
         return pyrr.vector.interpolate(v1, v2, delta).view(cls)
 
-    def __add__(self, other: 'number | Vector3') -> 'Vector3':
+    def __add__(self, other: 'Vector3') -> 'Vector3':
         return super().__add__(other).view(Vector3)
 
-    def __sub__(self, other: 'number | Vector3') -> 'Vector3':
+    def __sub__(self, other: 'Vector3') -> 'Vector3':
         return super().__sub__(other).view(Vector3)
 
     def __mul__(self, other: 'number | Vector3') -> 'Vector3':
@@ -193,10 +193,10 @@ class Vector3(pyrr.Vector3):
     def __floordiv__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__floordiv__(other).view(Vector3)
 
-    def __iadd__(self, other: 'number | Vector3') -> 'Vector3':
+    def __iadd__(self, other: 'Vector3') -> 'Vector3':
         return super().__iadd__(other).view(Vector3)
 
-    def __isub__(self, other: 'number | Vector3') -> 'Vector3':
+    def __isub__(self, other: 'Vector3') -> 'Vector3':
         return super().__isub__(other).view(Vector3)
 
     def __imul__(self, other: 'number | Vector3') -> 'Vector3':
@@ -257,10 +257,10 @@ class Vector4(pyrr.Vector4):
             raise ValueError('Cant dehomogenize, W component is zero')
         return Vector4(self[0] / w, self[1] / w, self[2] / w, 1.0)
 
-    def __add__(self, other: 'number | Vector4') -> 'Vector4':
+    def __add__(self, other: 'Vector4') -> 'Vector4':
         return super().__add__(other).view(Vector4)
 
-    def __sub__(self, other: 'number | Vector4') -> 'Vector4':
+    def __sub__(self, other: 'Vector4') -> 'Vector4':
         return super().__sub__(other).view(Vector4)
 
     def __mul__(self, other: 'number | Vector4') -> 'Vector4':
