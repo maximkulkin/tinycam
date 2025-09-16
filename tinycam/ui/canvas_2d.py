@@ -2,17 +2,19 @@ from typing import cast
 
 from PySide6 import QtCore
 from PySide6.QtCore import Qt
+from tinycam.globals import GLOBALS
 from tinycam.project import (
     CncProject, CncProjectItem, GerberItem, ExcellonItem,
     CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
     GeometryItem,
 )
+import tinycam.settings as s
 from tinycam.ui.camera import OrthographicCamera
 from tinycam.ui.camera_controllers import (
     PanAndZoomController,
     CameraPanAndZoomAnimation,
 )
-from tinycam.ui.view import CncView
+from tinycam.ui.view import CncView, SnapFlags, SnapResult
 from tinycam.ui.view_items.core import InfiniteGridXY
 from tinycam.ui.view_items.grid import Grid
 from tinycam.ui.view_items.project_item import CncProjectItemView
@@ -193,3 +195,36 @@ class CncCanvas2D(CncView):
         self.remove_item(self._grid)
         self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
         self.add_item(self._grid)
+
+    def snap_point(self, screen_point: Vector2, flags: SnapFlags) -> SnapResult:
+        if not GLOBALS.APP.state.snap_to_grid.value:
+            return SnapResult(point=screen_point, snapped=False)
+
+        snap_step = GLOBALS.APP.state.snap_step.value
+        snap_distance = s.SETTINGS.get('general/snapping/snap_distance')
+
+        world_point = self.camera.screen_to_world_point(screen_point).xy
+        grid_point = world_point + snap_step * 0.5
+        grid_point -= grid_point % snap_step
+
+        screen_grid_point = self.camera.world_to_screen_point(
+            Vector3.from_vector2(grid_point)
+        )
+        if (flags & SnapFlags.GRID_CORNERS and
+                (screen_point - screen_grid_point).length < snap_distance):
+            return SnapResult(point=screen_grid_point, snapped=True)
+
+        if flags & SnapFlags.GRID_EDGES:
+            if abs(screen_point.x - screen_grid_point.x) < snap_distance:
+                return SnapResult(
+                    point=Vector2(screen_grid_point.x, screen_point.y),
+                    snapped=True,
+                )
+
+            if abs(screen_point.y - screen_grid_point.y) < snap_distance:
+                return SnapResult(
+                    point=Vector2(screen_point.x, screen_grid_point.y),
+                    snapped=True,
+                )
+
+        return SnapResult(point=screen_point, snapped=False)
