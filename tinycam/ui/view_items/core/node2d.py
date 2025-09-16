@@ -6,12 +6,19 @@ from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
 
 
 class Node2D(Node):
-    def __init__(self, context: Context):
+    def __init__(
+        self,
+        context: Context,
+        *,
+        position: Vector2 = Vector2(),
+        rotation: float = 0.0,
+        scale: Vector2 = Vector2(1, 1),
+    ):
         super().__init__(context)
 
-        self._position = Vector2(0, 0)
-        self._rotation = Quaternion()
-        self._scale = Vector2(1, 1)
+        self._position = position
+        self._rotation = rotation
+        self._scale = scale
 
         self._local_matrix = None
         self._world_matrix = None
@@ -35,11 +42,11 @@ class Node2D(Node):
         self._invalidate_local_matrix()
 
     @property
-    def rotation(self) -> Quaternion:
+    def rotation(self) -> float:
         return self._rotation
 
     @rotation.setter
-    def rotation(self, value: Quaternion):
+    def rotation(self, value: float):
         self._rotation = value
         self._invalidate_local_matrix()
 
@@ -54,27 +61,28 @@ class Node2D(Node):
 
     @property
     def world_position(self) -> Vector2:
-        return (self.parent.world_position if self.parent is not None else Vector2()) + self._position
+        parent_position = self.parent.world_position if self.parent is not None else Vector2()
+        return self.position + parent_position
 
     @world_position.setter
     def world_position(self, value: Vector2):
         parent_position = self.parent.world_position if self.parent is not None else Vector2()
-        self._position = value - parent_position
-        self._invalidate_local_matrix()
+        self.position = value - parent_position
 
     @property
-    def world_rotation(self) -> Quaternion:
-        return (self.parent.world_rotation if self.parent is not None else Quaternion()) + self._rotation
+    def world_rotation(self) -> float:
+        parent_rotation = self.parent.world_rotation if self.parent is not None else 0.0
+        return parent_rotation + self._rotation
 
     @world_rotation.setter
-    def world_rotation(self, value: Quaternion):
-        parent_rotation = self.parent.world_rotation if self.parent is not None else Quaternion()
-        self._rotation = parent_rotation.conjugate * value
-        self._invalidate_local_matrix()
+    def world_rotation(self, value: float):
+        parent_rotation = self.parent.world_rotation if self.parent is not None else 0.0
+        self.rotation = value - parent_rotation
 
     @property
     def world_scale(self) -> Vector2:
-        return (self.parent.world_scale if self.parent is not None else Vector2(1, 1)) * self._scale
+        parent_scale = self.parent.world_scale if self.parent is not None else Vector2(1, 1)
+        return parent_scale * self._scale
 
     @world_scale.setter
     def world_scale(self, value: Vector2):
@@ -83,33 +91,14 @@ class Node2D(Node):
             parent_scale.x = 1
         if parent_scale.y == 0:
             parent_scale.y = 1
-        self._scale = value / parent_scale
-        self._invalidate_local_matrix()
+        self.scale = value / parent_scale
 
-    @property
-    def local_matrix(self) -> Matrix44:
-        if self._local_matrix is None:
-            self._local_matrix = (
-                Matrix44.from_translation(Vector3.from_vector2(self._position)) *
-                Matrix44.from_rotation(self._rotation) *
-                Matrix44.from_scale(Vector3.from_vector2(self._scale, 1.0))
-            )
-        return self._local_matrix
-
-    @property
-    def world_matrix(self) -> Matrix44:
-        if self._world_matrix is None:
-            parent_matrix = self.parent.world_matrix if self.parent is not None else Matrix44.identity()
-            self._world_matrix = parent_matrix * self.local_matrix
-
-        return self._world_matrix
-
-    def _invalidate_local_matrix(self):
-        self._local_matrix = None
-        self._invalidate_world_matrix()
-
-    def _invalidate_world_matrix(self):
-        self._world_matrix = None
+    def _calculate_local_matrix(self) -> Matrix44:
+        return (
+            Matrix44.from_translation(Vector3.from_vector2(self.position)) *
+            Matrix44.from_rotation(Quaternion.from_z_rotation(self.rotation)) *
+            Matrix44.from_scale(Vector3.from_vector2(self.scale, 1.0))
+        )
 
     @property
     def children(self) -> 'Sequence[Node2D]':

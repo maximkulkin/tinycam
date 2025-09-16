@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import override
 
+from tinycam.types import Matrix44
 from tinycam.ui.view import ViewItem, Context, RenderState
 
 
@@ -10,6 +11,10 @@ class Node(ViewItem):
 
         self._parent = None
         self._children = []
+        self._visible = True
+
+        self._local_matrix = None
+        self._world_matrix = None
 
     @property
     def parent(self) -> 'Node | None':
@@ -18,6 +23,33 @@ class Node(ViewItem):
     @parent.setter
     def parent(self, value: 'Node | None'):
         self._parent = value
+
+    @property
+    def local_matrix(self) -> Matrix44:
+        if self._local_matrix is None:
+            self._local_matrix = self._calculate_local_matrix()
+
+        return self._local_matrix
+
+    def _calculate_local_matrix(self) -> Matrix44:
+        return Matrix44.identity()
+
+    @property
+    def world_matrix(self) -> Matrix44:
+        if self._world_matrix is None:
+            parent_matrix = self.parent.world_matrix if self.parent is not None else Matrix44.identity()
+            self._world_matrix = parent_matrix * self.local_matrix
+
+        return self._world_matrix
+
+    def _invalidate_local_matrix(self):
+        self._local_matrix = None
+        self._invalidate_world_matrix()
+
+    def _invalidate_world_matrix(self):
+        self._world_matrix = None
+        for child in self.children:
+            child._invalidate_world_matrix()
 
     @property
     def children(self) -> 'Sequence[Node]':
@@ -48,6 +80,14 @@ class Node(ViewItem):
                 child.parent = None
 
         self._children.clear()
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool):
+        self._visible = value
 
     @override
     def render(self, state: RenderState):
