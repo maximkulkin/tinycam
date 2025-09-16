@@ -126,6 +126,9 @@ class Vector2(np.ndarray):
     def __imod__(self, other: 'number | Vector2') -> 'Vector2':
         return super().__mod__(other).view(Vector2)
 
+    def __rmul__(self, other: number) -> 'Vector2':
+        return super().__rmul__(other).view(Vector2)
+
     def __neg__(self) -> 'Vector2':
         return Vector2(-self.x, -self.y)
 
@@ -220,6 +223,9 @@ class Vector3(pyrr.Vector3):
     def __imod__(self, other: 'number | Vector3') -> 'Vector3':
         return super().__imod__(other).view(Vector3)
 
+    def __rmul__(self, other: number) -> 'Vector3':
+        return super().__rmul__(other).view(Vector3)
+
     def __neg__(self) -> 'Vector3':
         return Vector3(-self.x, -self.y, -self.z)
 
@@ -304,6 +310,9 @@ class Vector4(pyrr.Vector4):
 
     def __imod__(self, other: 'number | Vector4') -> 'Vector4':
         return super().__imod__(other).view(Vector4)
+
+    def __rmul__(self, other: number) -> 'Vector4':
+        return super().__rmul__(other).view(Vector4)
 
     def __neg__(self) -> 'Vector4':
         return Vector4(-self.x, -self.y, -self.z, -self.w)
