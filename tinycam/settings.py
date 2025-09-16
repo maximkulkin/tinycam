@@ -812,3 +812,7 @@ SETTINGS.register('general/control_type', CncEnumSetting[ControlType], default=C
 SETTINGS.register('general/invert_zoom', CncBooleanSetting, default=False)
 
 SETTINGS.register('general/machine_area_size', CncVector2Setting, default=Vector2(100, 100))
+
+SETTINGS.register('general/snapping/enabled', CncBooleanSetting, default=False)
+SETTINGS.register('general/snapping/default_step', CncVector2Setting, default=Vector2(1, 1))
+SETTINGS.register('general/snapping/snap_distance', CncIntegerSetting, default=10, suffix=' pixels')

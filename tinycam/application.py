@@ -31,6 +31,9 @@ class CncApplication(QtWidgets.QApplication):
         self._load_settings()
         self.aboutToQuit.connect(self._save_settings)
 
+        self.state.snap_to_grid.value = self.settings.get('general/snapping/enabled')
+        self.state.snap_step.value = self.settings.get('general/snapping/default_step')
+
     def _save_settings(self):
         settings = QtCore.QSettings()
         settings.beginGroup("settings")
