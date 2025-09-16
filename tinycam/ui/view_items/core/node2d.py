@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import cast
 
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.node import Node
@@ -102,7 +103,7 @@ class Node2D(Node):
 
     @property
     def children(self) -> 'Sequence[Node2D]':
-        return super().children
+        return cast(Sequence[Node2D], super().children)
 
     def add_child(self, child: 'Node2D', update_parent: bool = True):
         super().add_child(child, update_parent=update_parent)
