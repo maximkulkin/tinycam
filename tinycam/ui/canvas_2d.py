@@ -15,7 +15,6 @@ from tinycam.ui.camera_controllers import (
     CameraPanAndZoomAnimation,
 )
 from tinycam.ui.view import CncView, SnapFlags, SnapResult
-from tinycam.ui.view_items.core import InfiniteGridXY
 from tinycam.ui.view_items.grid import Grid
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.view_items.gerber_item import GerberItemView
