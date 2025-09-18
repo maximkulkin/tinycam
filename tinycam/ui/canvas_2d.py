@@ -197,6 +197,9 @@ class CncCanvas2D(CncView):
             camera.position = position
             camera.zoom = zoom
 
+    def zoom_to_grid(self):
+        self._zoom_to_region(self._grid.bounds)
+
     def _on_machine_area_size_changed(self, _: Vector2):
         if self._grid is None:
             return

@@ -99,6 +99,10 @@ class CncMainWindow(QtWidgets.QMainWindow):
             icon=':/icons/zoom_fit.svg',
             shortcut='Ctrl+=',
         )
+        zoom_grid_action = self._make_action(
+            'Zoom To Grid', self._zoom_to_grid,
+            icon=':/icons/zoom_grid.svg',
+        )
 
         self.toolbar = QtWidgets.QToolBar()
         self.toolbar.setObjectName('main_toolbar')
@@ -115,6 +119,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.zoom_toolbar.addAction(zoom_in_action)
         self.zoom_toolbar.addAction(zoom_out_action)
         self.zoom_toolbar.addAction(zoom_fit_action)
+        self.zoom_toolbar.addAction(zoom_grid_action)
 
         self.tools_toolbar = self._make_tools_toolbar()
         self.addToolBar(self.tools_toolbar)
@@ -464,6 +469,13 @@ class CncMainWindow(QtWidgets.QMainWindow):
                 self.canvas_2d.zoom_to_fit()
             case 1:
                 self.preview_3d.zoom_to_fit()
+
+    def _zoom_to_grid(self):
+        match self.tabs.currentIndex():
+            case 0:
+                self.canvas_2d.zoom_to_grid()
+            case 1:
+                pass
 
     def _activate_tool(self, tool: CncTool):
         self.canvas_2d.tool = tool
