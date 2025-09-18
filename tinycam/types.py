@@ -132,6 +132,9 @@ class Vector2(np.ndarray):
     def __neg__(self) -> 'Vector2':
         return Vector2(-self.x, -self.y)
 
+    def __abs__(self) -> 'Vector2':
+        return Vector2(abs(self.x), abs(self.y))
+
     def __eq__(self, other: 'Vector2') -> bool:
         return np.array_equal(self, other)
 
@@ -229,6 +232,9 @@ class Vector3(pyrr.Vector3):
     def __neg__(self) -> 'Vector3':
         return Vector3(-self.x, -self.y, -self.z)
 
+    def __abs__(self) -> 'Vector3':
+        return Vector3(abs(self.x), abs(self.y), abs(self.z))
+
     def __eq__(self, other: 'Vector3') -> bool:
         return np.array_equal(self, other)
 
@@ -316,6 +322,9 @@ class Vector4(pyrr.Vector4):
 
     def __neg__(self) -> 'Vector4':
         return Vector4(-self.x, -self.y, -self.z, -self.w)
+
+    def __abs__(self) -> 'Vector4':
+        return Vector4(abs(self.x), abs(self.y), abs(self.z), abs(self.w))
 
     def __eq__(self, other: 'Vector4') -> bool:
         return np.array_equal(self, other)
