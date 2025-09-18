@@ -1,11 +1,15 @@
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+import enum
+from typing import Any, cast, Protocol, TypeGuard
+
 import moderngl as mgl
 import numpy as np
-from typing import Any, cast, Protocol, TypeGuard
 from PIL.Image import Image
 from PySide6 import QtCore, QtGui, QtOpenGLWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QMouseEvent
+
 from tinycam.types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.camera import Camera, PerspectiveCamera
 
@@ -337,6 +341,18 @@ def has_on_click(obj: object) -> TypeGuard[HasOnClick]:
     return hasattr(obj, 'on_click')
 
 
+class SnapFlags(enum.IntFlag):
+    GRID_CORNERS = enum.auto()
+    GRID_EDGES = enum.auto()
+    VERTICES = enum.auto()
+
+
+@dataclass
+class SnapResult:
+    point: Vector2
+    snapped: bool
+
+
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -420,6 +436,10 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         color = img[int(screen_point.y), int(screen_point.x)]
 
         return state.get_pickable_by_color(color)
+
+    def snap_point(self, screen_point: Vector2, _flags: SnapFlags) -> SnapResult:
+        # Dummy implementation of point snapping
+        return SnapResult(point=screen_point, snapped=False)
 
     def initializeGL(self):
         super().initializeGL()
