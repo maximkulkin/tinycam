@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import cast
 
 from PySide6 import QtCore
@@ -25,7 +26,7 @@ from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.geometry_item import GeometryItemView
 from tinycam.ui.tools import CncTool, DummyTool
 from tinycam.ui.utils import vector2
-from tinycam.types import Vector2, Vector3
+from tinycam.types import Box, Vector2, Vector3
 
 
 class CncCanvas2D(CncView):
@@ -37,6 +38,7 @@ class CncCanvas2D(CncView):
 
         super().__init__(camera=camera, *args, **kwargs)
 
+        self._camera_initialized = False
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._project = project
 
@@ -53,7 +55,9 @@ class CncCanvas2D(CncView):
 
         self._grid = Grid(self.ctx, s.SETTINGS.get('general/machine_area_size'))
         self.add_item(self._grid)
-        s.SETTINGS['general/machine_area_size'].changed.connect(self._on_machine_area_size_changed)
+        s.SETTINGS['general/machine_area_size'].changed.connect(
+            self._on_machine_area_size_changed
+        )
 
         self.project.items.added.connect(self._on_project_item_added)
         self.project.items.removed.connect(self._on_project_item_removed)
@@ -70,6 +74,10 @@ class CncCanvas2D(CncView):
         super().resizeGL(width, height)
         if isinstance(self._camera, OrthographicCamera):
             self._camera.resize(width, height, keep_aspect=False)
+
+            if not self._camera_initialized:
+                self._zoom_to_region(self._grid.bounds, duration=0)
+                self._camera_initialized = True
 
     @property
     def tool(self) -> CncTool:
@@ -162,30 +170,32 @@ class CncCanvas2D(CncView):
         if not items:
             return
 
-        bounds = items[0].bounds
-        for item in items[1:]:
-            bounds = bounds.merge(item.bounds)
+        bounds = reduce(Box.merge, (item.bounds for item in items))
 
-        position = Vector3(
-            bounds.center.x,
-            bounds.center.y,
-            bounds.zmax + 5.0
-        )
-        c = cast(OrthographicCamera, self.camera)
-        zoom = min(float(c.width / (bounds.width + 10)),
-                   float(c.height / (bounds.height + 10)))
+        self._zoom_to_region(bounds)
 
-        if self._animation is not None:
-            self._animation.stop()
+    def _zoom_to_region(self, region: Box, duration: float=0.5):
+        camera = cast(OrthographicCamera, self.camera)
 
-        self._animation = CameraPanAndZoomAnimation(
-            cast(OrthographicCamera, self.camera),
-            duration=0.5,
-            position=position,
-            zoom=zoom,
-            on_update=self.update,
-        )
-        self._animation.start()
+        position = Vector3(region.center.x, region.center.y, region.zmax + 5.0)
+        zoom = min(float(camera.width / (region.width + 10)),
+                   float(camera.height / (region.height + 10)))
+
+        if duration > 0:
+            if self._animation is not None:
+                self._animation.stop()
+
+            self._animation = CameraPanAndZoomAnimation(
+                camera,
+                duration=duration,
+                position=position,
+                zoom=zoom,
+                on_update=self.update,
+            )
+            self._animation.start()
+        else:
+            camera.position = position
+            camera.zoom = zoom
 
     def _on_machine_area_size_changed(self, _: Vector2):
         if self._grid is None:
