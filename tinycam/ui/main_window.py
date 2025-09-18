@@ -641,24 +641,27 @@ class SnapControlsWidget(QtWidgets.QFrame):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent=parent)
 
+        self._snap_on_icon = QtGui.QIcon(':/icons/snap_on.svg')
+        self._snap_off_icon = QtGui.QIcon(':/icons/snap_off.svg')
+
+        snap_to_grid = GLOBALS.APP.state.snap_to_grid.value
         self._snap_to_grid_button = QtWidgets.QToolButton()
-        self._snap_to_grid_button.setIcon(QtGui.QIcon(':/icons/snap_to_grid.svg'))
-        self._snap_to_grid_button.setCheckable(True)
-        self._snap_to_grid_button.setChecked(GLOBALS.APP.state.snap_to_grid.value)
-        self._snap_to_grid_button.toggled.connect(self._on_button_toggled)
-        self._snap_to_grid_button.setToolTip('Snap to grid')
+        self._snap_to_grid_button.setIcon(
+            self._snap_on_icon if snap_to_grid else self._snap_off_icon
+        )
+        self._snap_to_grid_button.setToolTip(
+            f'Snap to grid {"enabled" if snap_to_grid else "disabled"}'
+        )
+        self._snap_to_grid_button.clicked.connect(self._on_snap_to_grid_button_clicked)
 
         self._x_step = DoubleSpinBox(parent=parent)
-        self._x_step.valueChanged.connect(self._on_x_step_changed)
         self._x_label = QtWidgets.QLabel('X:')
         self._x_label.setToolTip('Snap grid X step size')
         self._y_step = DoubleSpinBox(parent=parent)
-        self._y_step.valueChanged.connect(self._on_y_step_changed)
         self._y_label = QtWidgets.QLabel('Y:')
         self._y_label.setToolTip('Snap grid Y step size')
         self._sync_checkbox = QtWidgets.QCheckBox(parent=parent)
         self._sync_checkbox.setToolTip('Sync snap step on both axes')
-        self._sync_checkbox.checkStateChanged.connect(self._on_sync_checkbox_changed)
 
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -682,8 +685,20 @@ class SnapControlsWidget(QtWidgets.QFrame):
         self._sync_checkbox.setChecked(snap_step.value.x == snap_step.value.y)
         self._on_sync_checkbox_changed(self._sync_checkbox.checkState())
 
+        self._x_step.valueChanged.connect(self._on_x_step_changed)
+        self._y_step.valueChanged.connect(self._on_y_step_changed)
+        self._sync_checkbox.checkStateChanged.connect(self._on_sync_checkbox_changed)
+
+    def _on_snap_to_grid_button_clicked(self):
+        GLOBALS.APP.state.snap_to_grid.value = not GLOBALS.APP.state.snap_to_grid.value
+
     def _on_snap_to_grid_changed(self, value: bool):
-        self._snap_to_grid_button.setDown(value)
+        self._snap_to_grid_button.setIcon(
+            self._snap_on_icon if value else self._snap_off_icon
+        )
+        self._snap_to_grid_button.setToolTip(
+            f'Snap to grid {"enabled" if value else "disabled"}'
+        )
 
     def _on_snap_step_changed(self, value: Vector2):
         self._x_step.setValue(value.x)
@@ -711,6 +726,3 @@ class SnapControlsWidget(QtWidgets.QFrame):
 
         step = Vector2(self._x_step.value(), self._x_step.value())
         GLOBALS.APP.state.snap_step.value = step
-
-    def _on_button_toggled(self, checked: bool):
-        GLOBALS.APP.state.snap_to_grid.value = checked
