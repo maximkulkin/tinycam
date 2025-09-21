@@ -3,6 +3,8 @@ from typing import cast
 
 from PySide6 import QtCore
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
+
 from tinycam.globals import GLOBALS
 from tinycam.project import (
     CncProject, CncProjectItem, GerberItem, ExcellonItem,
@@ -114,8 +116,9 @@ class CncCanvas2D(CncView):
             return True
 
         if event.type() == QtCore.QEvent.Type.MouseMove:
+            mouse_event = cast(QMouseEvent, event)
             self.coordinateChanged.emit(
-                self.camera.unproject(vector2(event.position()))
+                self.camera.unproject(vector2(mouse_event.position()))
             )
 
         if self.tool is not None and self.tool.eventFilter(self, event):
