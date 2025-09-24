@@ -1,7 +1,8 @@
 from collections.abc import Sequence
+from functools import reduce
 from typing import override
 
-from tinycam.types import Matrix44
+from tinycam.types import Box, Matrix44
 from tinycam.ui.view import ViewItem, Context, RenderState
 
 
@@ -23,6 +24,15 @@ class Node(ViewItem):
     @parent.setter
     def parent(self, value: 'Node | None'):
         self._parent = value
+
+    @property
+    def bounds(self) -> 'Box':
+        if not self.children:
+            return Box(
+                width=0.01, height=0.01, depth=0.01,
+            )
+
+        return reduce(Box.merge, (node.bounds for node in self.children))
 
     @property
     def local_matrix(self) -> Matrix44:
