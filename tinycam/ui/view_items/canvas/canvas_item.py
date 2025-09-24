@@ -7,6 +7,9 @@ from tinycam.types import Vector2
 class CanvasItem(ViewItem):
     priority = 150
 
+    center: Vector2 = Vector2()
+    size: Vector2 = Vector2(1, 1)
+
     def __init__(
         self,
         context: Context,
@@ -19,10 +22,14 @@ class CanvasItem(ViewItem):
                 color = vec4(1);
             }
         ''',
-        center: Vector2 | None = None,
-        size: Vector2 | None = None
+        *,
+        center: Vector2 = Vector2(),
+        size: Vector2 = Vector2(1, 1),
     ):
         super().__init__(context)
+
+        self.center = center
+        self.size = size
 
         self._program = self.context.program(
             vertex_shader='''
@@ -50,37 +57,19 @@ class CanvasItem(ViewItem):
             ''',
             fragment_shader=fragment_shader,
         )
-        if center is None:
-            center = Vector2(0, 0)
-        if size is None:
-            size = Vector2(1, 1)
-
-        self.center = center
-        self.size = size
 
         self._ibo = self.context.buffer(np.array([0, 1, 2, 3], dtype='i4'))
-        self._vao = self.context.vertex_array(self._program, [], index_buffer=self._ibo, mode=mgl.TRIANGLE_STRIP)
-
-    @property
-    def center(self) -> Vector2:
-        return self._center
-
-    @center.setter
-    def center(self, value: Vector2):
-        self._center = value
-
-    @property
-    def size(self) -> Vector2:
-        return self._size
-
-    @size.setter
-    def size(self, value: Vector2):
-        self._size = value
+        self._vao = self.context.vertex_array(
+            self._program,
+            [],
+            index_buffer=self._ibo,
+            mode=mgl.TRIANGLE_STRIP,
+        )
 
     def render(self, state: RenderState):
-        self._program['size'] = self._size
+        self._program['size'] = self.size
         self._program['screen_size'] = state.camera.pixel_size
-        self._program['center'] = Vector2(self._center.x, state.camera.pixel_height - self._center.y)
+        self._program['center'] = Vector2(self.center.x, state.camera.pixel_height - self.center.y)
 
         with self.context.scope(flags=mgl.BLEND):
             self._vao.render()
