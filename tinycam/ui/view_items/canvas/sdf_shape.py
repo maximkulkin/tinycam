@@ -48,6 +48,9 @@ class SdfShape(CanvasItem):
                         discard;
                     }
                     color = mix(edgeColor, fillColor, edge);
+                    if (color.a < 0.01) {
+                        discard;
+                    }
                 }
             ''',
             **kwargs
