@@ -2,7 +2,7 @@ from PySide6 import QtGui
 from PySide6.QtCore import Qt
 import numpy as np
 
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.types import Box, Vector2, Vector3, Vector4
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.node3d import Node3D
@@ -15,6 +15,8 @@ class Grid(Node3D):
 
     def __init__(self, context: Context, size: Vector2):
         super().__init__(context)
+
+        self._size = size
 
         self._line((0, size.y), size)
         self._line((size.x, 0), size)
@@ -75,6 +77,17 @@ class Grid(Node3D):
             'Y',
             color=Vector4(0, 1, 0, 1),
             alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom,
+        )
+
+    @property
+    def bounds(self) -> Box:
+        return Box(
+            x=self.world_position.x - 20,
+            y=self.world_position.y - 20,
+            z=self.world_position.z - 0.5,
+            width=self._size.x + 40,
+            height=self._size.y + 40,
+            depth=1.0,
         )
 
     def _line(
