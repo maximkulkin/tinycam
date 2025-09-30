@@ -60,6 +60,10 @@ class Vector2(np.ndarray):
         return float(pyrr.vector.length(self))
 
     @property
+    def squared_length(self) -> float:
+        return float(np.dot(self, self))
+
+    @property
     def normalized(self) -> 'Vector2':
         v = Vector2(self.x, self.y)
         v.normalize()
@@ -176,6 +180,10 @@ class Vector3(pyrr.Vector3):
     @property
     def length(self) -> float:
         return float(pyrr.vector.length(self))
+
+    @property
+    def squared_length(self) -> float:
+        return float(np.dot(self, self))
 
     @property
     def normalized(self) -> 'Vector3':
