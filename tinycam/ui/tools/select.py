@@ -3,7 +3,7 @@ from typing import cast
 
 import numpy as np
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QMouseEvent, QKeyEvent
+from PySide6.QtGui import QCursor, QMouseEvent, QKeyEvent
 from PySide6.QtWidgets import QWidget
 
 from tinycam.globals import GLOBALS
@@ -11,7 +11,7 @@ from tinycam.project import CncProjectItem
 from tinycam.types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.commands import DeleteItemsCommand
 from tinycam.ui.tools import CncTool
-from tinycam.ui.view_items.canvas import Rectangle
+from tinycam.ui.view_items.core.canvas import Canvas, Rectangle
 from tinycam.ui.view_items.project_item import CncProjectItemView
 from tinycam.ui.utils import vector2
 
@@ -28,12 +28,18 @@ class SelectTool(CncTool):
         self._selecting = False
         self._p1: Vector2 = Vector2()
         self._p2: Vector2 = Vector2()
+        self._canvas = None
 
         self._box = None
         self._last_modifiers = SelectionModifier.NONE
 
+    def activate(self):
+        super().activate()
+        self.view.add_item(self.canvas)
+
     def deactivate(self):
         self.cancel()
+        self.view.remove_item(self.canvas)
         super().deactivate()
 
     def cancel(self):
@@ -43,6 +49,13 @@ class SelectTool(CncTool):
 
         self._selecting = False
         self._last_modifiers = SelectionModifier.NONE
+
+    @property
+    def canvas(self) -> Canvas:
+        if self._canvas is None:
+            self._canvas = Canvas(self.view.ctx)
+
+        return self._canvas
 
     def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
         mouse_event = cast(QMouseEvent, event)
@@ -69,15 +82,18 @@ class SelectTool(CncTool):
             self._selecting = False
             return True
         elif self._selecting and event.type() == QEvent.Type.MouseMove:
-            self._p2 = vector2(mouse_event.position())
+            self._p2 = vector2(self.view.mapFromGlobal(QCursor.pos()))
 
             modifiers = self._make_selection_modifiers(mouse_event.modifiers())
             if self._box is None and (self._p1 - self._p2).length > 10:
                 self._box = self._make_box()
                 self.view.add_item(self._box)
             elif self._box is not None:
-                self._box.center = (self._p1 + self._p2) * 0.5
-                self._box.size = Vector2(np.abs(self._p1 - self._p2))
+                p1 = self.view.camera.unproject(self._p1).xy
+                p2 = self.view.camera.unproject(self._p2).xy
+
+                self._box.position = (p1 + p2) * 0.5
+                self._box.size = abs(p1 - p2)
 
             if self._box is not None:
                 color = self._get_modifier_color(modifiers)
@@ -123,13 +139,17 @@ class SelectTool(CncTool):
 
         color = self._get_modifier_color(SelectionModifier.NONE)
 
+        p1 = self.view.camera.unproject(self._p1).xy
+        p2 = self.view.camera.unproject(self._p2).xy
+
         return Rectangle(
             context=self.view.ctx,
-            center=(self._p1 + self._p2) * 0.5,
-            size=np.abs(self._p1 - self._p2),
+            position=(p1 + p2) * 0.5,
+            size=abs(p1 - p2),
             fill_color=Vector4.from_vector3(color, 0.1),
             edge_color=Vector4.from_vector3(color, 0.4),
-            edge_width=2,
+            edge_width=3,
+            screen_space_edge_width=True,
         )
 
     def _get_modifier_color(self, modifiers: SelectionModifier) -> Vector3:
