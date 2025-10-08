@@ -374,6 +374,10 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
         self._pick_texture = None
         self._pick_framebuffer = None
 
+        self._timer = QtCore.QTimer()
+        self._timer.setInterval(1000 // 30)
+        self._timer.timeout.connect(self.update)
+
     @property
     def camera(self) -> Camera:
         return self._camera
@@ -450,6 +454,7 @@ class CncView(QtOpenGLWidgets.QOpenGLWidget):
     def initializeGL(self):
         super().initializeGL()
         self._ctx = Context(mgl.create_context(require=410))
+        self._timer.start()
 
     def resizeGL(self, width, height):
         super().resizeGL(width, height)
