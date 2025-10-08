@@ -2,6 +2,7 @@ import moderngl as mgl
 import numpy as np
 import shapely
 import shapely.geometry as sg
+from tinycam.globals import GLOBALS
 from tinycam.types import Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
@@ -41,13 +42,7 @@ class Polygon(Node3D):
 
         self._color = color
 
-        polygons = []
-        if isinstance(polygon, sg.Polygon):
-            polygons = [polygon]
-        elif isinstance(polygon, sg.MultiPolygon):
-            polygons = polygon.geoms
-        else:
-            raise ValueError(f'Unsupported polygon type {type(polygon)}')
+        polygons = GLOBALS.GEOMETRY.polygons(polygon)
 
         for polygon in polygons:
             shapely.prepare(polygon)
