@@ -570,10 +570,18 @@ class Rect(np.ndarray):
     def translated(self, offset: Vector2) -> 'Rect':
         return Rect(self.x + offset.x, self.y + offset.y, self.width, self.height)
 
-    def scaled(self, scale: Vector2) -> 'Rect':
+    def scaled(self, scale: Vector2, origin: Vector2 | None = None) -> 'Rect':
+        if origin is None:
+            return Rect(
+                self.x, self.y,
+                self.width * scale.x, self.height * scale.y,
+            )
+
         return Rect(
-            self.x, self.y,
-            self.width * scale.x, self.height * scale.y,
+            (self.x - origin.x) * scale.x + origin.x,
+            (self.y - origin.y) * scale.y + origin.y,
+            self.width * scale.x,
+            self.height * scale.y,
         )
 
     def __eq__(self, other: 'Rect') -> bool:
