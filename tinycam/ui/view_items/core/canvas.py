@@ -2,7 +2,7 @@ import moderngl as mgl
 import numpy as np
 from typing import Sequence, cast
 
-from tinycam.types import Vector2, Vector4
+from tinycam.types import Vector2, Vector3, Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core.node2d import Node2D
 from tinycam.ui.view_items.core.node3d import Node3D
@@ -15,23 +15,20 @@ class CanvasItem(Node2D):
 
         self._canvas = None
 
-    # @Node2D.parent.getter
-    # def parent(self) -> 'CanvasItem | None':
-    #     return cast(CanvasItem | None, super().parent)
+    @Node2D.parent.setter
+    def parent(self, value: 'Node2D | None'):
+        if value is not None and not isinstance(value, CanvasItem):
+            raise ValueError('Invalid parent for canvas item')
 
-    # @Node2D.parent.setter
-    # def parent(self, value: 'Node2D | None'):
-    #     if value is not None and not isinstance(value, CanvasItem):
-    #         raise ValueError('Invalid parent for canvas item')
-
-    #     super().parent = value
+        assert Node2D.parent.fset
+        Node2D.parent.fset(self, value)
 
     @property
     def canvas(self) -> 'Canvas | None':
         if self._canvas is not None:
             return self._canvas
         if self.parent is not None:
-            return self.parent.canvas
+            return cast(CanvasItem, self.parent).canvas
 
         return self._canvas
 
@@ -57,16 +54,18 @@ class SdfShape(CanvasItem):
         context: Context,
         *,
         size: Vector2 = Vector2(1, 1),
-        screen_space_size: bool = False,
         fill_color: Vector4 = Vector4(1, 1, 1, 1),
         edge_color: Vector4 = Vector4(1, 1, 1, 1),
         edge_width: float = 0.1,
+        screen_space_size: bool = False,
+        screen_space_edge_width: bool = False,
         **kwargs
     ):
         super().__init__(context, **kwargs)
 
         self.size = size
         self._screen_space_size = screen_space_size
+        self._screen_space_edge_width = screen_space_edge_width
         self.fill_color = fill_color
         self.edge_color = edge_color
         self.edge_width = edge_width
@@ -82,19 +81,23 @@ class SdfShape(CanvasItem):
                     vec2( 0.5, -0.5)
                 );
 
-                uniform mat4 mvp;
+                uniform mat4 model_view_matrix;
+                uniform mat4 projection_matrix;
 
                 // size of the SDF shape in pixels
                 uniform vec2 size;
 
+                // UV coordinates in pixels with zero in the center
                 out vec2 uv;
 
                 void main() {
-                    vec2 position = positions[gl_VertexID];
+                    vec2 position = positions[gl_VertexID] * size;
 
                     gl_Position =
-                        mvp * vec4(0, 0, 0, 1) +
-                        vec4(position * size, 0.0, 0.0);
+                        projection_matrix * (
+                            model_view_matrix * vec4(0, 0, 0, 1) +
+                            vec4(position, 0.0, 0.0)
+                        );
 
                     uv = position;
                 }
@@ -105,6 +108,7 @@ class SdfShape(CanvasItem):
 
                 uniform vec4 fill_color;
                 uniform vec4 edge_color;
+                // edge width in pixels
                 uniform float edge_width;
 
                 in vec2 uv;
@@ -115,7 +119,7 @@ class SdfShape(CanvasItem):
 
                 void main() {
                     float d = shape(uv);
-                    float edge = smoothstep(-edge_width * 0.5, -edge_width, d);
+                    float edge = smoothstep(-edge_width, 0, d);
 
                     if (d > 0) {
                         discard;
@@ -137,16 +141,19 @@ class SdfShape(CanvasItem):
                     vec2( 0.5, -0.5)
                 );
 
-                uniform mat4 mvp;
+                uniform mat4 model_view_matrix;
+                uniform mat4 projection_matrix;
 
+                // size of the SDF shape in world units
                 uniform vec2 size;
 
+                // UV coordinates in world units with zero in the center
                 out vec2 uv;
 
                 void main() {
-                    vec2 position = positions[gl_VertexID];
-                    gl_Position = mvp * vec4(position * size, 0.0, 1.0);
-                    uv = positions[gl_VertexID];
+                    vec2 position = positions[gl_VertexID] * size;
+                    gl_Position = projection_matrix * model_view_matrix * vec4(position, 0.0, 1.0);
+                    uv = position;
                 }
             '''
 
@@ -155,6 +162,7 @@ class SdfShape(CanvasItem):
 
                 uniform vec4 fill_color;
                 uniform vec4 edge_color;
+                // edge width in world units
                 uniform float edge_width;
 
                 in vec2 uv;
@@ -165,12 +173,12 @@ class SdfShape(CanvasItem):
 
                 void main() {
                     float d = shape(uv);
-                    float edge = smoothstep(-edge_width * 0.5, -edge_width, d);
+                    float edge = smoothstep(-edge_width, 0.0, d);
 
                     if (d > 0) {
                         discard;
                     }
-                    color = mix(edge_color, fill_color, edge);
+                    color = mix(fill_color, edge_color, edge);
                     if (color.a < 0.01) {
                         discard;
                     }
@@ -194,18 +202,27 @@ class SdfShape(CanvasItem):
         if not self.visible:
             return
 
+        p1 = state.camera.unproject(Vector2(0, 0)).xy
+        p2 = state.camera.unproject(Vector2(1, 1)).xy
+        pixel_size = abs(p2 - p1) * 0.5
+
+        if self._screen_space_size:
+            self._program['size'] = self.size * pixel_size
+        else:
+            self._program['size'] = self.size
+
+        if self._screen_space_edge_width:
+            self._program['edge_width'] = self.edge_width * min(pixel_size.x, pixel_size.y)
+        else:
+            self._program['edge_width'] = self.edge_width
+
         self._program['fill_color'] = self.fill_color
         self._program['edge_color'] = self.edge_color
-        self._program['edge_width'] = self.edge_width / min(self.size.x, self.size.y)
-        self._program['mvp'] = (
-            state.camera.projection_matrix *
+        self._program['projection_matrix'] = state.camera.projection_matrix
+        self._program['model_view_matrix'] = (
             state.camera.view_matrix *
             self.world_matrix
         )
-        if self._screen_space_size:
-            self._program['size'] = self.size / state.camera.pixel_size
-        else:
-            self._program['size'] = self.size
 
         with self.context.scope(flags=mgl.BLEND):
             self._vao.render()
@@ -213,8 +230,10 @@ class SdfShape(CanvasItem):
 
 class Circle(SdfShape):
     shape_code = '''
+    uniform vec2 size;
+
     float shape(vec2 uv) {
-        return length(uv) - 0.5;
+        return length(uv) - size.x * 0.5;
     }
     '''
 
@@ -225,18 +244,29 @@ class Circle(SdfShape):
 
     @property
     def radius(self) -> float:
-        return self.size.x
+        return self.size.x * 0.5
 
     @radius.setter
     def radius(self, value: float):
-        self.size = Vector2(1, 1) * value
+        self.size = Vector2(2, 2) * value
+
+
+class Rectangle(SdfShape):
+    shape_code = '''
+    uniform vec2 size;
+
+    float shape(vec2 uv) {
+        vec2 d = abs(uv) - size * 0.5;
+        return length(max(d, 0)) + min(max(d.x, d.y), 0);
+    }
+    '''
 
 
 class VerticalCross(SdfShape):
     shape_code = '''
         float shape(vec2 p) {
-            return min(abs(p.x) - edge_width,
-                       abs(p.y) - edge_width);
+            return min(abs(p.x) - edge_width * 0.5,
+                       abs(p.y) - edge_width * 0.5);
         }
     '''
 
@@ -244,8 +274,8 @@ class VerticalCross(SdfShape):
 class DiagonalCross(SdfShape):
     shape_code = '''
         float shape(vec2 p) {
-            return min(abs(p.x - p.y) - edge_width,
-                       abs(p.y + p.x) - edge_width);
+            return min(abs(p.x - p.y) - edge_width * 0.5,
+                       abs(p.y + p.x) - edge_width * 0.5);
         }
     '''
 
