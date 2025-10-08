@@ -434,12 +434,41 @@ class Matrix44(pyrr.Matrix44):
         return pyrr.matrix44.create_identity(dtype='f4').view(cls)
 
     @classmethod
+    def transform_around_origin(cls, transform: 'Matrix44', origin: Vector3) -> 'Matrix44':
+        return cls.from_translation(origin) * transform * cls.from_translation(-origin)
+
+    @classmethod
     def from_translation(cls, translation: Vector3) -> 'Matrix44':
         return pyrr.matrix44.create_from_translation(translation, dtype='f4').view(cls)
 
     @classmethod
     def from_rotation(cls, rotation: Quaternion) -> 'Matrix44':
         return pyrr.matrix44.create_from_quaternion(rotation, dtype='f4').view(cls)
+
+    @classmethod
+    def from_x_rotation(cls, angle: float | np.number) -> 'Matrix44':
+        return pyrr.matrix44.create_from_quaternion(
+            Quaternion.from_x_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_y_rotation(cls, angle: float | np.number) -> 'Matrix44':
+        return pyrr.matrix44.create_from_quaternion(
+            Quaternion.from_y_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_z_rotation(cls, angle: float | np.number) -> 'Matrix44':
+        return pyrr.matrix44.create_from_quaternion(
+            Quaternion.from_z_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_axis_rotation(cls, axis: Vector3, angle: float | np.number) -> 'Matrix44':
+        return pyrr.matrix44.create_from_axis_rotation(axis, angle, dtype='f4').view(cls)
 
     @classmethod
     def from_scale(cls, scale: Vector3) -> 'Matrix44':
