@@ -327,8 +327,7 @@ class TransformTool(CncTool):
         if self._applied_scale is not None:
             pivot = self._applied_scale_pivot
             all_bounds = [
-                bounds.scaled(self._applied_scale)
-                .translated(pivot - (pivot - bounds.pmin) * self._applied_scale - bounds.pmin)
+                bounds.scaled(self._applied_scale, origin=pivot)
                 for bounds in all_bounds
             ]
         if self._applied_offset is not None:
@@ -405,7 +404,7 @@ class TransformTool(CncTool):
 
         self._applied_offset = offset
 
-        for view, item_offset, item_scale in zip(self._selected_views, self._offsets, self._scales):
+        for view, item_offset in zip(self._selected_views, self._offsets):
             view.world_position = item_offset + Vector3.from_vector2(offset)
 
         self._update_control_positions()
