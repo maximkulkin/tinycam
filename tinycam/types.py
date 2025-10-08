@@ -423,6 +423,85 @@ class Quaternion(pyrr.Quaternion):
         return Vector3(roll, pitch, yaw)
 
 
+class Matrix33(pyrr.Matrix33):
+    def __new__(cls, value: 'Matrix33 | np.ndarray | list[number] | None') -> 'Matrix33':
+        if value is None:
+            return np.zeros((3, 3), dtype='f4').view(cls)
+        return np.array(value, dtype='f4').view(cls)
+
+    @classmethod
+    def identity(cls) -> 'Matrix33':
+        return pyrr.matrix33.create_identity(dtype='f4').view(cls)
+
+    @overload
+    def __mul__(self, other: 'Matrix33') -> 'Matrix33':
+        ...
+
+    @overload
+    def __mul__(self, other: Vector3) -> Vector3:
+        ...
+
+    def __mul__(self, other):
+        if isinstance(other, Matrix33):
+            return super().__mul__(other).view(Matrix33)
+        elif isinstance(other, Vector3):
+            return super().__mul__(other).view(Vector3)
+        else:
+            raise ValueError(f'Invalid value type: {other}')
+
+    @property
+    def inverse(self) -> 'Matrix33':
+        return super().inverse.view(Matrix33)
+
+    @classmethod
+    def transform_around_origin(cls, transform: 'Matrix33', origin: Vector2) -> 'Matrix33':
+        return cls.from_translation(origin) * transform * cls.from_translation(-origin)
+
+    @classmethod
+    def from_translation(cls, translation: Vector2) -> 'Matrix33':
+        return Matrix33([
+            0., 0., translation.x,
+            0., 0., translation.y,
+            0., 0., 1.,
+        ])
+
+    @classmethod
+    def from_rotation(cls, rotation: Quaternion) -> 'Matrix33':
+        return pyrr.matrix33.create_from_quaternion(rotation, dtype='f4').view(cls)
+
+    @classmethod
+    def from_x_rotation(cls, angle: float | np.number) -> 'Matrix33':
+        return pyrr.matrix33.create_from_quaternion(
+            Quaternion.from_x_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_y_rotation(cls, angle: float | np.number) -> 'Matrix33':
+        return pyrr.matrix33.create_from_quaternion(
+            Quaternion.from_y_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_z_rotation(cls, angle: float | np.number) -> 'Matrix33':
+        return pyrr.matrix33.create_from_quaternion(
+            Quaternion.from_z_rotation(angle),
+            dtype='f4',
+        ).view(cls)
+
+    @classmethod
+    def from_axis_rotation(cls, axis: Vector3, angle: float | np.number) -> 'Matrix33':
+        return pyrr.matrix33.create_from_axis_rotation(axis, angle, dtype='f4').view(cls)
+
+    @classmethod
+    def from_scale(cls, scale: Vector2) -> 'Matrix33':
+        return pyrr.matrix33.create_from_scale(
+            Vector3.from_vector2(scale, 1.0),
+            dtype='f4',
+        ).view(cls)
+
+
 class Matrix44(pyrr.Matrix44):
     def __new__(cls, value: 'Matrix44 | np.ndarray | list[number] | None') -> 'Matrix44':
         if value is None:
@@ -861,6 +940,7 @@ __all__ = [
     'Vector3',
     'Vector4',
     'Quaternion',
+    'Matrix33',
     'Matrix44',
     'Rect',
     'Box',
