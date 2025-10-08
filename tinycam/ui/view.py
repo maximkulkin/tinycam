@@ -354,6 +354,8 @@ class SnapResult:
 
 
 class CncView(QtOpenGLWidgets.QOpenGLWidget):
+    coordinateChanged = QtCore.Signal(Vector2)
+
     def __init__(self, camera: Camera | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setMouseTracking(True)

@@ -57,7 +57,7 @@ class SelectTool(CncTool):
 
         return self._canvas
 
-    def eventFilter(self, widget: QWidget, event: QEvent) -> bool:
+    def eventFilter(self, _: QWidget, event: QEvent) -> bool:
         mouse_event = cast(QMouseEvent, event)
 
         if (event.type() == QEvent.Type.MouseButtonPress and
@@ -100,7 +100,8 @@ class SelectTool(CncTool):
                 self._box.fill_color = Vector4.from_vector3(color, 0.1)
                 self._box.edge_color = Vector4.from_vector3(color, 0.4)
 
-            widget.update()
+            self.view.coordinateChanged.emit(self.view.camera.unproject(self._p2).xy)
+            self.view.update()
             return True
         elif event.type() == QEvent.Type.KeyPress:
             key_event = cast(QKeyEvent, event)

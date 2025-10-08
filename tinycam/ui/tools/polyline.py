@@ -95,7 +95,9 @@ class PolylineTool(CncTool):
             self._polyline = self._make_polyline()
             self.view.add_item(self._polyline)
 
-            widget.update()
+
+            self.view.coordinateChanged.emit(world_point)
+            self.view.update()
             return True
         elif event.type() == QEvent.Type.KeyPress:
             key_event = cast(QKeyEvent, event)

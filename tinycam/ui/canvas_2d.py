@@ -32,7 +32,6 @@ from tinycam.types import Box, Vector2, Vector3
 
 
 class CncCanvas2D(CncView):
-    coordinateChanged = QtCore.Signal(Vector2)
 
     def __init__(self, project: CncProject, *args, **kwargs):
         camera = OrthographicCamera()
