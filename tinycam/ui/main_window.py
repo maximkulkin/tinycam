@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
-from tinycam.project import GerberItem, ExcellonItem
+from tinycam.project import GerberItem, ExcellonItem, SvgItem
 from tinycam.settings import SETTINGS, CncSetting, ControlType
 from tinycam.types import Vector2
 from tinycam.ui.commands import (
@@ -402,17 +402,22 @@ class CncMainWindow(QtWidgets.QMainWindow):
     def _import_file(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             parent=self, caption='Import Drawing',
-            filter='Gerber (*.gbr);;Excellon (*.drl);;All files (*)'
+            filter='SVG (*.svg);;Gerber (*.gbr);;Excellon (*.drl);;All files (*)'
         )
         if filename == '':
             return
 
         item = None
-        if filename.endswith('.gbr'):
+        if filename.endswith('.svg'):
+            item = self._import_svg(filename)
+        elif filename.endswith('.gbr'):
             item = self._import_gerber(filename)
         elif filename.endswith('.drl'):
             item = self._import_excellon(filename)
         else:
+            if item is None:
+                item = self._import_svg(filename, silent=True)
+
             if item is None:
                 item = self._import_gerber(filename, silent=True)
 
@@ -427,6 +432,16 @@ class CncMainWindow(QtWidgets.QMainWindow):
             return
 
         GLOBALS.APP.undo_stack.push(ImportFileCommand(filename, item))
+
+    def _import_svg(self, filename: str, silent: bool = False) -> SvgItem | None:
+        try:
+            return SvgItem.from_file(filename)
+        except Exception as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(
+                    self, 'Import SVG', f'Error parsing SVG file: {e}',
+                )
+            return None
 
     def _import_gerber(self, filename: str, silent: bool = False) -> GerberItem | None:
         try:

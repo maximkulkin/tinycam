@@ -7,7 +7,7 @@ from PySide6.QtGui import QMouseEvent
 
 from tinycam.globals import GLOBALS
 from tinycam.project import (
-    CncProject, CncProjectItem, GerberItem, ExcellonItem,
+    CncProject, CncProjectItem, GerberItem, ExcellonItem, SvgItem,
     CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
     GeometryItem,
 )
@@ -136,6 +136,8 @@ class CncCanvas2D(CncView):
                 view = GerberItemView(self.ctx, item)
             case ExcellonItem():
                 view = ExcellonItemView(self.ctx, item)
+            case SvgItem():
+                view = GeometryItemView(self.ctx, item)
             case CncCutoutJob():
                 view = CncCutoutJobView(self.ctx, item)
             case CncIsolateJob():

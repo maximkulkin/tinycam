@@ -4,7 +4,7 @@ from typing import cast
 from PySide6 import QtCore
 
 from tinycam.project import (
-    CncProjectItem, GerberItem, ExcellonItem,
+    CncProjectItem, GerberItem, ExcellonItem, SvgItem,
     CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
 )
 import tinycam.settings as s
@@ -14,6 +14,7 @@ from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation
 from tinycam.ui.view_items.core import InfiniteGridXY
 from tinycam.ui.view_items.project_item import CncProjectItemView
+from tinycam.ui.view_items.geometry_item import GeometryItemView
 from tinycam.ui.view_items.cutout_job import CncCutoutJobView
 from tinycam.ui.view_items.drill_job import CncDrillJobView
 from tinycam.ui.view_items.isolate_job import CncIsolateJobView
@@ -117,6 +118,8 @@ class CncPreview3D(CncView):
                 view = CncDrillJobView(self.ctx, item)
             case GerberItem() | ExcellonItem() | CncJob():
                 view = CncProjectItemView(self.ctx, item)
+            case SvgItem():
+                view = GeometryItemView(self.ctx, item)
             case _:
                 return
 
