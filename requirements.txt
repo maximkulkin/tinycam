@@ -3,6 +3,7 @@ moderngl
 numpy
 PySide6
 PySide6-Addons
+pillow
 pyparsing
 pyserial
 pyserial-asyncio
