@@ -327,9 +327,12 @@ class CncControllerStateDisplayWindow(CncWindow):
         self.setObjectName("cnc_state")
         self.setWindowTitle("CNC State")
 
-        controller.workspace_coordinates_changed.connect(
-            self._on_workspace_coordinates_changed,
+        controller.machine_coordinates_changed.connect(
+            self._on_machine_coordinates_changed,
         )
+        # controller.workspace_coordinates_changed.connect(
+        #     self._on_workspace_coordinates_changed,
+        # )
 
         self._x_readout = CncCoordinateDisplay('X')
         self._y_readout = CncCoordinateDisplay('Y')
@@ -365,6 +368,11 @@ class CncControllerStateDisplayWindow(CncWindow):
         main_widget = QtWidgets.QWidget(self)
         main_widget.setLayout(layout)
         self.setWidget(main_widget)
+
+    def _on_machine_coordinates_changed(self, coords: Vector3):
+        self._x_readout.setValue(coords.x)
+        self._y_readout.setValue(coords.y)
+        self._z_readout.setValue(coords.z)
 
     def _on_workspace_coordinates_changed(self, coords: Vector3):
         self._x_readout.setValue(coords.x)
