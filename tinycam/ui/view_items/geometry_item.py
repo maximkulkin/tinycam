@@ -1,5 +1,6 @@
 from tinycam import geometry as g
 from tinycam.globals import GLOBALS
+from tinycam.tasks import run_task
 from tinycam.types import Vector4
 from tinycam.project.geometry import (
     CapStyle as ModelCapStyle,
@@ -18,9 +19,12 @@ class GeometryItemView(CncProjectItemView):
 
     def _update_geometry(self):
         geometry = self._model.geometry
+        if self._geometry is geometry:
+            return
 
         if self._geometry_view is not None:
             self.remove_child(self._geometry_view)
+            self._geometry_view = None
 
         if geometry is not None:
             self._geometry_view = self._make_geometry_view(
