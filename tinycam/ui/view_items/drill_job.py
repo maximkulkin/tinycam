@@ -33,7 +33,7 @@ class CncDrillJobView(CncProjectItemView[CncDrillJob]):
                 self._outline.add_child(polygon_view)
 
             self._path = CncCommandsView(self.context, model.generate_commands())
-            self._path.global_position = Vector3()
+            self._path.world_position = Vector3()
 
             self._geometry = self._model.geometry
             self._tool_diameter = tool_diameter
