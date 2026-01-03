@@ -15,6 +15,7 @@ class CreateCutoutJobCommand(CreateItemCommandBase):
     @property
     def item(self) -> CncProjectItem | None:
         if self._item is None:
-            self._item = CncCutoutJob(self.source_item)
+            self._item = CncCutoutJob()
+            self._item.source_item = self._source_item
 
         return self._item

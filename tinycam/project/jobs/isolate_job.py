@@ -1,4 +1,7 @@
-from PySide6 import QtGui
+from typing import override
+
+from PySide6 import QtGui, QtWidgets
+from PySide6.QtCore import Qt
 
 from tinycam.commands import CncCommand, CncCommandBuilder
 from tinycam.geometry import Line
@@ -7,8 +10,10 @@ from tinycam.project import CncProjectItem
 from tinycam.project.jobs.job import CncJob
 import tinycam.properties as p
 import tinycam.settings as s
+from tinycam.signals import Signal
 from tinycam.tasks import run_task
 from tinycam.tools import CncTool
+import tinycam.ui.property_editor as pe
 
 
 with s.SETTINGS.section('jobs/isolate') as S:
@@ -42,7 +47,38 @@ with s.SETTINGS.section('jobs/isolate') as S:
     )
 
 
+class ProgressEditor(pe.BasePropertyEditor[float]):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._editor = QtWidgets.QSlider(Qt.Orientation.Horizontal, parent=self)
+        self._editor.setMinimum(0)
+        self._editor.setMaximum(100000)
+        self._editor.valueChanged.connect(self._on_value_changed)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._editor)
+        self.setLayout(layout)
+
+    def value(self) -> float:
+        return self._editor.value()
+
+    def setValue(self, value: float):
+        self._editor.setValue(int(value))
+
+    @override
+    def setEnabled(self, value: bool):
+        super().setEnabled(value)
+        self._editor.setEnabled(self.enabled())
+
+    def _on_value_changed(self, value: int):
+        self.valueChanged.emit(value)
+
+
 class CncIsolateJob(CncJob):
+    progress_changed = Signal[float]()
+
     def __init__(self):
         super().__init__()
 
@@ -123,6 +159,15 @@ class CncIsolateJob(CncJob):
         p.Order(10),
         p.MinValue(0),
         p.Suffix('{units}/min'),
+    ])
+
+    def _on_progress_changed(self):
+        self.progress_changed.emit(self.progress)
+
+    progress = p.Property[float](on_update=_on_progress_changed, default=0., metadata=[
+        p.Order(11),
+        p.MinValue(0),
+        pe.Editor(ProgressEditor),
     ])
 
     def _on_source_item_updated(self, _item):
