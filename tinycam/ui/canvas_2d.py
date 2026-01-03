@@ -100,9 +100,7 @@ class CncCanvas2D(CncView):
 
     @default_tool.setter
     def default_tool(self, value: CncTool):
-        self._default_tool.deactivate()
         self._default_tool = value
-        self._default_tool.activate()
 
     def _on_tool_deactivated(self):
         self._tool = self._default_tool
@@ -114,14 +112,14 @@ class CncCanvas2D(CncView):
         if event.isAccepted():
             return True
 
+        if self.tool is not None and self.tool.eventFilter(self, event):
+            return True
+
         if event.type() == QtCore.QEvent.Type.MouseMove:
             mouse_event = cast(QMouseEvent, event)
             self.coordinateChanged.emit(
                 self.camera.unproject(vector2(mouse_event.position()))
             )
-
-        if self.tool is not None and self.tool.eventFilter(self, event):
-            return True
 
         return False
 
@@ -182,8 +180,10 @@ class CncCanvas2D(CncView):
         camera = cast(OrthographicCamera, self.camera)
 
         position = Vector3(region.center.x, region.center.y, region.zmax + 5.0)
-        zoom = min(float(camera.width / (region.width + 10)),
-                   float(camera.height / (region.height + 10)))
+        aspect = camera.pixel_width / camera.pixel_height if camera.pixel_height > 0 else 1.0
+        zoom_x = camera.width / (region.width + 10)
+        zoom_y = (camera.width / aspect) / (region.height + 10)
+        zoom = min(zoom_x, zoom_y)
 
         if duration > 0:
             if self._animation is not None:
