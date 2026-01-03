@@ -141,6 +141,10 @@ def _generate_vertices(
     cap_style: CapStyle = CapStyle.BUTT,
 ) -> tuple[bytes, bytes]:
     if width is None:
+        points = list(points)
+        if closed:
+            points.append(points[0])
+
         positions = np.array(points, dtype='f4')
 
         lengths = np.zeros(len(points), dtype='f4')
@@ -316,10 +320,16 @@ class Line2D(Node3D):
                 #version 410 core
 
                 uniform vec4 color;
+                uniform float start_distance;
+                uniform float end_distance;
+
                 out vec4 fragColor;
                 in vec2 v_uv;
 
                 void main() {
+                    if (v_uv.x < start_distance || v_uv.x > end_distance)
+                        discard;
+
                     fragColor = color;
                 }
             ''',
@@ -338,15 +348,21 @@ class Line2D(Node3D):
             cap_style=cap_style,
         )
 
-        self._vbo = self.context.buffer(vertices)
-        self._uv_vbo = self.context.buffer(uvs)
+        self._positions_vbo = self.context.buffer(vertices)
+        self._uvs_vbo = self.context.buffer(uvs)
         self._vao = self.context.vertex_array(
             self._program,
             [
-                (self._vbo, '2f', 'position'),
-                (self._uv_vbo, '2f', 'uv'),
+                (self._positions_vbo, '2f', 'position'),
+                (self._uvs_vbo, '2f', 'uv'),
             ],
             mode=mgl.LINE_STRIP if self._width is None else mgl.TRIANGLE_STRIP,
+        )
+
+        self._start_distance = 0.0
+        self._end_distance = sum(
+            float((p1 - p2).length)
+            for p1, p2 in zip(points, points[1:])
         )
 
     @property
@@ -357,11 +373,31 @@ class Line2D(Node3D):
     def color(self, value: Vector4):
         self._color = value
 
+    @property
+    def start_distance(self) -> float:
+        return self._start_distance
+
+    @start_distance.setter
+    def start_distance(self, value: float):
+        self._start_distance = value
+
+    @property
+    def end_distance(self) -> float:
+        return self._end_distance
+
+    @end_distance.setter
+    def end_distance(self, value: float):
+        self._end_distance = value
+
     def render(self, state: RenderState):
         self._program['color'].write(self._color.astype('f4').tobytes())
-        camera = state.camera
+        self._program['start_distance'] = self.start_distance
+        self._program['end_distance'] = self.end_distance
+
         self._program['mvp'].write(
-            camera.projection_matrix * camera.view_matrix * self.world_matrix
+            state.camera.projection_matrix *
+            state.camera.view_matrix *
+            self.world_matrix
         )
 
         self._vao.render()
