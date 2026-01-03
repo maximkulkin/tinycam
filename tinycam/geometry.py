@@ -9,7 +9,7 @@ import shapely.affinity
 import shapely.ops
 from shapely.geometry.base import BaseGeometry as Shape
 
-from tinycam.types import Vector2, Vector3, Rect
+from tinycam.types import Vector2, Vector3, Quaternion, Rect, Matrix33
 
 
 type number = int | float
@@ -176,6 +176,11 @@ class Geometry:
             return [shape]
         elif isinstance(shape, shapely.MultiPolygon):
             return shape.geoms
+        elif isinstance(shape, shapely.GeometryCollection):
+            return [
+                self.polygons(geom)
+                for geom in shape.geoms
+            ]
 
         raise ValueError('Geometry is not a polygon: %s' % shape.__class__)
 
@@ -257,8 +262,12 @@ class Geometry:
             xfact=factor[0],
             yfact=factor[1],
             zfact=factor[2],
-            origin=(origin[0], origin[1]),
+            origin=(get_x(origin), get_y(origin)),
         )
+
+    def transform[T: AnyShape](self, shape: T, matrix: Matrix33) -> T:
+        (a, b, xoff), (d, e, yoff), _ = matrix
+        return shapely.affinity.affine_transform(shape, (a, b, d, e, xoff, yoff))
 
     def buffer(self, shape: AnyShape, offset: number) -> Polygon:
         return shape.buffer(offset)
