@@ -2,8 +2,6 @@ import math
 import re
 import xml.etree.ElementTree as ET
 
-import numpy as np
-
 from tinycam.geometry import Geometry, Shape
 from tinycam.types import Vector2, Matrix33
 
@@ -18,25 +16,53 @@ def load(filename: str) -> list[Shape]:
         return loads(f.read())
 
 
-def quadratic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, step: float = 0.1) -> list[Vector2]:
-    a = p0 - 2*p1 + p2
-    b = 2*(p1 - p0)
-    c = p0
+def _quadratic_bezier_adaptive(p0: Vector2, p1: Vector2, p2: Vector2, tol_sq: float, out: list) -> None:
+    d = p2 - p0
+    d_sq = float(d[0]*d[0] + d[1]*d[1])
+    if d_sq > 1e-10:
+        c = p1 - p0
+        cross = float(c[0]*d[1] - c[1]*d[0])
+        if cross * cross > tol_sq * d_sq:
+            p01  = (p0 + p1)  * 0.5
+            p12  = (p1 + p2)  * 0.5
+            p012 = (p01 + p12) * 0.5
+            _quadratic_bezier_adaptive(p0, p01, p012, tol_sq, out)
+            _quadratic_bezier_adaptive(p012, p12, p2, tol_sq, out)
+            return
+    out.append(p2)
 
-    t = np.asarray(np.linspace(0, 1, int((p2 - p0).length / step)))[..., None]
-    points = (a * t + b) * t + c
-    return [Vector2(point) for point in points]
+
+def quadratic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, tolerance: float = 0.5) -> list[Vector2]:
+    out: list[Vector2] = []
+    _quadratic_bezier_adaptive(p0, p1, p2, tolerance * tolerance, out)
+    return out
 
 
-def cubic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, step: float = 0.1) -> list[Vector2]:
-    a = -p0 + 3*p1 - 3*p2 + p3
-    b =  3*p0 - 6*p1 + 3*p2
-    c = -3*p0 + 3*p1
-    d =  p0
+def _cubic_bezier_adaptive(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, tol_sq: float, out: list) -> None:
+    d = p3 - p0
+    d_sq = float(d[0]*d[0] + d[1]*d[1])
+    if d_sq > 1e-10:
+        c1 = p1 - p0
+        c2 = p2 - p0
+        cross1 = float(c1[0]*d[1] - c1[1]*d[0])
+        cross2 = float(c2[0]*d[1] - c2[1]*d[0])
+        if max(cross1 * cross1, cross2 * cross2) > tol_sq * d_sq:
+            p01   = (p0 + p1)   * 0.5
+            p12   = (p1 + p2)   * 0.5
+            p23   = (p2 + p3)   * 0.5
+            p012  = (p01 + p12) * 0.5
+            p123  = (p12 + p23) * 0.5
+            p0123 = (p012 + p123) * 0.5
+            _cubic_bezier_adaptive(p0, p01, p012, p0123, tol_sq, out)
+            _cubic_bezier_adaptive(p0123, p123, p23, p3, tol_sq, out)
+            return
+    out.append(p3)
 
-    t = np.asarray(np.linspace(0, 1, int((p3 - p0).length / step)))[..., None]
-    points = (((a * t) + b) * t + c) * t + d
-    return [Vector2(point) for point in points]
+
+def cubic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, tolerance: float = 0.5) -> list[Vector2]:
+    out: list[Vector2] = []
+    _cubic_bezier_adaptive(p0, p1, p2, p3, tolerance * tolerance, out)
+    return out
 
 
 def elliptical_arc(p1: Vector2, p2: Vector2, rx: float, ry: float, angle: float, large_arc: bool, cw: bool) -> list[Vector2]:

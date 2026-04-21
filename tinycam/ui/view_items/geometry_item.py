@@ -81,7 +81,6 @@ class GeometryItemView(CncProjectItemView):
                     width=self.model.line_thickness if self.model.line_thickness > 0 else None,
                     cap_style=cap_style,
                     joint_style=joint_style,
-                    max_segment_length=self.model.line_thickness * 10.0 if self.model.line_thickness > 0 else None,
                 )
 
             case g.Line():
@@ -93,7 +92,6 @@ class GeometryItemView(CncProjectItemView):
                     width=self.model.line_thickness if self.model.line_thickness > 0 else None,
                     cap_style=cap_style,
                     joint_style=joint_style,
-                    max_segment_length=self.model.line_thickness * 10.0 if self.model.line_thickness > 0 else None,
                 )
 
             case g.Polygon() | g.MultiPolygon():
