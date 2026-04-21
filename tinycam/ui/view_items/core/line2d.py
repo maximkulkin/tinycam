@@ -9,6 +9,12 @@ from tinycam.types import Vector2, Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
 
+try:
+    from tinycam.ui.view_items.core._line2d_cy import generate_vertices_thick as _cy_thick
+    _HAS_CYTHON = True
+except ImportError:
+    _HAS_CYTHON = False
+
 
 type Point2 = Vector2
 
@@ -131,6 +137,27 @@ def _create_joint(
             return joint_vertices
 
 
+def _generate_vertices_cython(
+    points: Sequence[Vector2],
+    closed: bool,
+    width: float,
+    joint_style: JointStyle,
+    miter_limit: float | None,
+    max_segment_length: float | None,
+    cap_style: CapStyle,
+) -> tuple[bytes, bytes]:
+    pts = np.array(list(points), dtype='f4').reshape(-1, 2)
+    return _cy_thick(
+        pts,
+        closed,
+        width * 0.5,
+        joint_style.value,
+        -1.0 if miter_limit is None else float(miter_limit),
+        cap_style.value,
+        -1.0 if max_segment_length is None else float(max_segment_length),
+    )
+
+
 def _generate_vertices(
     points: Sequence[Vector2],
     closed: bool = False,
@@ -140,6 +167,11 @@ def _generate_vertices(
     miter_limit: float | None = None,
     cap_style: CapStyle = CapStyle.BUTT,
 ) -> tuple[bytes, bytes]:
+    if width is not None and _HAS_CYTHON:
+        return _generate_vertices_cython(
+            points, closed, width, joint_style, miter_limit, max_segment_length, cap_style
+        )
+
     if width is None:
         points = list(points)
         if closed:

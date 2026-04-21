@@ -1,4 +1,6 @@
 **/__pycache__/
+build/
+tinycam/ui/view_items/core/_line2d_cy.c
 
 # Ignore sample geometry files
 *.drl
