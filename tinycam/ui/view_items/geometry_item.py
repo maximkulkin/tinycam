@@ -19,7 +19,14 @@ class GeometryItemView(CncProjectItemView):
 
     def _update_geometry(self):
         geometry = self._model.geometry
-        if self._geometry is geometry:
+        line_thickness = self._model.line_thickness
+        cap_style = self._model.cap_style
+        joint_style = self._model.joint_style
+
+        if (self._geometry is geometry and
+                getattr(self, '_cached_line_thickness', None) == line_thickness and
+                getattr(self, '_cached_cap_style', None) == cap_style and
+                getattr(self, '_cached_joint_style', None) == joint_style):
             return
 
         if self._geometry_view is not None:
@@ -32,6 +39,9 @@ class GeometryItemView(CncProjectItemView):
                 color=qcolor_to_vec4(self.model.color),
             )
             self._geometry = geometry
+            self._cached_line_thickness = line_thickness
+            self._cached_cap_style = cap_style
+            self._cached_joint_style = joint_style
             self.add_child(self._geometry_view)
 
     def _make_geometry_view(
