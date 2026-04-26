@@ -1,10 +1,123 @@
 import math
 import re
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
+
+import shapely
 
 from tinycam.geometry import Geometry, Shape
 from tinycam.types import Vector2, Matrix33
 
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+@dataclass
+class SvgShape:
+    """Describes one shape to be written into an SVG file."""
+    geometry: Shape
+    stroke: str = '#000000'
+    stroke_width: float = 0.1
+    fill: str = 'none'
+    fill_rule: str = 'nonzero'
+
+
+def _coords_to_path(coords, closed: bool) -> str:
+    pts = list(coords)
+    if not pts:
+        return ''
+    # LinearRing / closed LineString coords repeat the first point at the end
+    if closed and len(pts) > 1 and pts[0] == pts[-1]:
+        pts = pts[:-1]
+    parts = [f'M {pts[0][0]:.6g},{pts[0][1]:.6g}']
+    for x, y in pts[1:]:
+        parts.append(f'L {x:.6g},{y:.6g}')
+    if closed:
+        parts.append('Z')
+    return ' '.join(parts)
+
+
+def _geometry_to_path_data(shape: Shape) -> str:
+    """Recursively convert any Shapely geometry to SVG path data."""
+    if isinstance(shape, shapely.LinearRing):
+        return _coords_to_path(shape.coords, closed=True)
+
+    if isinstance(shape, shapely.LineString):
+        return _coords_to_path(shape.coords, closed=shape.is_closed)
+
+    if isinstance(shape, shapely.Polygon):
+        if shape.is_empty:
+            return ''
+        parts = [_coords_to_path(shape.exterior.coords, closed=True)]
+        for interior in shape.interiors:
+            parts.append(_coords_to_path(interior.coords, closed=True))
+        return ' '.join(parts)
+
+    if isinstance(shape, (shapely.MultiLineString, shapely.MultiPolygon,
+                           shapely.GeometryCollection)):
+        return ' '.join(filter(None, (_geometry_to_path_data(g) for g in shape.geoms)))
+
+    return ''
+
+
+def dumps(shapes: list[SvgShape]) -> str:
+    """Serialise a list of SvgShape objects to an SVG string."""
+    geoms = [s.geometry for s in shapes if s.geometry and not s.geometry.is_empty]
+    if not geoms:
+        return '<svg xmlns="http://www.w3.org/2000/svg"/>'
+
+    xmin, ymin, xmax, ymax = shapely.total_bounds(geoms)
+
+    # Small margin so strokes on the edge are not clipped
+    margin = max((xmax - xmin) * 0.01, (ymax - ymin) * 0.01, 1.0)
+    xmin -= margin; ymin -= margin; xmax += margin; ymax += margin
+    width = xmax - xmin
+    height = ymax - ymin
+
+    root = ET.Element('svg', {
+        'xmlns': 'http://www.w3.org/2000/svg',
+        'width': f'{width:.6g}',
+        'height': f'{height:.6g}',
+        'viewBox': f'{xmin:.6g} {ymin:.6g} {width:.6g} {height:.6g}',
+    })
+
+    for shape in shapes:
+        if not shape.geometry or shape.geometry.is_empty:
+            continue
+        d = _geometry_to_path_data(shape.geometry)
+        if not d:
+            continue
+
+        attrs: dict[str, str] = {'d': d}
+
+        if shape.fill != 'none':
+            attrs['fill'] = shape.fill
+            attrs['fill-rule'] = shape.fill_rule
+        else:
+            attrs['fill'] = 'none'
+
+        if shape.stroke != 'none':
+            attrs['stroke'] = shape.stroke
+            attrs['stroke-width'] = f'{shape.stroke_width:.6g}'
+
+        ET.SubElement(root, 'path', attrs)
+
+    ET.indent(root, space='  ')
+    return ET.tostring(root, encoding='unicode', xml_declaration=False)
+
+
+def save(path: str, shapes: list[SvgShape]) -> None:
+    """Write shapes to an SVG file."""
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        f.write(dumps(shapes))
+        f.write('\n')
+
+
+# ---------------------------------------------------------------------------
+# Import
+# ---------------------------------------------------------------------------
 
 def loads(string: str) -> list[Shape]:
     parser = SvgParser()

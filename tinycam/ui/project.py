@@ -628,6 +628,9 @@ class CncProjectWindow(CncWindow):
         elif isinstance(item, CncProjectItem):
             popup.addAction('Create Cutout Job', self._cutout_job)
 
+        if isinstance(item, GeometryItem):
+            popup.addAction('Export SVG', lambda: self._export_svg(item))
+
         popup.exec(self.mapToGlobal(position))
 
     def _toggle_item_visibility(self, item: CncProjectItem):
@@ -697,4 +700,47 @@ class CncProjectWindow(CncWindow):
             info_box = QtWidgets.QMessageBox(self)
             info_box.setWindowTitle('Export Gcode')
             info_box.setText('Failed to export Gcode to %s' % result[0])
+            info_box.exec()
+
+    def _export_svg(self, item: GeometryItem):
+        result = QtWidgets.QFileDialog.getSaveFileName(
+            parent=self,
+            caption='Export SVG',
+            dir=f'{item.name}.svg',
+            filter='SVG (*.svg)',
+        )
+        if result[0] == '':
+            return
+
+        color = item.color
+        hex_color = f'#{color.red():02x}{color.green():02x}{color.blue():02x}'
+
+        # Polygons get a fill; pure line geometry gets stroke only.
+        import shapely as _shapely
+        def _has_polygon(geom) -> bool:
+            if isinstance(geom, (_shapely.Polygon, _shapely.MultiPolygon)):
+                return True
+            if isinstance(geom, _shapely.GeometryCollection):
+                return any(_has_polygon(g) for g in geom.geoms)
+            return False
+
+        filled = _has_polygon(item.geometry)
+        stroke_width = item.line_thickness if item.line_thickness > 0 else (0.0 if filled else 0.1)
+
+        svg_shape = SvgShape(
+            geometry=item.geometry,
+            stroke=hex_color,
+            stroke_width=stroke_width,
+            fill=hex_color if filled else 'none',
+            fill_rule='evenodd',
+        )
+
+        try:
+            svg_save(result[0], [svg_shape])
+        except Exception as e:
+            print('Failed to export SVG to %s: %s' % (result[0], e))
+
+            info_box = QtWidgets.QMessageBox(self)
+            info_box.setWindowTitle('Export SVG')
+            info_box.setText('Failed to export SVG to %s' % result[0])
             info_box.exec()
