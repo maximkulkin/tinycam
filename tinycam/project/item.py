@@ -251,13 +251,17 @@ class CncProjectItemCollection:
         return item in self._items
 
     def _on_item_changed(self, item: CncProjectItem):
-        index = self._items.index(item)
-        if index == -1:
+        try:
+            # Ensure that the item exists in the project before emitting signal
+            self._items.index(item)
+        except ValueError:
             return
         self.changed.emit(item)
 
     def _on_item_updated(self, item: CncProjectItem):
-        index = self._items.index(item)
-        if index == -1:
+        try:
+            # Ensure that the item exists in the project before emitting signal
+            self._items.index(item)
+        except ValueError:
             return
         self.updated.emit(item)
