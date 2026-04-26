@@ -6,7 +6,8 @@ from typing import cast
 
 from tinycam.gcode import GcodeRenderer
 from tinycam.globals import GLOBALS
-from tinycam.project import CncProject, CncProjectItem, ExcellonItem, GerberItem, CncJob
+from tinycam.project import CncProject, CncProjectItem, ExcellonItem, GerberItem, GeometryItem, CncJob
+from tinycam.formats.svg import save as svg_save, SvgShape
 from tinycam.ui.window import CncWindow
 from tinycam.ui.commands import (
     CreateIsolateJobCommand,
@@ -16,6 +17,7 @@ from tinycam.ui.commands import (
     DuplicateItemCommand,
     UpdateItemsCommand,
     SplitGeometryCommand,
+    CombineGeometryCommand,
 )
 from tinycam.ui.utils import load_icon
 from tinycam.utils import index_if
@@ -603,9 +605,17 @@ class CncProjectWindow(CncWindow):
         popup.addAction('Delete', self._delete_items)
 
         G = GLOBALS.GEOMETRY
+        selection = list(self.project.selection)
+        geometry_actions = False
         if len(list(G.shapes(item.geometry))) > 1:
             popup.addAction('Split Geometry',
                             lambda: self._split_geometry(item))
+            geometry_actions = True
+        if (len(selection) > 1 and
+                all(isinstance(it, GeometryItem) for it in selection)):
+            popup.addAction('Combine Geometry', self._combine_geometry)
+            geometry_actions = True
+        if geometry_actions:
             popup.addSeparator()
 
         popup.addSeparator()
@@ -633,6 +643,9 @@ class CncProjectWindow(CncWindow):
 
     def _split_geometry(self, item: CncProjectItem):
         GLOBALS.APP.undo_stack.push(SplitGeometryCommand(item))
+
+    def _combine_geometry(self):
+        GLOBALS.APP.undo_stack.push(CombineGeometryCommand(list(self.project.selection)))
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(list(self.project.selection)))
