@@ -715,16 +715,7 @@ class CncProjectWindow(CncWindow):
         color = item.color
         hex_color = f'#{color.red():02x}{color.green():02x}{color.blue():02x}'
 
-        # Polygons get a fill; pure line geometry gets stroke only.
-        import shapely as _shapely
-        def _has_polygon(geom) -> bool:
-            if isinstance(geom, (_shapely.Polygon, _shapely.MultiPolygon)):
-                return True
-            if isinstance(geom, _shapely.GeometryCollection):
-                return any(_has_polygon(g) for g in geom.geoms)
-            return False
-
-        filled = _has_polygon(item.geometry)
+        filled = GLOBALS.GEOMETRY.is_filled(item.geometry)
         stroke_width = item.line_thickness if item.line_thickness > 0 else (0.0 if filled else 0.1)
 
         svg_shape = SvgShape(

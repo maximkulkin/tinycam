@@ -3,9 +3,8 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
-import shapely
-
 from tinycam.geometry import Geometry, Shape
+from tinycam.globals import GLOBALS
 from tinycam.types import Vector2, Matrix33
 
 
@@ -39,35 +38,37 @@ def _coords_to_path(coords, closed: bool) -> str:
 
 
 def _geometry_to_path_data(shape: Shape) -> str:
-    """Recursively convert any Shapely geometry to SVG path data."""
-    if isinstance(shape, shapely.LinearRing):
-        return _coords_to_path(shape.coords, closed=True)
+    """Recursively convert any geometry shape to SVG path data."""
+    G = GLOBALS.GEOMETRY
+    if G.is_ring(shape):
+        return _coords_to_path(G.coords(shape), closed=True)
 
-    if isinstance(shape, shapely.LineString):
-        return _coords_to_path(shape.coords, closed=shape.is_closed)
+    if G.is_line(shape):
+        return _coords_to_path(G.coords(shape), closed=G.is_closed(shape))
 
-    if isinstance(shape, shapely.Polygon):
-        if shape.is_empty:
+    if G.is_polygon(shape):
+        if G.is_empty(shape):
             return ''
-        parts = [_coords_to_path(shape.exterior.coords, closed=True)]
-        for interior in shape.interiors:
-            parts.append(_coords_to_path(interior.coords, closed=True))
+        parts = [_coords_to_path(G.coords(exterior), closed=True)
+                 for exterior in G.exteriors(shape)]
+        for interior in G.interiors(shape):
+            parts.append(_coords_to_path(G.coords(interior), closed=True))
         return ' '.join(parts)
 
-    if isinstance(shape, (shapely.MultiLineString, shapely.MultiPolygon,
-                           shapely.GeometryCollection)):
-        return ' '.join(filter(None, (_geometry_to_path_data(g) for g in shape.geoms)))
+    if G.is_collection(shape):
+        return ' '.join(filter(None, (_geometry_to_path_data(g) for g in G.shapes(shape))))
 
     return ''
 
 
 def dumps(shapes: list[SvgShape]) -> str:
     """Serialise a list of SvgShape objects to an SVG string."""
-    geoms = [s.geometry for s in shapes if s.geometry and not s.geometry.is_empty]
+    G = GLOBALS.GEOMETRY
+    geoms = [s.geometry for s in shapes if s.geometry and not G.is_empty(s.geometry)]
     if not geoms:
         return '<svg xmlns="http://www.w3.org/2000/svg"/>'
 
-    xmin, ymin, xmax, ymax = shapely.total_bounds(geoms)
+    xmin, ymin, xmax, ymax = G.total_bounds(geoms)
 
     # Small margin so strokes on the edge are not clipped
     margin = max((xmax - xmin) * 0.01, (ymax - ymin) * 0.01, 1.0)
@@ -532,15 +533,14 @@ class SvgParser:
             lines.append(self.geo.line(points))
 
         if closed_rings:
-            polys = [shapely.Polygon(ring) for ring in closed_rings]
+            G = GLOBALS.GEOMETRY
+            polys = [G.polygon(ring) for ring in closed_rings]
             if fill_rule == 'evenodd':
                 # XOR successive rings: inner rings punch holes via the evenodd rule
-                filled = shapely.Polygon()
-                for poly in polys:
-                    filled = filled.symmetric_difference(poly)
+                filled = G.symmetric_difference_all(polys)
             else:
-                filled = shapely.unary_union(polys)
-            if not filled.is_empty:
+                filled = G.union(*polys)
+            if not G.is_empty(filled):
                 lines.append(filled)
 
         return lines

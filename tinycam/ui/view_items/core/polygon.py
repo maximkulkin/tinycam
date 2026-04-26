@@ -1,7 +1,6 @@
 import moderngl as mgl
 import numpy as np
-import shapely
-import shapely.geometry as sg
+from tinycam.geometry import Polygon as ShapePolygon, MultiPolygon as ShapeMultiPolygon
 from tinycam.globals import GLOBALS
 from tinycam.types import Vector4
 from tinycam.ui.view import Context, RenderState
@@ -12,7 +11,7 @@ class Polygon(Node3D):
     def __init__(
         self,
         context: Context,
-        polygon: shapely.Polygon | shapely.MultiPolygon,
+        polygon: ShapePolygon | ShapeMultiPolygon,
         color: Vector4 = Vector4(1, 1, 1, 1),
     ):
         super().__init__(context)
@@ -42,22 +41,15 @@ class Polygon(Node3D):
 
         self._color = color
 
-        polygons = GLOBALS.GEOMETRY.polygons(polygon)
-
-        for polygon in polygons:
-            shapely.prepare(polygon)
+        G = GLOBALS.GEOMETRY
+        polygons = G.polygons(polygon)
 
         vertices = np.array([
             coord
-            for polygon in polygons
-            # for triangle in shapely.delaunay_triangles(polygon.segmentize(max_segment_length=0.25)).geoms
-            for triangle in shapely.delaunay_triangles(polygon.segmentize(max_segment_length=1.0)).geoms
-            if polygon.contains(triangle.centroid)
-            for coord in triangle.exterior.coords[:-1]
+            for poly in polygons
+            for triangle_coords in G.triangulate(poly)
+            for coord in triangle_coords
         ], dtype='f4')
-
-        for polygon in polygons:
-            shapely.destroy_prepared(polygon)
 
         self._vbo = self.context.buffer(vertices)
         self._vao = self.context.vertex_array(self._program, [

@@ -278,3 +278,68 @@ class Geometry:
     def nearest(self, from_shape: AnyShape, to_shape: AnyShape) -> Point:
         _, point_b = shapely.ops.nearest_points(from_shape, to_shape)
         return point_b
+
+    # type predicates
+
+    def is_empty(self, shape: AnyShape) -> bool:
+        return shape.is_empty
+
+    def is_filled(self, shape: AnyShape) -> bool:
+        """True when the shape contains at least one non-empty polygon."""
+        if isinstance(shape, (shapely.Polygon, shapely.MultiPolygon)):
+            return not shape.is_empty
+        if isinstance(shape, shapely.GeometryCollection):
+            return any(self.is_filled(g) for g in shape.geoms)
+        return False
+
+    def is_ring(self, shape: AnyShape) -> bool:
+        return isinstance(shape, shapely.LinearRing)
+
+    def is_line(self, shape: AnyShape) -> bool:
+        """True for LineString only (not LinearRing, which is a LineString subclass)."""
+        return isinstance(shape, shapely.LineString) and not isinstance(shape, shapely.LinearRing)
+
+    def is_polygon(self, shape: AnyShape) -> bool:
+        return isinstance(shape, shapely.Polygon)
+
+    def is_collection(self, shape: AnyShape) -> bool:
+        return isinstance(shape, (shapely.MultiLineString, shapely.MultiPolygon,
+                                   shapely.GeometryCollection))
+
+    def is_closed(self, shape: AnyShape) -> bool:
+        return shape.is_closed
+
+    def coords(self, shape: AnyShape) -> list[tuple[float, float]]:
+        """Return the raw coordinate sequence of a Line or Ring as plain tuples."""
+        return list(shape.coords)
+
+    def total_bounds(self, shapes: list[AnyShape]) -> tuple[float, float, float, float]:
+        """Return (xmin, ymin, xmax, ymax) bounding box over a list of shapes."""
+        xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
+        return xmin, ymin, xmax, ymax
+
+    def symmetric_difference(self, shape1: AnyShape, shape2: AnyShape) -> Shape:
+        return shapely.symmetric_difference(shape1, shape2)
+
+    def symmetric_difference_all(self, shapes: list[AnyShape]) -> Shape:
+        """XOR all shapes together (used to apply the SVG evenodd fill rule)."""
+        result = shapely.Polygon()
+        for shape in shapes:
+            result = shapely.symmetric_difference(result, shape)
+        return result
+
+    def triangulate(self, polygon: Polygon, max_segment_length: float = 1.0) -> list[list[tuple]]:
+        """Tessellate a polygon into triangles for rendering.
+
+        Returns a list of triangles, each a list of three (x, y) coordinate tuples.
+        """
+        shapely.prepare(polygon)
+        result = [
+            list(triangle.exterior.coords[:-1])
+            for triangle in shapely.delaunay_triangles(
+                polygon.segmentize(max_segment_length)
+            ).geoms
+            if polygon.contains(triangle.centroid)
+        ]
+        shapely.destroy_prepared(polygon)
+        return result
