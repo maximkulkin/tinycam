@@ -17,6 +17,7 @@ from .update_items import UpdateItemsCommand
 from .delete_items import DeleteItemsCommand
 from .duplicate_item import DuplicateItemCommand
 from .import_file import ImportFileCommand
+from .split_geometry import SplitGeometryCommand
 
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     'DeleteItemsCommand',
     'DuplicateItemCommand',
     'ImportFileCommand',
+    'SplitGeometryCommand',
 ]

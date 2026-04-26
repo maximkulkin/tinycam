@@ -15,6 +15,7 @@ from tinycam.ui.commands import (
     DeleteItemsCommand,
     DuplicateItemCommand,
     UpdateItemsCommand,
+    SplitGeometryCommand,
 )
 from tinycam.ui.utils import load_icon
 from tinycam.utils import index_if
@@ -601,6 +602,12 @@ class CncProjectWindow(CncWindow):
                         lambda: self._duplicate_item(item))
         popup.addAction('Delete', self._delete_items)
 
+        G = GLOBALS.GEOMETRY
+        if len(list(G.shapes(item.geometry))) > 1:
+            popup.addAction('Split Geometry',
+                            lambda: self._split_geometry(item))
+            popup.addSeparator()
+
         popup.addSeparator()
         if isinstance(item, GerberItem):
             popup.addAction('Create Isolate Job', self._isolate_job)
@@ -623,6 +630,9 @@ class CncProjectWindow(CncWindow):
 
     def _duplicate_item(self, item: CncProjectItem):
         GLOBALS.APP.undo_stack.push(DuplicateItemCommand(item))
+
+    def _split_geometry(self, item: CncProjectItem):
+        GLOBALS.APP.undo_stack.push(SplitGeometryCommand(item))
 
     def _delete_items(self):
         GLOBALS.APP.undo_stack.push(DeleteItemsCommand(list(self.project.selection)))
