@@ -194,6 +194,20 @@ class SvgParser:
     def _apply_transform(self, shape, transform: Matrix33):
         return self.geo.transform(shape, transform)
 
+    def _get_style_property(self, elem: ET.Element, property_name: str, default: str) -> str:
+        """Return a CSS/presentation property, with inline style taking precedence."""
+        # Direct presentation attribute
+        value = elem.attrib.get(property_name, default)
+        # Inline style overrides presentation attributes
+        style = elem.attrib.get('style', '')
+        for part in style.split(';'):
+            part = part.strip()
+            if ':' in part:
+                key, _, val = part.partition(':')
+                if key.strip() == property_name:
+                    value = val.strip()
+        return value
+
     def _parse_transform(self, transform_str: str) -> Matrix33:
         matrix = Matrix33.identity()
 
@@ -260,12 +274,20 @@ class SvgParser:
     def _process_element_polyline(self, elem: ET.Element) -> list[Shape]:
         points_str = elem.attrib.get('points', '')
         points = [Vector2(list(map(float, p.split(',', 2)))) for p in points_str.split()]
+        fill = self._get_style_property(elem, 'fill', 'black')
+        if fill.lower() != 'none':
+            return [self.geo.polygon(points)]
         return [self.geo.line(points)]
 
     def _process_element_path(self, elem: ET.Element) -> list[Shape]:
         d = elem.attrib.get('d', '')
+        # SVG default fill is black; fill-rule default is nonzero
+        fill = self._get_style_property(elem, 'fill', 'black')
+        fill_rule = self._get_style_property(elem, 'fill-rule', 'nonzero')
+        is_filled = fill.lower() != 'none'
 
         lines = []
+        closed_rings: list[list] = []  # point lists for Z-closed sub-paths when filled
         points = []
         current_point = Vector2(0, 0)
         last_smooth_quadratic_bezier_control_point = None
@@ -490,7 +512,10 @@ class SvgParser:
 
                 case 'Z' | 'z':
                     if len(points) > 1:
-                        lines.append(self.geo.line(points, closed=True))
+                        if is_filled:
+                            closed_rings.append(list(points))
+                        else:
+                            lines.append(self.geo.line(points, closed=True))
 
                     if len(points) > 0:
                         current_point = points[0]
@@ -505,5 +530,17 @@ class SvgParser:
 
         if len(points) > 1:
             lines.append(self.geo.line(points))
+
+        if closed_rings:
+            polys = [shapely.Polygon(ring) for ring in closed_rings]
+            if fill_rule == 'evenodd':
+                # XOR successive rings: inner rings punch holes via the evenodd rule
+                filled = shapely.Polygon()
+                for poly in polys:
+                    filled = filled.symmetric_difference(poly)
+            else:
+                filled = shapely.unary_union(polys)
+            if not filled.is_empty:
+                lines.append(filled)
 
         return lines
