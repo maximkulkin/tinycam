@@ -37,11 +37,17 @@ class GeometryItem(CncProjectItem):
     def _update(self):
         self._signal_changed()
 
+    @property
+    def is_filled(self) -> bool:
+        """True when the geometry contains at least one filled polygon."""
+        return GLOBALS.GEOMETRY.is_filled(self._geometry)
+
     line_thickness = p.Property[float](
         on_update=_update,
         default=0.0,
         metadata=[
             p.Order(0),
+            p.VisibleIf(lambda item: not cast(GeometryItem, item).is_filled),
         ],
     )
     joint_style = p.Property[JointStyle](
@@ -49,7 +55,10 @@ class GeometryItem(CncProjectItem):
         default=JointStyle.MITER,
         metadata=[
             p.Order(1),
-            p.VisibleIf(lambda item: cast(GeometryItem, item).line_thickness > 0),
+            p.VisibleIf(lambda item: (
+                not cast(GeometryItem, item).is_filled and
+                cast(GeometryItem, item).line_thickness > 0
+            )),
         ],
     )
     cap_style = p.Property[CapStyle](
@@ -57,7 +66,10 @@ class GeometryItem(CncProjectItem):
         default=CapStyle.BUTT,
         metadata=[
             p.Order(2),
-            p.VisibleIf(lambda item: cast(GeometryItem, item).line_thickness > 0),
+            p.VisibleIf(lambda item: (
+                not cast(GeometryItem, item).is_filled and
+                cast(GeometryItem, item).line_thickness > 0
+            )),
         ],
     )
 
