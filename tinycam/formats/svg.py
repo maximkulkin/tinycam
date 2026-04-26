@@ -375,7 +375,7 @@ class SvgParser:
                     last_smooth_quadratic_bezier_control_point = None
                     last_smooth_cubic_bezier_control_point = None
 
-                case 'Z', 'z':
+                case 'Z' | 'z':
                     if len(points) > 1:
                         lines.append(self.geo.line(points, closed=True))
 
@@ -388,7 +388,7 @@ class SvgParser:
 
                 case _:
                     # Unknown command
-                    pass
+                    print(f'Unknown SVG path command: {cmd}')
 
         if len(points) > 1:
             lines.append(self.geo.line(points))
