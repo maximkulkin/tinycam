@@ -302,17 +302,16 @@ def generate_vertices_thick(
                         half_width, ccw, joint_style, miter_limit, 0.0)
 
         # ── main segment loop ───────────────────────────────────────────────
-        for i in range(n - 1):
+        for i in range(n - 2):
             _normal(p[i, 0], p[i, 1], p[i+1, 0], p[i+1, 1], &nx, &ny)
             length += _len2(p[i+1, 0] - p[i, 0], p[i+1, 1] - p[i, 1])
 
-            if i < n - 2:
-                _normal(p[i+1, 0], p[i+1, 1], p[i+2, 0], p[i+2, 1], &nx2, &ny2)
-                dx = p[i+2, 0] - p[i+1, 0]; dy = p[i+2, 1] - p[i+1, 1]
-                ccw = (nx * dx + ny * dy) > 0
-                _emit_joint(pp, pu, &cnt,
-                            p[i+1, 0], p[i+1, 1], nx, ny, nx2, ny2,
-                            half_width, ccw, joint_style, miter_limit, length)
+            _normal(p[i+1, 0], p[i+1, 1], p[i+2, 0], p[i+2, 1], &nx2, &ny2)
+            dx = p[i+2, 0] - p[i+1, 0]; dy = p[i+2, 1] - p[i+1, 1]
+            ccw = (nx * dx + ny * dy) > 0
+            _emit_joint(pp, pu, &cnt,
+                        p[i+1, 0], p[i+1, 1], nx, ny, nx2, ny2,
+                        half_width, ccw, joint_style, miter_limit, length)
 
         if not closed:
             # ── last segment end pair ───────────────────────────────────────

@@ -172,6 +172,14 @@ def _generate_vertices(
             points, closed, width, joint_style, miter_limit, max_segment_length, cap_style
         )
 
+    filtered_points = [points[0]]
+    for point in points[1:]:
+        if filtered_points[-1] == point:
+            continue
+        filtered_points.append(point)
+
+    points = filtered_points
+
     if width is None:
         points = list(points)
         if closed:
@@ -262,25 +270,24 @@ def _generate_vertices(
         points = new_points
 
     # Create vertices for each segment
-    for i in range(len(points) - 1):
+    for i in range(len(points) - 2):
         p1 = points[i]
         p2 = points[i + 1]
+        p3 = points[i + 2]
         n = (p2 - p1).normal
 
         length += (p2 - p1).length
 
-        if i < len(points) - 2:
-            p3 = points[(i + 2) % len(points)]
-            n_next = (p3 - p2).normal
-            ccw = n.dot(p3 - p2) > 0
-            joint_vertices = _create_joint(
-                p2, n, n_next, half_width,
-                ccw=ccw,
-                joint_style=joint_style,
-                miter_limit=miter_limit,
-            )
-            vertices.extend(joint_vertices)
-            uvs.extend([Vector2(length, 0) for _ in joint_vertices])
+        n_next = (p3 - p2).normal
+        ccw = n.dot(p3 - p2) > 0
+        joint_vertices = _create_joint(
+            p2, n, n_next, half_width,
+            ccw=ccw,
+            joint_style=joint_style,
+            miter_limit=miter_limit,
+        )
+        vertices.extend(joint_vertices)
+        uvs.extend([Vector2(length, 0) for _ in joint_vertices])
 
     if not closed:
         p1 = points[-2]
