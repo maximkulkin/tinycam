@@ -1,6 +1,5 @@
 from tinycam import geometry as g
 from tinycam.globals import GLOBALS
-from tinycam.tasks import run_task
 from tinycam.types import Vector4
 from tinycam.project.geometry import (
     CapStyle as ModelCapStyle,
@@ -43,6 +42,21 @@ class GeometryItemView(CncProjectItemView):
             self._cached_cap_style = cap_style
             self._cached_joint_style = joint_style
             self.add_child(self._geometry_view)
+
+    def _on_model_changed(self, model):
+        super()._on_model_changed(model)
+
+        color = self._model.color
+        if color == getattr(self, '_cached_color', None):
+            return
+        self._cached_color = color
+
+        if self._geometry_view is None:
+            return
+
+        vec = qcolor_to_vec4(color)
+        for child in self._geometry_view.children:
+            child.color = vec
 
     def _make_geometry_view(
         self,
