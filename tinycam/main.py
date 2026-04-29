@@ -5,6 +5,7 @@ from PySide6 import QtGui
 from qasync import QEventLoop
 
 import tinycam.icons_rc
+import tinycam.textures_rc
 from tinycam.application import CncApplication
 from tinycam.globals import GLOBALS
 from tinycam.project import GerberItem, ExcellonItem

@@ -1,4 +1,5 @@
 import enum
+import io
 import moderngl as mgl
 import numpy as np
 from PIL import Image
@@ -222,7 +223,10 @@ class OrientationCube(ViewItem, QtCore.QObject):
             for point in uv(x, y)
         ], dtype='f4') * 0.333
 
-        image = Image.open('textures/orientation_cube.png').transpose(Image.FLIP_TOP_BOTTOM)
+        f = QtCore.QFile(':/textures/orientation_cube.png')
+        f.open(QtCore.QFile.OpenModeFlag.ReadOnly)
+        image = Image.open(io.BytesIO(f.readAll().data())).transpose(Image.FLIP_TOP_BOTTOM)
+        f.close()
         self._texture = self.context.texture(image.size, 3, image)
 
         self._vertex_buffer = self.context.buffer(vertices)

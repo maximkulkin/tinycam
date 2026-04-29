@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/">
+    <file>textures/orientation_cube.png</file>
+  </qresource>
+</RCC>
