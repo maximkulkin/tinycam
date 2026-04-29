@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import cast
 
-from tinycam.types import Vector3, Quaternion, Matrix44
+from tinycam.math_types import Vector3, Quaternion, Matrix44
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.node import Node
 

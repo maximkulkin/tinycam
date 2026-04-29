@@ -1,6 +1,6 @@
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.canvas.canvas_item import CanvasItem
-from tinycam.types import Vector4
+from tinycam.math_types import Vector4
 
 
 class SdfShape(CanvasItem):

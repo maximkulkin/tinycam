@@ -8,7 +8,7 @@ from tinycam.project import (
     CncJob, CncCutoutJob, CncIsolateJob, CncDrillJob,
 )
 import tinycam.settings as s
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 from tinycam.ui.view import CncView
 from tinycam.ui.camera import PerspectiveCamera
 from tinycam.ui.camera_controllers import PanAndZoomController, OrbitController, CameraPanAndZoomAnimation

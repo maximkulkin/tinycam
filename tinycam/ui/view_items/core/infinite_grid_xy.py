@@ -1,7 +1,7 @@
 import math
 import moderngl as mgl
 import numpy as np
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 from tinycam.ui.camera import PerspectiveCamera, OrthographicCamera
 from tinycam.ui.view import Context, ViewItem, RenderState
 

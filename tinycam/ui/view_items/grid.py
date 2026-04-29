@@ -2,7 +2,7 @@ from PySide6 import QtGui
 from PySide6.QtCore import Qt
 import numpy as np
 
-from tinycam.types import Box, Vector2, Vector3, Vector4
+from tinycam.math_types import Box, Vector2, Vector3, Vector4
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.line2d import Line2D
 from tinycam.ui.view_items.core.node3d import Node3D

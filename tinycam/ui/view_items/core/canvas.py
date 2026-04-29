@@ -2,7 +2,7 @@ import moderngl as mgl
 import numpy as np
 from typing import Sequence, cast
 
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.math_types import Vector2, Vector3, Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core.node2d import Node2D
 from tinycam.ui.view_items.core.node3d import Node3D

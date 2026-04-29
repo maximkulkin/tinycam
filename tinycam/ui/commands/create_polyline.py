@@ -2,7 +2,7 @@ from typing import Sequence
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem, GeometryItem
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 

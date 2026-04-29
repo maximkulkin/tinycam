@@ -1,7 +1,7 @@
 from typing import cast
 
 from tinycam.signals import Signal
-from tinycam.types import Vector2, Vector3, Vector4, Quaternion, Matrix44
+from tinycam.math_types import Vector2, Vector3, Vector4, Quaternion, Matrix44
 
 
 class Camera:

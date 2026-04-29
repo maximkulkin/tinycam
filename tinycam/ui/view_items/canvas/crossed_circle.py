@@ -1,6 +1,6 @@
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.canvas.sdf_shape import SdfShape
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class CrossedCircle(SdfShape):

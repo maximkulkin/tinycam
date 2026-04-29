@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from tinycam.ui.utils import clear_layout
 from tinycam.ui.widgets import SpinBox, DoubleSpinBox
 from tinycam import properties as p
-from tinycam.types import Vector2, Vector3
+from tinycam.math_types import Vector2, Vector3
 from tinycam.utils import get_property_type
 
 

@@ -1,5 +1,5 @@
 from tinycam.commands import CncPathType
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.math_types import Vector2, Vector3, Vector4
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.direction_markers import DirectionMarkers
 from tinycam.ui.view_items.core import Node3D

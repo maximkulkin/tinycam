@@ -5,7 +5,7 @@ from PySide6.QtGui import QMouseEvent, QKeyEvent, QCursor
 from PySide6.QtWidgets import QWidget
 
 from tinycam.globals import GLOBALS
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.math_types import Vector2, Vector3, Vector4
 from tinycam.ui.commands import CreatePolylineCommand
 from tinycam.ui.tools import CncTool
 from tinycam.ui.utils import vector2

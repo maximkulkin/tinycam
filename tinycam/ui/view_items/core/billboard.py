@@ -1,6 +1,6 @@
 import numpy as np
 
-from tinycam.types import Vector3, Matrix44
+from tinycam.math_types import Vector3, Matrix44
 from tinycam.ui.view import RenderState
 from tinycam.ui.view_items.core.node3d import Node3D
 

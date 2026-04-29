@@ -1,6 +1,6 @@
 from tinycam.globals import GLOBALS
 from tinycam.project import CncDrillJob
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core import Node3D, Polygon
 from tinycam.ui.view_items.project_item import CncProjectItemView

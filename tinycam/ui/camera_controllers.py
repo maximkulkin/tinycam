@@ -9,7 +9,7 @@ from PySide6.QtGui import QMouseEvent, QWheelEvent, QKeyEvent
 from PySide6.QtWidgets import QWidget
 
 from tinycam.settings import SETTINGS, ControlType
-from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
+from tinycam.math_types import Vector2, Vector3, Quaternion, Matrix44
 from tinycam.utils import lerp
 from tinycam.ui.camera import Camera, OrthographicCamera
 from tinycam.ui.utils import vector2

@@ -1,6 +1,6 @@
 import moderngl as mgl
 import numpy as np
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.math_types import Vector2, Vector3, Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
 

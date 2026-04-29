@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from functools import reduce
 from typing import override
 
-from tinycam.types import Box, Matrix44
+from tinycam.math_types import Box, Matrix44
 from tinycam.ui.view import ViewItem, Context, RenderState
 
 

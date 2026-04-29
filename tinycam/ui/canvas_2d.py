@@ -28,7 +28,7 @@ from tinycam.ui.view_items.isolate_job import CncIsolateJobView
 from tinycam.ui.view_items.geometry_item import GeometryItemView
 from tinycam.ui.tools import CncTool, DummyTool
 from tinycam.ui.utils import vector2
-from tinycam.types import Box, Vector2, Vector3
+from tinycam.math_types import Box, Vector2, Vector3
 
 
 class CncCanvas2D(CncView):

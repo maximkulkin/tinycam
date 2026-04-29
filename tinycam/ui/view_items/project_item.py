@@ -1,6 +1,6 @@
 import moderngl as mgl
 from tinycam.project import CncProjectItem
-from tinycam.types import Vector3, Vector4, Box
+from tinycam.math_types import Vector3, Vector4, Box
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
 from tinycam.ui.view_items.core.polygon import Polygon

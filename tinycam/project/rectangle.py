@@ -2,7 +2,7 @@ from tinycam.globals import GLOBALS
 from tinycam.geometry import AnyShape
 from tinycam.project.geometry import GeometryItem
 import tinycam.properties as p
-from tinycam.types import Rect, Vector2
+from tinycam.math_types import Rect, Vector2
 
 
 class RectangleItem(GeometryItem):

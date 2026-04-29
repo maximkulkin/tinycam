@@ -8,7 +8,7 @@ import numpy as np
 from PySide6 import QtGui, QtCore
 from PySide6.QtCore import Qt
 
-from tinycam.types import Vector2, Vector4
+from tinycam.math_types import Vector2, Vector4
 from tinycam.ui.view import RenderState, Context
 from tinycam.ui.view_items.core import Node3D
 

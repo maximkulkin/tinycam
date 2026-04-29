@@ -1,6 +1,6 @@
 from tinycam.project import CncProject
 from tinycam.signals import Signal
-from tinycam.types import Vector2, Vector3
+from tinycam.math_types import Vector2, Vector3
 from tinycam.ui.view import CncView
 from tinycam.ui.utils import vector2
 from PySide6 import QtCore

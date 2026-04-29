@@ -3,7 +3,7 @@ from typing import cast
 
 from tinycam.ui.view import Context
 from tinycam.ui.view_items.core.node import Node
-from tinycam.types import Vector2, Vector3, Quaternion, Matrix44
+from tinycam.math_types import Vector2, Vector3, Quaternion, Matrix44
 
 
 class Node2D(Node):

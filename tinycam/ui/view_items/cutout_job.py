@@ -1,6 +1,6 @@
 from tinycam.globals import GLOBALS
 from tinycam.project import CncCutoutJob
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 from tinycam.ui.utils import qcolor_to_vec4
 from tinycam.ui.view_items.core import Line2D, Node3D
 from tinycam.ui.view_items.commands_view import CncCommandsView

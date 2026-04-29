@@ -4,7 +4,7 @@ import moderngl as mgl
 import numpy as np
 from PIL import Image
 from PySide6 import QtCore
-from tinycam.types import Vector2, Vector3, Vector4, Matrix44
+from tinycam.math_types import Vector2, Vector3, Vector4, Matrix44
 from tinycam.ui.camera import Camera
 from tinycam.ui.view import Context, ViewItem, RenderState
 

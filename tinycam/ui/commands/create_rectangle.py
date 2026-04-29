@@ -1,5 +1,5 @@
 from tinycam.project import CncProjectItem, RectangleItem
-from tinycam.types import Rect
+from tinycam.math_types import Rect
 from tinycam.ui.commands.create_item import CreateItemCommandBase
 
 

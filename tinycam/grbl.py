@@ -5,7 +5,7 @@ import traceback
 import serial_asyncio
 
 from tinycam.signals import Signal
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 
 
 __all__ = [

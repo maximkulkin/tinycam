@@ -1,7 +1,7 @@
 import moderngl
 import numpy as np
 from typing import Optional
-from tinycam.types import Vector3, Vector4
+from tinycam.math_types import Vector3, Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
 

@@ -6,7 +6,7 @@ from PySide6 import QtGui
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
 import tinycam.properties as p
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class JointStyle(enum.Enum):

@@ -1,6 +1,6 @@
 from tinycam import geometry as g
 from tinycam.globals import GLOBALS
-from tinycam.types import Vector4
+from tinycam.math_types import Vector4
 from tinycam.project.geometry import (
     CapStyle as ModelCapStyle,
     JointStyle as ModelJointStyle,

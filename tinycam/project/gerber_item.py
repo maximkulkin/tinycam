@@ -4,7 +4,7 @@ import os.path
 from tinycam.formats import gerber
 from tinycam.globals import GLOBALS
 from tinycam.project.item import CncProjectItem
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class GerberItem(CncProjectItem):

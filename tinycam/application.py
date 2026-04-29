@@ -7,7 +7,7 @@ from tinycam.project import CncProject, GerberItem, ExcellonItem, SvgItem
 from tinycam.reactive import ReactiveVar
 from tinycam.settings import CncSettings, BufferReader, BufferWriter, get_serializer
 from tinycam.tasks import TaskManager
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class CncApplicationState:

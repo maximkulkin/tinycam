@@ -7,7 +7,7 @@ from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
 from tinycam.project import GerberItem, ExcellonItem, SvgItem
 from tinycam.settings import SETTINGS, CncSetting, ControlType
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 from tinycam.ui.commands import (
     ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand,
     AlignLeftCommand, AlignRightCommand, AlignCenterCommand,

@@ -10,7 +10,7 @@ from tinycam import grbl
 from tinycam.project import CncProject
 from tinycam.properties import format_suffix
 import tinycam.settings as s
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 from tinycam.ui.window import CncWindow
 
 

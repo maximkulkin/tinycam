@@ -2,7 +2,7 @@ from collections.abc import Sequence
 import enum
 from dataclasses import dataclass
 from typing import Optional
-from tinycam.types import Vector3
+from tinycam.math_types import Vector3
 
 
 class CncCommand:

@@ -2,7 +2,7 @@ import moderngl as mgl
 import numpy as np
 from tinycam.geometry import Polygon as ShapePolygon, MultiPolygon as ShapeMultiPolygon
 from tinycam.globals import GLOBALS
-from tinycam.types import Vector4
+from tinycam.math_types import Vector4
 from tinycam.ui.view import Context, RenderState
 from tinycam.ui.view_items.core import Node3D
 

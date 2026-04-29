@@ -9,7 +9,7 @@ import shapely.affinity
 import shapely.ops
 from shapely.geometry.base import BaseGeometry as Shape
 
-from tinycam.types import Vector2, Vector3, Quaternion, Rect, Matrix33
+from tinycam.math_types import Vector2, Vector3, Quaternion, Rect, Matrix33
 
 
 type number = int | float

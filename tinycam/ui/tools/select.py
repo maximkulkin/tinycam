@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QWidget
 
 from tinycam.globals import GLOBALS
 from tinycam.project import CncProjectItem
-from tinycam.types import Vector2, Vector3, Vector4, Rect
+from tinycam.math_types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.commands import DeleteItemsCommand
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.core.canvas import Canvas, Rectangle

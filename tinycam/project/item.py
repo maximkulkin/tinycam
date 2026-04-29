@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from tinycam.geometry import Shape
 from tinycam.globals import GLOBALS
 from tinycam.signals import Signal
-from tinycam.types import Rect
+from tinycam.math_types import Rect
 import tinycam.properties as p
 from tinycam.utils import index_if
 

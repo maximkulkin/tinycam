@@ -9,7 +9,7 @@ from PySide6.QtGui import QKeyEvent
 
 from tinycam.globals import GLOBALS
 from tinycam.ui.commands import MoveItemsCommand, ScaleItemsCommand
-from tinycam.types import Vector2, Vector3, Vector4
+from tinycam.math_types import Vector2, Vector3, Vector4
 from tinycam.project import CncProjectItem
 from tinycam.ui.tools import CncTool
 from tinycam.ui.utils import vector2

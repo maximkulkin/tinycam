@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from tinycam.geometry import Geometry, Shape
 from tinycam.globals import GLOBALS
-from tinycam.types import Vector2, Matrix33
+from tinycam.math_types import Vector2, Matrix33
 
 
 # ---------------------------------------------------------------------------

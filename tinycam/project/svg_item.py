@@ -6,7 +6,7 @@ from tinycam.formats import svg
 from tinycam.globals import GLOBALS
 from tinycam.project.geometry import GeometryItem
 from tinycam.project.item import CncProjectItem
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class SvgItem(GeometryItem):

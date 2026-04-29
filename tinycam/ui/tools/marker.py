@@ -4,7 +4,7 @@ from PySide6 import QtCore
 from PySide6.QtCore import Qt, QEvent, QObject
 from PySide6.QtGui import QMouseEvent
 
-from tinycam.types import Vector2, Vector4
+from tinycam.math_types import Vector2, Vector4
 from tinycam.ui.tools import CncTool
 from tinycam.ui.view_items.canvas import Circle
 

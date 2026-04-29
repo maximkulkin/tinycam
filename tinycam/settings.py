@@ -3,7 +3,7 @@ import enum
 import struct
 from typing import Any, Type, override, get_args
 
-from tinycam.types import Vector2, Vector3
+from tinycam.math_types import Vector2, Vector3
 import tinycam.properties as p
 from tinycam.utils import find_if, get_property_type
 from PySide6 import QtCore

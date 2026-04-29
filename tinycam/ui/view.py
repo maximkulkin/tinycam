@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtGui, QtOpenGLWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QMouseEvent
 
-from tinycam.types import Vector2, Vector3, Vector4, Rect
+from tinycam.math_types import Vector2, Vector3, Vector4, Rect
 from tinycam.ui.camera import Camera, PerspectiveCamera
 
 

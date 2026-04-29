@@ -2,7 +2,7 @@ from typing import override
 
 from PySide6 import QtCore, QtWidgets
 
-from tinycam.types import Vector2, Vector3
+from tinycam.math_types import Vector2, Vector3
 
 
 class PushButton(QtWidgets.QPushButton):

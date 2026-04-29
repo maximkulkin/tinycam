@@ -3,7 +3,7 @@ import pyparsing as pp
 import pyparsing.exceptions
 
 from tinycam.geometry import Geometry, Shape
-from tinycam.types import Vector2
+from tinycam.math_types import Vector2
 
 
 class Node:

@@ -3,7 +3,7 @@ from typing import Callable
 
 import numpy as np
 from PySide6 import QtGui, QtCore
-from tinycam.types import Vector2, Vector4
+from tinycam.math_types import Vector2, Vector4
 
 
 def qcolor_to_vec4(color: QtGui.QColor) -> Vector4:
