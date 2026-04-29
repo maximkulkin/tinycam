@@ -35,6 +35,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         super().__init__(*args, **kwargs)
 
         self.resize(600, 400)
+        self.setAcceptDrops(True)
 
         self.project = GLOBALS.APP.project
 
@@ -398,6 +399,15 @@ class CncMainWindow(QtWidgets.QMainWindow):
         tool.activated.connect(lambda: action.setChecked(True))
         tool.deactivated.connect(lambda: action.setChecked(False))
         return action
+
+    def dragEnterEvent(self, event: QtGui.QDragEnterEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QtGui.QDropEvent):
+        for url in event.mimeData().urls():
+            if url.isLocalFile():
+                GLOBALS.APP.import_file(url.toLocalFile())
 
     def _import_file(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(

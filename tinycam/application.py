@@ -1,8 +1,9 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 from typing import cast
 
+from tinycam.formats import excellon, gerber
 from tinycam.globals import GLOBALS
-from tinycam.project import CncProject
+from tinycam.project import CncProject, GerberItem, ExcellonItem, SvgItem
 from tinycam.reactive import ReactiveVar
 from tinycam.settings import CncSettings, BufferReader, BufferWriter, get_serializer
 from tinycam.tasks import TaskManager
@@ -49,6 +50,59 @@ class CncApplication(QtWidgets.QApplication):
             settings.setValue(setting.path, writer.data)
 
         settings.endGroup()
+
+    def event(self, event: QtCore.QEvent) -> bool:
+        if isinstance(event, QtGui.QFileOpenEvent):
+            self.import_file(event.file())
+            return True
+        return super().event(event)
+
+    def import_file(self, filename: str) -> bool:
+        from tinycam.ui.commands import ImportFileCommand
+
+        item = None
+        if filename.endswith('.svg'):
+            item = self._try_import_svg(filename)
+        elif filename.endswith('.gbr'):
+            item = self._try_import_gerber(filename)
+        elif filename.endswith('.drl'):
+            item = self._try_import_excellon(filename)
+        else:
+            item = (
+                self._try_import_svg(filename, silent=True) or
+                self._try_import_gerber(filename, silent=True) or
+                self._try_import_excellon(filename, silent=True)
+            )
+
+        if item is None:
+            return False
+
+        self.undo_stack.push(ImportFileCommand(filename, item))
+        return True
+
+    def _try_import_svg(self, filename: str, silent: bool = False) -> SvgItem | None:
+        try:
+            return SvgItem.from_file(filename)
+        except Exception as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(None, 'Import SVG', f'Error parsing SVG file: {e}')
+            return None
+
+    def _try_import_gerber(self, filename: str, silent: bool = False) -> GerberItem | None:
+        try:
+            return GerberItem.from_file(filename)
+        except gerber.GerberError as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(None, 'Import Gerber', f'Error parsing Gerber file: {e}')
+            return None
+
+    def _try_import_excellon(self, filename: str, silent: bool = False) -> ExcellonItem | None:
+        try:
+            return ExcellonItem.from_file(filename)
+        except excellon.ExcellonError as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(None, 'Import Excellon', f'Error parsing Excellon file: {e}')
+            return None
 
     def _load_settings(self):
         settings = QtCore.QSettings()
