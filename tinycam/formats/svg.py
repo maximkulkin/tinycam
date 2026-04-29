@@ -9,6 +9,16 @@ from tinycam.types import Vector2, Matrix33
 
 
 # ---------------------------------------------------------------------------
+# Coordinate flip
+# ---------------------------------------------------------------------------
+
+def _flip_y(shape: Shape, y_center: float) -> Shape:
+    """Flip a shape vertically around the given Y coordinate."""
+    G = GLOBALS.GEOMETRY
+    return G.translate(G.scale(shape, Vector2(1, -1)), Vector2(0, 2 * y_center))
+
+
+# ---------------------------------------------------------------------------
 # Export
 # ---------------------------------------------------------------------------
 
@@ -69,6 +79,11 @@ def dumps(shapes: list[SvgShape]) -> str:
         return '<svg xmlns="http://www.w3.org/2000/svg"/>'
 
     xmin, ymin, xmax, ymax = G.total_bounds(geoms)
+    y_center = (ymin + ymax) / 2
+    shapes = [
+        SvgShape(_flip_y(s.geometry, y_center), s.stroke, s.stroke_width, s.fill, s.fill_rule)
+        for s in shapes
+    ]
 
     # Small margin so strokes on the edge are not clipped
     margin = max((xmax - xmin) * 0.01, (ymax - ymin) * 0.01, 1.0)
@@ -121,8 +136,14 @@ def save(path: str, shapes: list[SvgShape]) -> None:
 # ---------------------------------------------------------------------------
 
 def loads(string: str) -> list[Shape]:
+    G = GLOBALS.GEOMETRY
     parser = SvgParser()
-    return parser.parse(string)
+    shapes = parser.parse(string)
+    if not shapes:
+        return shapes
+    _, ymin, _, ymax = G.total_bounds(shapes)
+    y_center = (ymin + ymax) / 2
+    return [_flip_y(shape, y_center) for shape in shapes]
 
 
 def load(filename: str) -> list[Shape]:
