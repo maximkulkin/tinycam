@@ -1,3 +1,4 @@
+import os
 from typing import Callable, cast
 
 from PySide6 import QtCore, QtWidgets, QtGui
@@ -82,7 +83,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         import_file_action = self._make_action(
             'Import File', self._import_file,
             icon=':/icons/file_import.svg',
-            shortcut='Ctrl+o',
+            shortcut='Ctrl+I',
         )
 
         zoom_in_action = self._make_action(
@@ -182,6 +183,19 @@ class CncMainWindow(QtWidgets.QMainWindow):
             Qt.DockWidgetArea.BottomDockWidgetArea,
         )
 
+        self.file_menu.addAction(
+            self._make_action('New Project', lambda: GLOBALS.APP.new_project(), shortcut='Ctrl+N')
+        )
+        self.file_menu.addAction(
+            self._make_action('Open Project…', lambda: GLOBALS.APP.open_project(), shortcut='Ctrl+O')
+        )
+        self.file_menu.addAction(
+            self._make_action('Save Project', lambda: GLOBALS.APP.save_project(), shortcut='Ctrl+S')
+        )
+        self.file_menu.addAction(
+            self._make_action('Save Project As…', lambda: GLOBALS.APP.save_project_as(), shortcut='Ctrl+Shift+S')
+        )
+        self.file_menu.addSeparator()
         self.file_menu.addAction(import_file_action)
 
         self.view_menu.addSeparator()
@@ -191,6 +205,16 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self.view_menu.addSeparator()
 
         self._load_settings()
+        GLOBALS.APP.project_path_changed.connect(self._update_title)
+        GLOBALS.APP.undo_stack.cleanChanged.connect(self._update_title)
+        self._update_title()
+
+    def _update_title(self):
+        path = GLOBALS.APP._project_path
+        name = os.path.basename(path) if path else 'Untitled'
+        dirty = not GLOBALS.APP.undo_stack.isClean()
+        suffix = ' *' if dirty else ''
+        self.setWindowTitle(f'TinyCAM — {name}{suffix}')
 
     def _make_tools_toolbar(self):
         # Tools
@@ -578,8 +602,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
             self._window_actions[window].setChecked(window.isVisible())
 
     def closeEvent(self, event):
-        self._save_settings()
-        super().closeEvent(event)
+        if GLOBALS.APP._confirm_discard_changes():
+            self._save_settings()
+            event.accept()
+        else:
+            event.ignore()
 
     def _save_settings(self):
         settings = QtCore.QSettings()

@@ -7,6 +7,7 @@ from typing import overload
 import numpy as np
 import shapely.affinity
 import shapely.ops
+import shapely
 from shapely.geometry.base import BaseGeometry as Shape
 
 from tinycam.math_types import Vector2, Vector3, Quaternion, Rect, Matrix33
@@ -313,6 +314,12 @@ class Geometry:
         """Return the raw coordinate sequence of a Line or Ring as plain tuples."""
         return list(shape.coords)
 
+    def to_wkt(self, shape: AnyShape) -> str:
+        return shapely.to_wkt(shape)
+
+    def from_wkt(self, wkt: str) -> AnyShape:
+        return shapely.from_wkt(wkt)
+
     def total_bounds(self, shapes: list[AnyShape]) -> tuple[float, float, float, float]:
         """Return (xmin, ymin, xmax, ymax) bounding box over a list of shapes."""
         xmin, ymin, xmax, ymax = shapely.total_bounds(shapes)
@@ -343,3 +350,9 @@ class Geometry:
         ]
         shapely.destroy_prepared(polygon)
         return result
+
+    def to_wkt(self, shape: AnyShape) -> str:
+        return shapely.to_wkt(shape)
+
+    def from_wkt(self, wkt: str) -> AnyShape:
+        return shapely.from_wkt(wkt)

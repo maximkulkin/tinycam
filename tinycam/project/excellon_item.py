@@ -48,6 +48,44 @@ class ExcellonItem(CncProjectItem):
         self._mills = value
         self._signal_changed()
 
+    def save(self) -> dict:
+        data = super().save()
+        data['geometry'] = GLOBALS.GEOMETRY.to_wkt(self._geometry)
+        data['tools'] = [
+            {'id': t.id, 'diameter': t.diameter}
+            for t in self._tools
+        ]
+        data['drills'] = [
+            {'tool_id': d.tool_id, 'position': [d.position.x, d.position.y]}
+            for d in self._drills
+        ]
+        data['mills'] = [
+            {'tool_id': m.tool_id, 'positions': [[p.x, p.y] for p in m.positions]}
+            for m in self._mills
+        ]
+        return data
+
+    def load(self, data: dict) -> None:
+        super().load(data)
+        if 'geometry' in data:
+            self._geometry = GLOBALS.GEOMETRY.from_wkt(data['geometry'])
+            self._bounds = None
+        if 'tools' in data:
+            self._tools = [
+                excellon.Tool(id=t['id'], diameter=t['diameter'])
+                for t in data['tools']
+            ]
+        if 'drills' in data:
+            self._drills = [
+                excellon.Drill(tool_id=d['tool_id'], position=Vector2(d['position'][0], d['position'][1]))
+                for d in data['drills']
+            ]
+        if 'mills' in data:
+            self._mills = [
+                excellon.Mill(tool_id=m['tool_id'], positions=[Vector2(p[0], p[1]) for p in m['positions']])
+                for m in data['mills']
+            ]
+
     def translate(self, offset: Vector2):
         for drill in self._drills:
             drill.position += offset

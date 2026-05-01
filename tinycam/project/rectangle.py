@@ -7,10 +7,10 @@ from tinycam.math_types import Rect, Vector2
 
 class RectangleItem(GeometryItem):
 
-    def __init__(self, rect: Rect):
+    def __init__(self, rect: Rect = None):
         super().__init__()
         self.name = 'Rectangle'
-        self._rect = rect
+        self._rect = rect if rect is not None else Rect(0, 0, 0, 0)
         self._corner_radius = 0
         self._update_geometry()
 
@@ -48,6 +48,23 @@ class RectangleItem(GeometryItem):
         self._geometry = G.buffer(G.box(rect.pmin, rect.pmax).exterior, radius).exterior
         self._bounds = None
         self._signal_updated()
+
+    def save(self) -> dict:
+        data = super().save()
+        data['rect'] = [float(self._rect.x), float(self._rect.y),
+                        float(self._rect.width), float(self._rect.height)]
+        data['corner_radius'] = self.corner_radius
+        return data
+
+    def load(self, data: dict) -> None:
+        with self:
+            super().load(data)
+            if 'rect' in data:
+                r = data['rect']
+                self._rect = Rect(r[0], r[1], r[2], r[3])
+                self._update_geometry()
+            if 'corner_radius' in data:
+                self.corner_radius = data['corner_radius']
 
     def translate(self, offset: Vector2):
         self._rect = self._rect.translated(offset)

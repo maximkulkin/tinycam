@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import inspect
 from typing import ForwardRef
+import uuid
 
 from PySide6 import QtGui
 from PySide6.QtCore import Qt
@@ -24,6 +25,7 @@ class CncProjectItem(p.EditableObject):
 
     def __init__(self):  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__()
+        self._id = uuid.uuid4().hex[:8]
 
         self._name = 'Item'
         self._color = Qt.black
@@ -37,6 +39,30 @@ class CncProjectItem(p.EditableObject):
 
     def _update(self):
         self._signal_changed()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    def save(self) -> dict:
+        return {
+            'name': self._name,
+            'color': self._color.name(QtGui.QColor.NameFormat.HexArgb),
+            'visible': self._visible,
+        }
+
+    def load(self, data: dict) -> None:
+        if 'id' in data:
+            self._id = data['id']
+        if 'name' in data:
+            self._name = data['name']
+        if 'color' in data:
+            self._color = QtGui.QColor(data['color'])
+        if 'visible' in data:
+            self._visible = data['visible']
+
+    def resolve_references(self, items_by_id: dict[str, 'CncProjectItem']) -> None:
+        pass
 
     @property
     def geometry(self) -> Shape:

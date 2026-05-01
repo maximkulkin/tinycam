@@ -1,3 +1,5 @@
+import os
+
 from PySide6 import QtCore, QtWidgets, QtGui
 from typing import cast
 
@@ -16,6 +18,8 @@ class CncApplicationState:
 
 
 class CncApplication(QtWidgets.QApplication):
+    project_path_changed = QtCore.Signal()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -27,6 +31,7 @@ class CncApplication(QtWidgets.QApplication):
         self.settings: CncSettings = GLOBALS.SETTINGS
         self.undo_stack: QtGui.QUndoStack = QtGui.QUndoStack()
         self.task_manager: TaskManager = TaskManager()
+        self._project_path: str | None = None
         self.state = CncApplicationState()
 
         self._load_settings()
@@ -103,6 +108,84 @@ class CncApplication(QtWidgets.QApplication):
             if not silent:
                 QtWidgets.QMessageBox.critical(None, 'Import Excellon', f'Error parsing Excellon file: {e}')
             return None
+
+    def _confirm_discard_changes(self) -> bool:
+        if self.undo_stack.isClean():
+            return True
+        filename = os.path.basename(self._project_path) if self._project_path else 'Untitled'
+        result = QtWidgets.QMessageBox.question(
+            None,
+            'Unsaved Changes',
+            f'Save changes to "{filename}"?',
+            QtWidgets.QMessageBox.StandardButton.Save |
+            QtWidgets.QMessageBox.StandardButton.Discard |
+            QtWidgets.QMessageBox.StandardButton.Cancel,
+            QtWidgets.QMessageBox.StandardButton.Save,
+        )
+        if result == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return False
+        if result == QtWidgets.QMessageBox.StandardButton.Save:
+            return self.save_project()
+        return True
+
+    def new_project(self) -> bool:
+        if not self._confirm_discard_changes():
+            return False
+        self.project.items.clear()
+        self.undo_stack.clear()
+        self._project_path = None
+        self.project_path_changed.emit()
+        return True
+
+    def open_project(self, path: str | None = None) -> bool:
+        if not self._confirm_discard_changes():
+            return False
+        if path is None:
+            path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                None, 'Open Project', '', 'TinyCAM Projects (*.tinycam)'
+            )
+            if not path:
+                return False
+        from tinycam.project.serialization import load_project
+        try:
+            items = load_project(path)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(None, 'Open Project', f'Failed to open project:\n{e}')
+            return False
+        self.project.items.clear()
+        for item in items:
+            self.project.items.append(item)
+        self.undo_stack.clear()
+        self._project_path = path
+        self.project_path_changed.emit()
+        return True
+
+    def save_project(self) -> bool:
+        if self._project_path is None:
+            return self.save_project_as()
+        return self._save_to_path(self._project_path)
+
+    def save_project_as(self) -> bool:
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            None, 'Save Project', '', 'TinyCAM Projects (*.tinycam)'
+        )
+        if not path:
+            return False
+        if not path.endswith('.tinycam'):
+            path += '.tinycam'
+        return self._save_to_path(path)
+
+    def _save_to_path(self, path: str) -> bool:
+        from tinycam.project.serialization import save_project
+        try:
+            save_project(list(self.project.items), path)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(None, 'Save Project', f'Failed to save project:\n{e}')
+            return False
+        self.undo_stack.setClean()
+        self._project_path = path
+        self.project_path_changed.emit()
+        return True
 
     def _load_settings(self):
         settings = QtCore.QSettings()

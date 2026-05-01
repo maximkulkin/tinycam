@@ -73,6 +73,27 @@ class GeometryItem(CncProjectItem):
         ],
     )
 
+    def save(self) -> dict:
+        data = super().save()
+        data['geometry'] = GLOBALS.GEOMETRY.to_wkt(self._geometry)
+        data['line_thickness'] = self.line_thickness
+        data['joint_style'] = self.joint_style.name
+        data['cap_style'] = self.cap_style.name
+        return data
+
+    def load(self, data: dict) -> None:
+        with self:
+            super().load(data)
+            if 'geometry' in data:
+                self._geometry = GLOBALS.GEOMETRY.from_wkt(data['geometry'])
+                self._bounds = None
+            if 'line_thickness' in data:
+                self.line_thickness = data['line_thickness']
+            if 'joint_style' in data:
+                self.joint_style = JointStyle[data['joint_style']]
+            if 'cap_style' in data:
+                self.cap_style = CapStyle[data['cap_style']]
+
     def translate(self, offset: Vector2):
         self.geometry = GLOBALS.GEOMETRY.translate(self.geometry, offset)
 

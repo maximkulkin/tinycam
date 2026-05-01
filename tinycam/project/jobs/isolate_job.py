@@ -12,7 +12,7 @@ import tinycam.properties as p
 import tinycam.settings as s
 from tinycam.signals import Signal
 from tinycam.tasks import run_task
-from tinycam.tools import CncTool
+from tinycam.tools import CncTool, save_tool, load_tool
 import tinycam.ui.property_editor as pe
 
 
@@ -169,6 +169,50 @@ class CncIsolateJob(CncJob):
         p.MinValue(0),
         pe.Editor(ProgressEditor),
     ])
+
+    def save(self) -> dict:
+        data = super().save()
+        data['source_item_id'] = self._source_item.id if self._source_item else None
+        data['show_outline'] = self.show_outline
+        data['show_path'] = self.show_path
+        data['pass_count'] = self.pass_count
+        data['pass_overlap'] = self.pass_overlap
+        data['cut_depth'] = self.cut_depth
+        data['cut_speed'] = self.cut_speed
+        data['spindle_speed'] = self.spindle_speed
+        data['travel_height'] = self.travel_height
+        data['travel_speed'] = self.travel_speed
+        data['tool'] = save_tool(self.tool)
+        return data
+
+    def load(self, data: dict) -> None:
+        with self:
+            super().load(data)
+            self._source_item_id = data.get('source_item_id')
+            if 'show_outline' in data:
+                self.show_outline = data['show_outline']
+            if 'show_path' in data:
+                self.show_path = data['show_path']
+            if 'pass_count' in data:
+                self.pass_count = data['pass_count']
+            if 'pass_overlap' in data:
+                self.pass_overlap = data['pass_overlap']
+            if 'cut_depth' in data:
+                self.cut_depth = data['cut_depth']
+            if 'cut_speed' in data:
+                self.cut_speed = data['cut_speed']
+            if 'spindle_speed' in data:
+                self.spindle_speed = data['spindle_speed']
+            if 'travel_height' in data:
+                self.travel_height = data['travel_height']
+            if 'travel_speed' in data:
+                self.travel_speed = data['travel_speed']
+            if 'tool' in data:
+                self.tool = load_tool(data['tool'])
+
+    def resolve_references(self, items_by_id: dict) -> None:
+        if self._source_item_id and self._source_item_id in items_by_id:
+            self.source_item = items_by_id[self._source_item_id]
 
     def _on_source_item_updated(self, _item):
         self._update_geometry()

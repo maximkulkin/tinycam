@@ -22,6 +22,17 @@ class GerberItem(CncProjectItem):
             origin=origin,
         )
 
+    def save(self) -> dict:
+        data = super().save()
+        data['geometry'] = GLOBALS.GEOMETRY.to_wkt(self._geometry)
+        return data
+
+    def load(self, data: dict) -> None:
+        super().load(data)
+        if 'geometry' in data:
+            self._geometry = GLOBALS.GEOMETRY.from_wkt(data['geometry'])
+            self._bounds = None
+
     @staticmethod
     def from_file(path) -> 'GerberItem':
         with open(path, 'rt') as f:

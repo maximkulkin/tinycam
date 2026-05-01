@@ -73,3 +73,31 @@ class CncToolSerializer(s.ObjectSerializer):
 
 
 s.SETTINGS.register('tools/tools', s.CncListSetting[CncTool], default=[])
+
+
+def save_tool(tool: 'CncTool | None') -> dict | None:
+    if tool is None:
+        return None
+    data: dict = {'type': tool.type.name}
+    if tool.type == CncToolType.RECTANGULAR:
+        data['diameter'] = tool.diameter
+    else:
+        data['angle'] = tool.angle
+        data['tip_diameter'] = tool.tip_diameter
+    return data
+
+
+def load_tool(data: dict | None) -> 'CncTool | None':
+    if data is None:
+        return None
+    try:
+        tool = CncTool()
+        tool.type = CncToolType[data['type']]
+        if tool.type == CncToolType.RECTANGULAR:
+            tool.diameter = data['diameter']
+        else:
+            tool.angle = data['angle']
+            tool.tip_diameter = data['tip_diameter']
+        return tool
+    except (KeyError, TypeError, ValueError) as e:
+        raise ValueError(f'Invalid tool data: {e}') from e
