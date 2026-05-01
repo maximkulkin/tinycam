@@ -56,7 +56,7 @@ The codebase has three layers:
 |--------|---------|
 | `application.py` | `CncApplication(QApplication)` — manages project, settings, undo stack, task manager |
 | `globals.py` | Global singletons: `geometry`, `app`, `settings`, `controller` |
-| `types.py` | NumPy-backed `Vector2/3/4`, `Quaternion`, `Matrix33/44`, `Rect`, `Box`, `Ray`, `Plane` |
+| `math_types.py` | NumPy-backed `Vector2/3/4`, `Quaternion`, `Matrix33/44`, `Rect`, `Box`, `Ray`, `Plane` |
 | `geometry.py` | Shapely-based geometry utilities (circles, offsets, boolean ops) |
 | `settings.py` | Hierarchical typed settings with binary serialization and Qt persistence |
 | `signals.py` | Custom `Signal`/`SignalInstance` with weak references (similar to Qt signals but for Python) |
@@ -71,7 +71,12 @@ The codebase has three layers:
 
 **Settings:** Access via `globals.settings`. Settings are hierarchical strings (`general/snapping/enabled`). The binary serialization format lives in `settings.py` as `BufferReader`/`BufferWriter`.
 
-**Geometry:** All geometry is Shapely-based. The `types.py` vectors are for 3D math/rendering; Shapely geometries are the canonical representation of project items.
+**Geometry:** The actual geometry is abstracted with a Geometry class (providing interface to geometry functions) as well as different Shape classes (Point, Line, Polygon, Group, etc). Although those are just re-exports and wrappers of Shapely types, it could change in the future. So, Shapely itself should not occur in source code other than geometry.py. The `math_types.py` types are for 3D math/rendering and are just wrappers on NumPy/Pyrr, providing more convenience usage.
+
+**Project items:** Everything that can be operated upon in the editor are represented by project items (project/item.py descendands). They represent core data for objects like geometry, color and other properties. On top of that, there are view items - view specific sattelite classes that handle visualization for project items in views. They could be different for 2D and 3D to provide different visualization, although currently they are the same. Project item use property system that allows to attach metadata to properties, that can be used to automatically create property inspector UI.
+Project items provide signals for when they are updated which can be used to automatically update dependent objects. If certain update might take a lot of time to execute, it should be implemented as asynchronous task, which would be run by task manager.
+
+**Commands:** Project item manipulation should be done through "commands" - an intent objects that change project and project items. The reason - allow for storing editing history and enable undo/redo functionality.
 
 **OpenGL:** Views use ModernGL (not raw OpenGL). Rendering happens in `CncView` subclasses via `view_items/`.
 
