@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 
 from tinycam.globals import GLOBALS
 from tinycam.formats import excellon, gerber
-from tinycam.project import GerberItem, ExcellonItem, SvgItem
+from tinycam.project import GerberItem, ExcellonItem, ImageItem, SvgItem
 from tinycam.settings import SETTINGS, CncSetting, ControlType
 from tinycam.math_types import Vector2
 from tinycam.ui.commands import (
@@ -436,7 +436,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
     def _import_file(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             parent=self, caption='Import Drawing',
-            filter='SVG (*.svg);;Gerber (*.gbr);;Excellon (*.drl);;All files (*)'
+            filter='SVG (*.svg);;Gerber (*.gbr);;Excellon (*.drl);;Images (*.png *.jpg *.jpeg *.bmp *.tiff *.webp);;All files (*)'
         )
         if filename == '':
             return
@@ -448,6 +448,8 @@ class CncMainWindow(QtWidgets.QMainWindow):
             item = self._import_gerber(filename)
         elif filename.endswith('.drl'):
             item = self._import_excellon(filename)
+        elif any(filename.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
+            item = self._import_image(filename)
         else:
             if item is None:
                 item = self._import_svg(filename, silent=True)
@@ -466,6 +468,16 @@ class CncMainWindow(QtWidgets.QMainWindow):
             return
 
         GLOBALS.APP.undo_stack.push(ImportFileCommand(filename, item))
+
+    def _import_image(self, filename: str, silent: bool = False) -> ImageItem | None:
+        try:
+            return ImageItem.from_file(filename)
+        except Exception as e:
+            if not silent:
+                QtWidgets.QMessageBox.critical(
+                    self, 'Import Image', f'Error loading image file: {e}',
+                )
+            return None
 
     def _import_svg(self, filename: str, silent: bool = False) -> SvgItem | None:
         try:

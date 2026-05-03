@@ -3,6 +3,7 @@ import json
 from tinycam.project.item import CncProjectItem
 from tinycam.project.gerber_item import GerberItem
 from tinycam.project.excellon_item import ExcellonItem
+from tinycam.project.image_item import ImageItem
 from tinycam.project.svg_item import SvgItem
 from tinycam.project.geometry import GeometryItem
 from tinycam.project.rectangle import RectangleItem
@@ -14,6 +15,7 @@ from tinycam.project.jobs.drill_job import CncDrillJob
 _TYPE_REGISTRY: dict[str, type[CncProjectItem]] = {
     'gerber': GerberItem,
     'excellon': ExcellonItem,
+    'image': ImageItem,
     'svg': SvgItem,
     'geometry_item': GeometryItem,
     'rectangle': RectangleItem,
