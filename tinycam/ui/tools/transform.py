@@ -428,22 +428,25 @@ class TransformTool(CncTool):
         self.view.update()
 
     def _commit(self):
-        # Restore original offsets and scales to allow command to apply them
         self._restore_items_states()
 
-        if self._applied_offset is not None:
-            GLOBALS.APP.undo_stack.push(MoveItemsCommand(
-                items=list(self._selected_items),
-                offset=self._applied_offset,
-            ))
-        elif self._applied_scale is not None:
-            GLOBALS.APP.undo_stack.push(ScaleItemsCommand(
-                items=list(self._selected_items),
-                scale=self._applied_scale,
-                pivot=self._applied_scale_pivot
-            ))
+        applied_offset = self._applied_offset
+        applied_scale = self._applied_scale
+        applied_scale_pivot = self._applied_scale_pivot
 
         self._reset()
+
+        if applied_offset is not None:
+            GLOBALS.APP.undo_stack.push(MoveItemsCommand(
+                items=list(self._selected_items),
+                offset=applied_offset,
+            ))
+        elif applied_scale is not None:
+            GLOBALS.APP.undo_stack.push(ScaleItemsCommand(
+                items=list(self._selected_items),
+                scale=applied_scale,
+                pivot=applied_scale_pivot,
+            ))
 
     def _cancel(self):
         self._restore_items_states()
