@@ -78,6 +78,9 @@ class Geometry:
             line = line.buffer(width / 2)
         return line
 
+    def multi_line(self, lines: list) -> MultiLineString:
+        return shapely.MultiLineString(lines)
+
     @overload
     def arc(
         self,
@@ -135,8 +138,8 @@ class Geometry:
     def box(self, pmin: PointLike, pmax: PointLike) -> Polygon:
         return shapely.box(get_x(pmin), get_y(pmin), get_x(pmax), get_y(pmax))
 
-    def polygon(self, points: Sequence[PointLike] | np.ndarray) -> Polygon:
-        return shapely.Polygon(points)
+    def polygon(self, points: Sequence[PointLike] | np.ndarray, holes=None) -> Polygon:
+        return shapely.Polygon(points, holes)
 
     # utils
 

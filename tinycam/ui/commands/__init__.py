@@ -19,6 +19,7 @@ from .duplicate_item import DuplicateItemCommand
 from .import_file import ImportFileCommand
 from .split_geometry import SplitGeometryCommand
 from .combine_geometry import CombineGeometryCommand
+from .edit_polyline import EditPolylineCommand
 
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     'ImportFileCommand',
     'SplitGeometryCommand',
     'CombineGeometryCommand',
+    'EditPolylineCommand',
 ]
