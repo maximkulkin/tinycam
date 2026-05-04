@@ -5,12 +5,11 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
 from tinycam.globals import GLOBALS
-from tinycam.formats import excellon, gerber
-from tinycam.project import GerberItem, ExcellonItem, ImageItem, SvgItem
+from tinycam.project import CncProjectItem
 from tinycam.settings import SETTINGS, CncSetting, ControlType
 from tinycam.math_types import Vector2
 from tinycam.ui.commands import (
-    ImportFileCommand, FlipHorizontallyCommand, FlipVerticallyCommand,
+    FlipHorizontallyCommand, FlipVerticallyCommand,
     AlignLeftCommand, AlignRightCommand, AlignCenterCommand,
     AlignTopCommand, AlignBottomCommand, AlignVCenterCommand,
 )
@@ -207,6 +206,7 @@ class CncMainWindow(QtWidgets.QMainWindow):
         self._load_settings()
         GLOBALS.APP.project_path_changed.connect(self._update_title)
         GLOBALS.APP.undo_stack.cleanChanged.connect(self._update_title)
+        GLOBALS.APP.file_imported.connect(self._on_file_imported)
         self._update_title()
 
     def _update_title(self):
@@ -440,75 +440,11 @@ class CncMainWindow(QtWidgets.QMainWindow):
         )
         if filename == '':
             return
+        GLOBALS.APP.import_file(filename)
 
-        item = None
-        if filename.endswith('.svg'):
-            item = self._import_svg(filename)
-        elif filename.endswith('.gbr'):
-            item = self._import_gerber(filename)
-        elif filename.endswith('.drl'):
-            item = self._import_excellon(filename)
-        elif any(filename.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp')):
-            item = self._import_image(filename)
-        else:
-            if item is None:
-                item = self._import_svg(filename, silent=True)
-
-            if item is None:
-                item = self._import_gerber(filename, silent=True)
-
-            if item is None:
-                item = self._import_excellon(filename, silent=True)
-
-        if item is None:
-            QtWidgets.QMessageBox.critical(
-                self, 'Import Drawing',
-                f'File format is not recognized for {filename}',
-            )
-            return
-
-        GLOBALS.APP.undo_stack.push(ImportFileCommand(filename, item))
-
-    def _import_image(self, filename: str, silent: bool = False) -> ImageItem | None:
-        try:
-            return ImageItem.from_file(filename)
-        except Exception as e:
-            if not silent:
-                QtWidgets.QMessageBox.critical(
-                    self, 'Import Image', f'Error loading image file: {e}',
-                )
-            return None
-
-    def _import_svg(self, filename: str, silent: bool = False) -> SvgItem | None:
-        try:
-            return SvgItem.from_file(filename)
-        except Exception as e:
-            if not silent:
-                QtWidgets.QMessageBox.critical(
-                    self, 'Import SVG', f'Error parsing SVG file: {e}',
-                )
-            return None
-
-    def _import_gerber(self, filename: str, silent: bool = False) -> GerberItem | None:
-        try:
-            return GerberItem.from_file(filename)
-        except gerber.GerberError as e:
-            if not silent:
-                QtWidgets.QMessageBox.critical(
-                    self, 'Import Drawing', f'Error parsing Gerber file: {e}',
-                )
-            return None
-
-    def _import_excellon(self, filename: str, silent: bool = False) -> ExcellonItem | None:
-        try:
-            return ExcellonItem.from_file(filename)
-        except excellon.ExcellonError as e:
-            if not silent:
-                QtWidgets.QMessageBox.critical(
-                    self, 'Import Drawing',
-                    f'Error parsing Excellon file: {e}',
-                )
-            return None
+    def _on_file_imported(self, item: CncProjectItem):
+        if SETTINGS.get('general/zoom_to_fit_on_import') and not self.canvas_2d.is_item_visible(item):
+            self.canvas_2d.zoom_to_fit()
 
     def _zoom_in(self):
         match self.tabs.currentIndex():

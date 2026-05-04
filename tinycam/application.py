@@ -19,6 +19,7 @@ class CncApplicationState:
 
 class CncApplication(QtWidgets.QApplication):
     project_path_changed = QtCore.Signal()
+    file_imported = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -82,9 +83,11 @@ class CncApplication(QtWidgets.QApplication):
             )
 
         if item is None:
+            QtWidgets.QMessageBox.critical(None, 'Import Drawing', f'File format is not recognized for {filename}')
             return False
 
         self.undo_stack.push(ImportFileCommand(filename, item))
+        self.file_imported.emit(item)
         return True
 
     def _try_import_image(self, filename: str, silent: bool = False) -> ImageItem | None:

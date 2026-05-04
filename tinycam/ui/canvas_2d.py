@@ -204,6 +204,21 @@ class CncCanvas2D(CncView):
             camera.position = position
             camera.zoom = zoom
 
+    def is_item_visible(self, item: CncProjectItem) -> bool:
+        if not self._camera_initialized:
+            return False
+        camera = cast(OrthographicCamera, self.camera)
+        bounds = item.bounds
+        cx, cy = camera.position.x, camera.position.y
+        half_w = camera.width / (2.0 * camera.zoom)
+        half_h = camera.height / (2.0 * camera.zoom)
+        return (
+            bounds.xmin >= cx - half_w and
+            bounds.xmax <= cx + half_w and
+            bounds.ymin >= cy - half_h and
+            bounds.ymax <= cy + half_h
+        )
+
     def zoom_to_grid(self):
         self._zoom_to_region(self._grid.bounds)
 
