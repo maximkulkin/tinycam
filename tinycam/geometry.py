@@ -146,7 +146,7 @@ class Geometry:
 
     def points(self, shape: AnyShape) -> Sequence[Vector2]:
         match shape:
-            case shapely.MultiLineString() | shapely.MultiPolygon():
+            case shapely.MultiLineString() | shapely.MultiPolygon() | shapely.GeometryCollection():
                 return chain(*[
                     self.points(geom)
                     for geom in shape.geoms
