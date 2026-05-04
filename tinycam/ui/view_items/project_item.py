@@ -2,7 +2,7 @@ import moderngl as mgl
 from tinycam.project import CncProjectItem
 from tinycam.math_types import Vector3, Vector4, Box
 from tinycam.ui.view import Context, RenderState
-from tinycam.ui.view_items.core import Node3D
+from tinycam.ui.view_items.core import Node3D, Colored
 from tinycam.ui.view_items.core.polygon import Polygon
 from tinycam.ui.utils import qcolor_to_vec4
 
@@ -81,7 +81,7 @@ class CncProjectItemView[T: CncProjectItem](Node3D):
                 color = color.lighter(150)
             color = qcolor_to_vec4(color)
 
-        if self._geometry_view is not None:
+        if isinstance(self._geometry_view, Colored):
             self._geometry_view.color = color
 
         with self.context.scope(disable=mgl.DEPTH_TEST, wireframe=self._model.debug, depth_func='<='):

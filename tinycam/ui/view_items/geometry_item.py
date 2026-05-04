@@ -5,7 +5,7 @@ from tinycam.project.geometry import (
     CapStyle as ModelCapStyle,
     JointStyle as ModelJointStyle,
 )
-from tinycam.ui.view_items.core import Node3D, Line2D, Polygon
+from tinycam.ui.view_items.core import Node3D, Line2D, Polygon, Colored, ColoredNode3D
 from tinycam.ui.view_items.core.line2d import (
     CapStyle as Line2DCapStyle,
     JointStyle as Line2DJointStyle,
@@ -54,9 +54,8 @@ class GeometryItemView(CncProjectItemView):
         if self._geometry_view is None:
             return
 
-        vec = qcolor_to_vec4(color)
-        for child in self._geometry_view.children:
-            child.color = vec
+        if isinstance(self._geometry_view, Colored):
+            self._geometry_view.color = qcolor_to_vec4(color)
 
     def _make_geometry_view(
         self,
@@ -112,7 +111,7 @@ class GeometryItemView(CncProjectItemView):
                 item = Polygon(self.context, polygon=geometry, color=color)
 
             case g.MultiLineString() | g.Group():
-                item = Node3D(self.context)
+                item = ColoredNode3D(self.context, color=color)
                 for line in G.shapes(geometry):
                     item.add_child(self._make_geometry_view(line, color=color))
 

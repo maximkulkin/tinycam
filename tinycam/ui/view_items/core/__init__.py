@@ -1,6 +1,7 @@
 from tinycam.ui.view_items.core.node import Node
 from tinycam.ui.view_items.core.node2d import Node2D
 from tinycam.ui.view_items.core.node3d import Node3D
+from tinycam.ui.view_items.core.colored_node3d import Colored, ColoredNode3D
 from tinycam.ui.view_items.core.canvas import Canvas, CanvasItem
 from tinycam.ui.view_items.core.debug import Debug
 from tinycam.ui.view_items.core.billboard import Billboard
@@ -16,6 +17,8 @@ __all__ = [
     'Node',
     'Node2D',
     'Node3D',
+    'Colored',
+    'ColoredNode3D',
     'Canvas',
     'CanvasItem',
     'Debug',
