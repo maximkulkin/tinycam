@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **TinyCAM** is a desktop CAM (Computer-Aided Manufacturing) application for CNC machines. It parses PCB/vector files (Gerber, Excellon, SVG), visualizes them in 2D/3D, generates G-code toolpaths, and controls GRBL-based CNC machines over serial.
 
+## Workflow
+
+Always implement changes in a worktree. Use `EnterWorktree` with a descriptive name before starting any implementation task.
+
 ## Running the Application
 
 ```bash
