@@ -168,23 +168,10 @@ class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
         super().__init__()
 
         self._camera = camera
-
         self._start_position = Vector3(self._camera.position)
-
         self._start_zoom = self._camera.zoom if isinstance(self._camera, OrthographicCamera) else 1.0
-
         self._target_position = position if position is not None else self._start_position
         self._target_zoom = zoom if zoom is not None else self._start_zoom
-        self._last_t = 0.0
-        self._log_start_zoom = math.log(self._start_zoom)
-        self._log_target_zoom = math.log(self._target_zoom)
-
-        if isinstance(self._camera, OrthographicCamera):
-            screen_point = self._camera.project(self._target_position)
-            self._position_delta = Vector3.from_vector2(self._camera.pixel_size * 0.5 - screen_point) / self._target_zoom * Vector3(-1, 1, 0)
-        else:
-            self._position_delta = self._target_position - self._start_position
-
         self._duration_ms = int(duration * 1000)
         self._on_update = on_update
 
@@ -192,26 +179,27 @@ class CameraPanAndZoomAnimation(QtCore.QAbstractAnimation):
         return self._duration_ms
 
     def updateCurrentTime(self, currentTime: int):
-        t = currentTime / self.duration()
-
-        position_delta = (t - self._last_t) * self._position_delta
-        zoom_adjustment = Vector3()
+        t = max(0.0, min(1.0, currentTime / self.duration()))
 
         if isinstance(self._camera, OrthographicCamera):
-            screen_point = self._camera.project(self._target_position)
-            p0 = self._camera.unproject(screen_point)
+            # Linear zoom interpolation is required for all items to move at constant
+            # velocity in screen space.  Derivation: for every world point W, its screen
+            # position lerps linearly iff zoom_t = lerp(Z0, Z1, t) and camera position
+            # follows the zoom-weighted blend below.
+            zoom_t = lerp(self._start_zoom, self._target_zoom, t)
+            self._camera.zoom = zoom_t
 
-            self._camera.zoom = math.exp(
-                lerp(self._log_start_zoom, self._log_target_zoom, t)
-            )
+            w0 = self._start_zoom * (1.0 - t)
+            w1 = self._target_zoom * t
+            cam_x = (self._start_position.x * w0 + self._target_position.x * w1) / zoom_t
+            cam_y = (self._start_position.y * w0 + self._target_position.y * w1) / zoom_t
+            cam_z = lerp(self._start_position.z, self._target_position.z, t)
+            self._camera.position = Vector3(cam_x, cam_y, cam_z)
+        else:
+            t_pos = self._start_position + t * (self._target_position - self._start_position)
+            self._camera.position = t_pos
 
-            p1 = self._camera.unproject(screen_point)
-            zoom_adjustment = (p0 - p1) * Vector3(1, 1, 0)
-
-        self._camera.position += position_delta + zoom_adjustment
         self._on_update()
-
-        self._last_t = t
 
 
 class PanAndZoomController(QtCore.QObject):
