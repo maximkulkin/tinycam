@@ -338,17 +338,24 @@ class Geometry:
             result = shapely.symmetric_difference(result, shape)
         return result
 
-    def triangulate(self, polygon: Polygon, max_segment_length: float = 1.0) -> list[list[tuple]]:
+    def triangulate(self, polygon: Polygon) -> list[list[tuple]]:
         """Tessellate a polygon into triangles for rendering.
 
-        Returns a list of triangles, each a list of three (x, y) coordinate tuples.
+        Uses adaptive segmentize: only subdivides edges that are significantly
+        longer than the polygon's mean edge length. This prevents Delaunay chord
+        artifacts in concave regions without inflating the vertex count for
+        already-dense boundary sampling (e.g. SVG paths with many short segments).
         """
         shapely.prepare(polygon)
+        n_edges = len(polygon.exterior.coords) - 1
+        if n_edges > 0:
+            mean_edge = polygon.exterior.length / n_edges
+            input_geom = polygon.segmentize(mean_edge * 2)
+        else:
+            input_geom = polygon
         result = [
             list(triangle.exterior.coords[:-1])
-            for triangle in shapely.delaunay_triangles(
-                polygon.segmentize(max_segment_length)
-            ).geoms
+            for triangle in shapely.delaunay_triangles(input_geom).geoms
             if polygon.contains(triangle.centroid)
         ]
         shapely.destroy_prepared(polygon)
