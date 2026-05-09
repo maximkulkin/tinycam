@@ -21,12 +21,7 @@ sips -z 1024 1024 tinycam_icon.png --out build/TinyCAM.iconset/icon_512x512@2x.p
 iconutil -c icns build/TinyCAM.iconset -o build/TinyCAM.icns
 rm -rf build/TinyCAM.iconset
 
-# Build Cython extension if source is newer than compiled output
-if [ ! -f tinycam/ui/view_items/core/_line2d_cy*.so ] || \
-   [ tinycam/ui/view_items/core/_line2d_cy.pyx -nt tinycam/ui/view_items/core/_line2d_cy*.so ]; then
-    echo "Building Cython extension..."
-    python setup.py build_ext --inplace --build-lib build/cython
-fi
+python setup.py build_ext --build-lib build/cython
 
 echo "Running PyInstaller..."
 pyinstaller TinyCAM.spec --noconfirm --workpath build/pyinstaller --distpath build

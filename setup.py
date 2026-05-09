@@ -20,6 +20,12 @@ extensions = [
         include_dirs=[np.get_include()],
         extra_compile_args=["-O3", "-ffast-math"],
     ),
+    Extension(
+        "tinycam.algorithms.outline_cy",
+        sources=["tinycam/algorithms/outline_cy.pyx"],
+        include_dirs=[np.get_include()],
+        extra_compile_args=["-O3", "-march=native", "-ffast-math"],
+    ),
 ]
 
 setup(
